@@ -22,14 +22,15 @@
 #include <stdint.h>
 //#include "galoisfield.h"
 
-//const int w = 8;
-//const int NW = 1 << 8;
-
 #define W 8
 #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
 
-//#define DEBUG 
+#define TILE_WIDTH 2
+#define TILE_DEPTH 2
+
 #define BUFFER_SIZE 256
+
+//#define DEBUG 
 
 __shared__ uint8_t gflog[512];
 __shared__ uint8_t gfexp[512];
@@ -231,6 +232,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	int i = threadIdx.x;
 	int j = threadIdx.y;
 	setup_tables(8);
+	__syncthreads();
 	encodingMatrix[i*col + j] = gf_pow(j+1, i);
 }
 
@@ -240,6 +242,54 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 // C: nxm
 __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m)
 {
+	__shared__ int rowVector[TILE_WIDTH][TILE_DEPTH];
+	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH];
+	__shared__ int product[TILE_WIDTH][TILE_WIDTH];
+
+	int bx = blockIdx.x;
+   	int by = blockIdx.y;
+	int tx = threadIdx.x;
+	int ty = threadIdx.y;
+	int row;
+	int col;
+	int px;
+	int py;	
+
+	setup_tables(8);
+	__syncthreads();
+
+	for(py=ty; py<TILE_WIDTH; py+=blockDim.y)
+	{
+		for(px=tx; px<TILE_WIDTH; px+=blockDim.x)
+		{
+			row = by*TILE_WIDTH+py;
+			col = bx*TILE_WIDTH+px;
+			product[py][px] = 0;
+			__syncthreads();
+		
+			for(int i=0; i<(int)(ceil((float)p/TILE_DEPTH)); i++)
+			{
+				for(int j=tx; j<TILE_DEPTH; j+=blockDim.x)
+				{
+					rowVector[py][j] = A[row*p+i*TILE_DEPTH+j];
+				}
+				for(int j=ty; j<TILE_DEPTH; j+=blockDim.y)
+				{		
+					colVector[j][px] = B[col+(i*TILE_DEPTH+j)*m];
+				}
+				__syncthreads();
+		
+				for(int j=0; j<TILE_DEPTH; j++)
+				{
+					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+				}
+				__syncthreads();
+			}
+			C[row*m+col] = product[py][px];
+		}
+	}
+	/*
 	int i;
 	int j;
 	int k;
@@ -254,6 +304,7 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 			}
 		}
 	}
+	*/
 }
 
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
@@ -382,14 +433,19 @@ int main(int argc, char *argv[])
 	uint8_t *encodingMatrix_d;	//device
 	encodingMatrix = (uint8_t*) malloc( parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
 	cudaMalloc( (void **)&encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
-	dim3 block(parityBlockNum, nativeBlockNum);
-	gen_encoding_matrix<<<1, block>>>(encodingMatrix_d, parityBlockNum, nativeBlockNum);
+	dim3 blk(parityBlockNum, nativeBlockNum);
+	gen_encoding_matrix<<<1, blk>>>(encodingMatrix_d, parityBlockNum, nativeBlockNum);
 //	cudaDeviceSynchronize();
 
 	cudaMemcpy(encodingMatrix, encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t), cudaMemcpyDeviceToHost);
 	write_metadata(parityBlockNum, nativeBlockNum, encodingMatrix);
 
-	encode_chunk<<<1, 1>>>(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
+	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
+	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
+	dim3 grid(gridDimX, gridDimY);
+	dim3 block(TILE_WIDTH, TILE_WIDTH);
+
+	encode_chunk<<<grid, block>>>(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	cudaMemcpy(codeBuf, codeBuf_d, parityBlockNum*chunkSize*sizeof(uint8_t), cudaMemcpyDeviceToHost);
 
 
