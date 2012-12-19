@@ -7,8 +7,8 @@
 #define SQUARE_BLOCK_SIZE 16    // MAX 
 #define LINEAR_BLOCK_SIZE 512   // MAX 
 
-#define DISPLAY_SETTINGS true
-#define DISPLAY true
+#define DISPLAY_SETTINGS false
+#define DISPLAY false
 
 //#define IDC2D(i,j,ld) (((j)*(ld))+(i))
 #define IDC2D(i,j,ld) (((i)*(ld))+(j))
@@ -21,7 +21,7 @@
 
 #define BUFFER_SIZE 256
 
-#define DEBUG 
+//#define DEBUG
 
 
 //#define BLOCKSIZE 16
@@ -592,7 +592,7 @@ void invert_matrix( uint8_t *matrix_dev, uint8_t *result_dev, int lda )
 
 
 
-void show_decoding_matrix(uint8_t *decodingMatrix, int size)
+void show_squre_matrix(uint8_t *matrix, int size)
 {
 	int i;
 	int j;
@@ -600,16 +600,27 @@ void show_decoding_matrix(uint8_t *decodingMatrix, int size)
 	{
 		for(j=0; j<size; j++)
 		{
-			printf("%d ", decodingMatrix[i*size+j]);
+			printf("%d ", matrix[i*size+j]);
 		}
 		printf("\n");
 	}
 }
+
+void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, int rowSize)
+{
+	int i;
+	for(i=0; i<rowSize; i++)
+	{
+		des[desRowIndex*rowSize+i] = src[srcRowIndex*rowSize+i];
+	}
+}
+
 int main()
 {
 	int nativeBlockNum = 4;
 	int parityBlockNum = 2;
 	int chunkSize = 1;
+	int totalSize;
 
 	uint8_t *dataBuf;		//host
 	uint8_t *codeBuf;		//host
@@ -621,14 +632,27 @@ int main()
 
 	FILE *fp_in;
 	FILE *fp_out;
-	if( ( fp_in = fopen("native_0","rb") ) == NULL )
+
+	int totalMatrixSize;
+	int matrixSize;
+	uint8_t *totalEncodingMatrix;	//host
+	uint8_t *encodingMatrix;	//host
+	if( ( fp_in = fopen(".METADATA","rb") ) == NULL )
 	{
 		printf("Can not open source file!\n");
 		exit(0);
 	}
-	fseek(fp_in, 0L, SEEK_END);
-	chunkSize = ftell(fp_in);
-
+	fscanf(fp_in, "%d", &totalSize);
+	fscanf(fp_in, "%d %d", &parityBlockNum, &nativeBlockNum);
+	chunkSize = (int) (ceil( (float)totalSize / nativeBlockNum )); 
+	totalMatrixSize = nativeBlockNum * ( nativeBlockNum + parityBlockNum );
+	totalEncodingMatrix = (uint8_t*) malloc( totalMatrixSize );
+	matrixSize = nativeBlockNum * nativeBlockNum;
+	encodingMatrix = (uint8_t*) malloc( matrixSize );
+	for(int i =0; i<nativeBlockNum*(nativeBlockNum+parityBlockNum); i++)
+	{
+		fscanf(fp_in, "%d", totalEncodingMatrix+i);
+	}
 
 	dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
@@ -641,54 +665,31 @@ int main()
 	cudaMalloc( (void **)&codeBuf_d, codeSize );
 	cudaMemset(codeBuf_d, 0, codeSize);
 
-/*	
-	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	int codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	dataBuf = (uint8_t*) malloc( dataSize );
-	memset(dataBuf, 0, dataSize);
-	codeBuf = (uint8_t*) malloc( codeSize);
-	memset(codeBuf, 0, codeSize);
-	cudaMalloc( (void **)&dataBuf_d, dataSize );
-	cudaMemset(dataBuf_d, 0, dataSize);
-	cudaMalloc( (void **)&codeBuf_d, codeSize );
-	cudaMemset(codeBuf_d, 0, codeSize);
-
-//
-	FILE *fp_in;
-	FILE *fp_out;
-	if( ( fp_in = fopen(argv[1],"rb") ) == NULL )
+	for(int i=0; i<nativeBlockNum; i++)
 	{
-		printf("Can not open source file!\n");
-		exit(0);
+		char input_file_name[20];
+		int index;
+		printf("Please enter the file name of fragment:\n");
+		scanf("%s", input_file_name);
+		index = atoi(input_file_name+1);
+		printf("#%dth fragment\n", index);
+
+		copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
+
+		fp_in = fopen(input_file_name, "rb");
+		fseek(fp_in, 0L, SEEK_SET);
+		// this part can be process in parallel with computing inversed matrix
+		fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
+		fclose(fp_in);
+
 	}
-	fseek(fp_in, 0L, SEEK_END);
-	//ftell() get the total size of the file
-	chunkSize = (int) (ceil( (float)ftell(fp_in) / nativeBlockNum )); 
-//	
 	cudaMemcpy(codeBuf_d, codeBuf, codeSize, cudaMemcpyHostToDevice);
-//
-*/
+
 #ifdef DEBUG
-//	int matrixSize = nativeBlockNum*nativeBlockNum*sizeof(uint8_t);
-	int matrixSize = 16;
-	uint8_t testMatrix[4][4] = {{1, 0, 0, 0}, {0, 1, 0, 0}, {1, 1, 1, 1}, {1, 2, 3, 4}};
-//	uint8_t testMatrix[16] = {0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 3, 4};
-//	uint8_t testMatrix[16] = {1, 1, 1, 1, 1, 2, 3, 4, 0, 0, 1, 0, 0, 0, 0, 1};
-	uint8_t *encodingMatrix_d;	//device
-	uint8_t *decodingMatrix;	//host
-	uint8_t *decodingMatrix_d;	//device
-	decodingMatrix = (uint8_t*) malloc( matrixSize );
-	cudaMalloc( (void **)&encodingMatrix_d, matrixSize );
-	cudaMalloc( (void **)&decodingMatrix_d, matrixSize );
-	cudaMemcpy(encodingMatrix_d, testMatrix, matrixSize, cudaMemcpyHostToDevice);
+	show_squre_matrix(encodingMatrix, nativeBlockNum);
+#endif
 
-    invert_matrix( encodingMatrix_d, decodingMatrix_d, 4 );
-
-	cudaMemcpy(decodingMatrix, decodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
-	show_decoding_matrix(decodingMatrix, nativeBlockNum);
 /*
-	FILE *fp_in;
-	FILE *fp_out;
 	if( ( fp_in = fopen("native_2","rb") ) == NULL )
 	{
 		printf("Can not open source file!\n");
@@ -696,20 +697,28 @@ int main()
 	}
 	fseek(fp_in, 0L, SEEK_END);
 	chunkSize = ftell(fp_in);
-
-
-	dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	dataBuf = (uint8_t*) malloc( dataSize );
-	memset(dataBuf, 0, dataSize);
-	codeBuf = (uint8_t*) malloc( codeSize);
-	memset(codeBuf, 0, codeSize);
-	cudaMalloc( (void **)&dataBuf_d, dataSize );
-	cudaMemset(dataBuf_d, 0, dataSize);
-	cudaMalloc( (void **)&codeBuf_d, codeSize );
-	cudaMemset(codeBuf_d, 0, codeSize);
 */
+#ifdef DEBUG
+//	int matrixSize = nativeBlockNum*nativeBlockNum*sizeof(uint8_t);
+	uint8_t testMatrix[4][4] = {{0, 0, 1, 0}, {0, 1, 0, 0}, {1, 1, 1, 1}, {1, 2, 3, 4}};
+//	uint8_t testMatrix[16] = {0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 3, 4};
+//	uint8_t testMatrix[16] = {1, 1, 1, 1, 1, 2, 3, 4, 0, 0, 1, 0, 0, 0, 0, 1};
+	cudaMemcpy(encodingMatrix_d, testMatrix, matrixSize, cudaMemcpyHostToDevice);
+#endif
 
+	uint8_t *encodingMatrix_d;	//device
+	uint8_t *decodingMatrix;	//host
+	uint8_t *decodingMatrix_d;	//device
+	decodingMatrix = (uint8_t*) malloc( matrixSize );
+	cudaMalloc( (void **)&encodingMatrix_d, matrixSize );
+	cudaMalloc( (void **)&decodingMatrix_d, matrixSize );
+	cudaMemcpy(encodingMatrix_d, encodingMatrix, matrixSize, cudaMemcpyHostToDevice);
+
+    invert_matrix( encodingMatrix_d, decodingMatrix_d, nativeBlockNum );
+
+	cudaMemcpy(decodingMatrix, decodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
+	show_squre_matrix(decodingMatrix, nativeBlockNum);
+/*
 	fseek(fp_in, 0L, SEEK_SET);
 	fread(codeBuf, sizeof(uint8_t), chunkSize, fp_in);
 	fclose(fp_in);
@@ -728,8 +737,7 @@ int main()
 	fseek(fp_in, 0L, SEEK_SET);
 	fread(codeBuf+3*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
 	fclose(fp_in);
-
-	cudaMemcpy(codeBuf_d, codeBuf, codeSize, cudaMemcpyHostToDevice);
+*/
 
 	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
 	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
@@ -738,8 +746,11 @@ int main()
 	decode_chunk<<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	cudaMemcpy(dataBuf, dataBuf_d, dataSize, cudaMemcpyDeviceToHost);
 
-	fp_out = fopen("test", "wb");
-	fwrite(dataBuf, sizeof(uint8_t), nativeBlockNum*chunkSize, fp_out);
+	char output_file_name[20];
+	printf("Enter the name of the decoded file:\n");
+	scanf("%s", output_file_name);
+	fp_out = fopen(output_file_name, "wb");
+	fwrite(dataBuf, sizeof(uint8_t), totalSize, fp_out);
 	fclose(fp_out);
 
 	cudaFree(decodingMatrix_d);
@@ -749,74 +760,6 @@ int main()
 	free(decodingMatrix);
 	free(dataBuf);
 	free(codeBuf);
-#endif
-/*
-	int matrixSize = nativeBlockNum*nativeBlockNum*sizeof(uint8_t);
-	uint8_t *encodingMatrix;	//host
-	uint8_t *encodingMatrix_d;	//device
-	uint8_t *decodingMatrix;	//host
-	uint8_t *decodingMatrix_d;	//device
-	encodingMatrix = (uint8_t*) malloc( matrixSize );
-	decodingMatrix = (uint8_t*) malloc( matrixSize );
-	cudaMalloc( (void **)&encodingMatrix_d, matrixSize );
-	cudaMalloc( (void **)&decodingMatrix_d, matrixSize );
-	cudaMemcpy(encodingMatrix_d, encodingMatrix, matrixSize, cudaMemcpyHostToDevice);
-	GPUGausSeidel (encodingMatrix_d, decodingMatrix_d, nativeBlockNum);
-//	GPUGausSeidel (encodingMatrix_d, decodingMatrix_d);
-	cudaMemcpy(decodingMatrix, decodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
-//	cudaDeviceSynchronize();
-
-	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
-	dim3 grid(gridDimX, gridDimY);
-	dim3 block(TILE_WIDTH, TILE_WIDTH);
-	decode_chunk<<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
-	cudaMemcpy(dataBuf, dataBuf_d, dataSize, cudaMemcpyDeviceToHost);
-
-
-	char output_file_name[10];
-	for(i=0; i<parityBlockNum; i++)
-	{
-		sprintf(output_file_name, "code_%d", i);
-		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
-		{
-			printf("Can not open source file!\n");
-			exit(0);
-		}
-		if( fwrite(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
-		{
-			printf("fwrite error!\n");
-			exit(0);
-		}
-		fclose(fp_out);
-	}
-
-	for(i=0; i<nativeBlockNum; i++)
-	{
-		sprintf(output_file_name, "native_%d", i);
-		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
-		{
-			printf("Can not open source file!\n");
-			exit(0);
-		}
-		if( fwrite(dataBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
-		{
-			printf("fwrite error!\n");
-			exit(0);
-		}
-		fclose(fp_out);
-	}
-
-//	cudaFree(encodingMatrix_d);
-	cudaFree(decodingMatrix_d);
-	cudaFree(dataBuf_d);
-	cudaFree(codeBuf_d);
-
-//	free(encodingMatrix);
-	free(decodingMatrix);
-	free(dataBuf);
-	free(codeBuf);
-*/
 
 }
 
