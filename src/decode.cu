@@ -16,8 +16,10 @@
 #define W 8
 #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
 
-#define TILE_WIDTH 4
-#define TILE_DEPTH 4
+#define TILE_WIDTH_ROW 2
+#define TILE_WIDTH_COL 64
+//#define TILE_WIDTH 2
+#define TILE_DEPTH 2
 
 #define BUFFER_SIZE 256
 
@@ -226,9 +228,9 @@ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfe
 // C: nxm
 __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m)
 {
-	__shared__ int rowVector[TILE_WIDTH][TILE_DEPTH];
-	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH];
-	__shared__ int product[TILE_WIDTH][TILE_WIDTH];
+	__shared__ int rowVector[TILE_WIDTH_ROW][TILE_DEPTH];
+	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH_COL];
+	__shared__ int product[TILE_WIDTH_ROW][TILE_WIDTH_COL];
 
 	int bx = blockIdx.x;
    	int by = blockIdx.y;
@@ -242,12 +244,12 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	setup_tables(8);
 	__syncthreads();
 
-	for(py=ty; py<TILE_WIDTH; py+=blockDim.y)
+	for(py=ty; py<TILE_WIDTH_ROW; py+=blockDim.y)
 	{
-		for(px=tx; px<TILE_WIDTH; px+=blockDim.x)
+		for(px=tx; px<TILE_WIDTH_COL; px+=blockDim.x)
 		{
-			row = by*TILE_WIDTH+py;
-			col = bx*TILE_WIDTH+px;
+			row = by*TILE_WIDTH_ROW+py;
+			col = bx*TILE_WIDTH_COL+px;
 			product[py][px] = 0;
 			__syncthreads();
 		
@@ -615,7 +617,7 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
 	}
 }
 
-int main()
+int main(int argc, char *argv[])
 {
 	int nativeBlockNum = 4;
 	int parityBlockNum = 2;
@@ -665,23 +667,49 @@ int main()
 	cudaMalloc( (void **)&codeBuf_d, codeSize );
 	cudaMemset(codeBuf_d, 0, codeSize);
 
-	for(int i=0; i<nativeBlockNum; i++)
+	if(argc == 2)
 	{
+		FILE *fp_conf;
 		char input_file_name[20];
 		int index;
-		printf("Please enter the file name of fragment:\n");
-		scanf("%s", input_file_name);
-		index = atoi(input_file_name+1);
-		printf("#%dth fragment\n", index);
+		fp_conf = fopen(argv[1], "r");
 
-		copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
+		for(int i=0; i<nativeBlockNum; i++)
+		{
+			fscanf(fp_conf, "%s", input_file_name);
+			index = atoi(input_file_name+1);
 
-		fp_in = fopen(input_file_name, "rb");
-		fseek(fp_in, 0L, SEEK_SET);
-		// this part can be process in parallel with computing inversed matrix
-		fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
-		fclose(fp_in);
+			copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
 
+			fp_in = fopen(input_file_name, "rb");
+			fseek(fp_in, 0L, SEEK_SET);
+			// this part can be process in parallel with computing inversed matrix
+			fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
+			fclose(fp_in);
+		}
+
+		fclose(fp_conf);
+	}
+	else
+	{
+		for(int i=0; i<nativeBlockNum; i++)
+		{
+			char input_file_name[20];
+			int index;
+			printf("Please enter the file name of fragment:\n");
+			scanf("%s", input_file_name);
+			index = atoi(input_file_name+1);
+			printf("#%dth fragment\n", index);
+
+			copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
+
+			fp_in = fopen(input_file_name, "rb");
+			fseek(fp_in, 0L, SEEK_SET);
+			// this part can be process in parallel with computing inversed matrix
+			fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
+			fclose(fp_in);
+
+		}
 	}
 	cudaMemcpy(codeBuf_d, codeBuf, codeSize, cudaMemcpyHostToDevice);
 
@@ -700,10 +728,10 @@ int main()
 */
 #ifdef DEBUG
 //	int matrixSize = nativeBlockNum*nativeBlockNum*sizeof(uint8_t);
-	uint8_t testMatrix[4][4] = {{0, 0, 1, 0}, {0, 1, 0, 0}, {1, 1, 1, 1}, {1, 2, 3, 4}};
+//	uint8_t testMatrix[4][4] = {{0, 0, 1, 0}, {0, 1, 0, 0}, {1, 1, 1, 1}, {1, 2, 3, 4}};
 //	uint8_t testMatrix[16] = {0, 0, 1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 3, 4};
 //	uint8_t testMatrix[16] = {1, 1, 1, 1, 1, 2, 3, 4, 0, 0, 1, 0, 0, 0, 0, 1};
-	cudaMemcpy(encodingMatrix_d, testMatrix, matrixSize, cudaMemcpyHostToDevice);
+//	cudaMemcpy(encodingMatrix_d, testMatrix, matrixSize, cudaMemcpyHostToDevice);
 #endif
 
 	uint8_t *encodingMatrix_d;	//device
@@ -739,10 +767,13 @@ int main()
 	fclose(fp_in);
 */
 
-	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
+//	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
+//	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
+//	dim3 block(TILE_WIDTH, TILE_WIDTH);
+	int gridDimX = (int)( ceil((float)chunkSize / TILE_WIDTH_COL) );
+	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
 	dim3 grid(gridDimX, gridDimY);
-	dim3 block(TILE_WIDTH, TILE_WIDTH);
+	dim3 block(TILE_WIDTH_ROW, TILE_WIDTH_COL);
 	decode_chunk<<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	cudaMemcpy(dataBuf, dataBuf_d, dataSize, cudaMemcpyDeviceToHost);
 
