@@ -15,12 +15,6 @@ RS: matrix.o encode.o decode.o main.o
 #.cu .o:
 #	$(NVCC) -o $@ -c $< 
 
-#.c .o:
-#	$(CC) -o $@ -c $<
-
-
-#encode:
-#	$(NVCC) -o encode.o encode.cu
 clean:
 	rm *.o && rm RS
 test:
