@@ -6,11 +6,11 @@
  *    Description:  
  *
  *        Version:  1.0
- *        Created:  12/21/2012 07:38:17 PM
+ *        Created:  12/21/2012 07:45:23 PM
  *       Revision:  none
- *       Compiler:  gcc
+ *       Compiler:  nvcc
  *
- *         Author:  YOUR NAME (), 
+ *         Author:  Shuai YUAN (yszheda AT gmail.com), 
  *        Company:  
  *
  * =====================================================================================
@@ -19,11 +19,8 @@
 #ifndef _MATRIX_H_
 #define _MATRIX_H_
 
-#define SQUARE_BLOCK_SIZE 16    // MAX 
-#define SINGLE_BLOCK_SIZE 512   // MAX 
-
-#define DISPLAY_SETTINGS false
-#define DISPLAY false
+#define SQUARE_BLOCK_SIZE 16
+#define SINGLE_BLOCK_SIZE 512
 
 //#define IDC2D(i,j,ld) (((j)*(ld))+(i))
 #define IDC2D(i,j,ld) (((i)*(ld))+(j))
@@ -32,6 +29,8 @@
 #define TILE_WIDTH_COL 64
 //#define TILE_WIDTH 2
 #define TILE_DEPTH 2
+
+#define SINGLE_GRID_SIZE 16384 // MAX 
 
 #define W 8
 #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */

@@ -10,7 +10,7 @@
  *       Revision:  none
  *       Compiler:  nvcc
  *
- *         Author:  Shuai YUAN (), 
+ *         Author:  Shuai YUAN (yszheda AT gmail.com), 
  *        Company:  
  *
  * =====================================================================================
@@ -21,22 +21,6 @@
 #include <stdint.h>
 #include <math.h>
 #include "matrix.h"
-//#include "galoisfield.h"
-
-//#define SQUARE_BLOCK_SIZE 16    // MAX 
-//#define SINGLE_BLOCK_SIZE 512   // MAX 
-//
-//#define DISPLAY_SETTINGS false
-//#define DISPLAY false
-//
-////#define IDC2D(i,j,ld) (((j)*(ld))+(i))
-//#define IDC2D(i,j,ld) (((i)*(ld))+(j))
-//
-//#define TILE_WIDTH 4
-//#define TILE_DEPTH 4
-//
-//#define W 8
-//#define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
 
 __shared__ uint8_t gflog[256];
 __shared__ uint8_t gfexp[256];
@@ -223,7 +207,7 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 	return gfexp[pow_log];
 }
 
-// C=AB
+// input matrix A and B, compute the product matrix C=AB
 // A: nxp
 // B: pxm
 // C: nxm
@@ -245,6 +229,8 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	setup_tables(8);
 	__syncthreads();
 
+for(bx=blockIdx.x; bx< (int)(ceil((float)m/gridDim.x)); bx+=gridDim.x )
+{
 	for(py=ty; py<TILE_WIDTH_ROW; py+=blockDim.y)
 	{
 		for(px=tx; px<TILE_WIDTH_COL; px+=blockDim.x)
@@ -254,8 +240,12 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 			product[py][px] = 0;
 			__syncthreads();
 		
+if(row < n && col < m)
+{
 			for(int i=0; i<(int)(ceil((float)p/TILE_DEPTH)); i++)
 			{
+				int bound = min(p, TILE_DEPTH);
+/*
 				for(int j=tx; j<TILE_DEPTH; j+=blockDim.x)
 				{
 					rowVector[py][j] = A[row*p+i*TILE_DEPTH+j];
@@ -271,9 +261,27 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
 //					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
 				}
+*/
+				for(int j=tx; j<bound; j+=blockDim.x)
+				{
+					rowVector[py][j] = A[row*p+i*bound+j];
+				}
+				for(int j=ty; j<bound; j+=blockDim.y)
+				{		
+					colVector[j][px] = B[col+(i*bound+j)*m];
+				}
+				__syncthreads();
+		
+				for(int j=0; j<bound; j++)
+				{
+					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+				}
 				__syncthreads();
 			}
 			C[row*m+col] = product[py][px];
+}
+}
 		}
 	}
 }
@@ -350,41 +358,7 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //	*/
 //}
 
-/******************************************************************************
-                           AWAKE THE GPU CARD KERNEL
-
-                                    works
-*******************************************************************************/
-__global__ void initKernel(){}
-
-
-/******************************************************************************
-                        ROUND UP - AIDING FUNCTION
-
-*******************************************************************************/
-int roundUp ( int n, int d )
-{
-	return n/d + (n%d != 0);
-}
-
-/******************************************************************************
-                        MINIMUM - AIDING FUNCTION
-
-*******************************************************************************/
-int minimo(     int a,
-                int b )
-{
-    return ( a < b )? a : b;
-
-}
-
-/******************************************************************************
-                   SWITCH ROWS IF NECESSARY - KERNEL 
-
-            Needs only a "row" of threads, block can be linear!
-
-                                works                                    
-*******************************************************************************/
+// switch rows if the current row is not the pivot row
 __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int rowDes, int size)
 {
     int col = threadIdx.y + blockDim.y * blockIdx.y;
@@ -402,6 +376,7 @@ __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int ro
         result[ IDC2D(rowDes, col, size) ] = oldResultItem; 
     }
 } 
+// switch columns if the current row is not the pivot row
 __global__ void switch_columns(uint8_t *matrix, uint8_t *result, int colSrc, int colDes, int size)
 {
     int row = threadIdx.y + blockDim.y * blockIdx.y;
@@ -419,13 +394,8 @@ __global__ void switch_columns(uint8_t *matrix, uint8_t *result, int colSrc, int
         result[ IDC2D(row, colSrc, size) ] = oldResultItem; 
     }
 } 
-/******************************************************************************
-                    NORMALIZE THE PIVOT ROW KERNEL
 
-            Needs only a "column" of threads, block can be linear!
-
-                                works
-*******************************************************************************/
+// normalize the row by the pivot value
 __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, int size)
 {
     int ty = threadIdx.y;
@@ -450,6 +420,7 @@ __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, i
         result[ IDC2D(row, col, size)] = gf_div(result[ IDC2D(row, col, size) ], pivotValue);
     }
 }
+// normalize the column by the pivot value
 __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, int size)
 {
     int ty = threadIdx.y;
@@ -475,13 +446,7 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
     }
 }
 
-/******************************************************************************
-         MODIFIED GAUSSIAN ELIMINATION (MGE) KERNEL - LINEAR VERSION
-
-        As the name implies, its grid is formed out of linear blocks
-
-*******************************************************************************/
-
+//eliminate by row to make the pivot column become reduced echelon form
 __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
@@ -522,6 +487,7 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
     }
 }
 
+//eliminate by column to make the pivot row become reduced echelon form
 __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
@@ -553,7 +519,7 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
         __syncthreads();
 
 		// substraction in GF
-		// make the pivotCol become reduced echelon form
+		// make the pivotRow become reduced echelon form
         if ( col != pivotIndex )
         {
 			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
@@ -562,18 +528,7 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
     }
 }
 
-
-
-
-/******************************************************************************
-                        CREATE RESULT KERNEL 
-
-    Needs a complete grid of threads for ALL of the matrix positions.
-    
-    * SQUARE_BLOCK_SIZE and squareGrid used!
-
-*******************************************************************************/
-
+//generate an identity matrix
 __global__ void get_identity_matrix(uint8_t *result, int size)
 {
 	int row = blockIdx.x * blockDim.x + threadIdx.x;
@@ -589,29 +544,22 @@ __global__ void get_identity_matrix(uint8_t *result, int size)
 	}
 }
 
-/******************************************************************************
-              GET THE MAXIMUM INDEX OF THE COLUMN - HOST CODE
-
-                                    works
-*******************************************************************************/
-int get_pivot_index(uint8_t *row, int index, int size)
+//find the pivot index in the given row/column
+int get_pivot_index(uint8_t *vector, int index, int size)
 {
     int pivotIndex = -1;
     int i = index;
     while( pivotIndex == -1 && i < size )
     {
-        pivotIndex = (row[i] > 0)? i: -1;        
+        pivotIndex = (vector[i] > 0)? i: -1;        
         i++;
     }
     return pivotIndex;
 }
 
 
-/******************************************************************************
-                MODIFIED GAUSSIAN ELIMINATION (MGE) - HOST CODE
-
-*******************************************************************************/
-
+// compute the inverse of a given matrix
+// Guassian elimination
 extern "C"
 void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 {
@@ -620,35 +568,6 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
     uint8_t currentRow[size];
     int currentRowSize = size*sizeof(uint8_t);
 
-/*
-// setup for get_identity_matrix kernel (cr)
-    dim3 crGrid( ceil( size, SQUARE_BLOCK_SIZE ), ceil( size, SQUARE_BLOCK_SIZE ) );    // GRID
-    dim3 crBlock( minimo( size, SQUARE_BLOCK_SIZE ), minimo( size, SQUARE_BLOCK_SIZE ) );     // BLOCK
-
-// setup for normalize_pivot_col kernel (npr) GRID
-    dim3 nprGrid( 1, ceil( size, SINGLE_BLOCK_SIZE) );
- 
-// setup for linearMGE kernel (lmge) GRID
-    dim3 lmgeGrid( size, ceil( size, SINGLE_BLOCK_SIZE));
-
-// setup for normalize_pivot_col kernel (npr) AND linearMGE kernel BLOCK
-    dim3 linearBlock( 1, minimo(size, SINGLE_BLOCK_SIZE)); 
-
-// Shows the setup if DISPLAY_SETTINGS macro is TRUE
-    if ( DISPLAY_SETTINGS )
-    {
-        printf( "\nKernels Setup:\n" );
-
-        printf( "\t> crGrid( %d, %d )\n", crGrid.x, crGrid.y );
-        printf( "\t> crBlock( %d, %d )\n", crBlock.x, crBlock.y );    
-
-        printf( "\t> nprGrid( %d, %d )\n", nprGrid.x, nprGrid.y );
-        printf( "\t> nprBlock( %d, %d )\n", linearBlock.x, linearBlock.y );
-
-        printf( "\t> lmgeGrid( %d, %d )\n", lmgeGrid.x, lmgeGrid.y );
-        printf( "\t> lmgeBlock( %d, %d )\n\n", linearBlock.x, linearBlock.y );
-    }
-*/
     dim3 gimGrid( (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)), (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)) );
     dim3 gimBlock( min(size, SQUARE_BLOCK_SIZE), min(size, SQUARE_BLOCK_SIZE) );
     get_identity_matrix<<< gimGrid, gimBlock >>>(result_dev, size);
@@ -667,7 +586,6 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
             switch_columns<<< scGrid, scBlock >>>(matrix_dev, result_dev, index, pivotIndex, size);
 		}
 		cudaDeviceSynchronize();
-//		cudaThreadSynchronize();
 
 		dim3 nprGrid(1, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 nprBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
@@ -676,15 +594,12 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 //    	// Normalize the pivot column
 //        normalize_pivot_col<<< nprGrid, linearBlock >>>(matrix_dev, result_dev, index, size);
 		cudaDeviceSynchronize();
-//		cudaThreadSynchronize();
 
 		dim3 ebrGrid(size, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 ebrBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
         eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, size);
 		cudaDeviceSynchronize();
-//		cudaThreadSynchronize();
     }
-//    cudaThreadSynchronize();
 
 }
 
@@ -700,11 +615,33 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
 	matrix_mul(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
+/*
+	int currentSize = chunkSize;
+	for(int i=0; i<(int)(ceil((float)chunkSize/SINGLE_GRID_SIZE)); i++)
+	{
+		if(chunkSize-(i+1)*SINGLE_GRID_SIZE < 0)
+		{
+			currentSize = chunkSize - i*SINGLE_GRID_SIZE;
+		}
+		matrix_mul(parityCoeff, dataChunk+i*SINGLE_GRID_SIZE, codeChunk+i*SINGLE_GRID_SIZE, parityBlockNum, nativeBlockNum, currentSize);
+	}
+*/
 }
 
 __global__ void decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
 	matrix_mul(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
+/*
+	int currentSize = chunkSize;
+	for(int i=0; i<(int)(ceil((float)chunkSize/SINGLE_GRID_SIZE)); i++)
+	{
+		if(chunkSize-(i+1)*SINGLE_GRID_SIZE < 0)
+		{
+			currentSize = chunkSize - i*SINGLE_GRID_SIZE;
+		}
+		matrix_mul(parityCoeff, codeChunk+i*SINGLE_GRID_SIZE, dataChunk+i*SINGLE_GRID_SIZE, parityBlockNum, nativeBlockNum, currentSize);
+	}
+*/
 }
 
 

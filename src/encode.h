@@ -8,9 +8,9 @@
  *        Version:  1.0
  *        Created:  12/25/2012 04:33:06 PM
  *       Revision:  none
- *       Compiler:  gcc
+ *       Compiler:  nvcc 
  *
- *         Author:  YOUR NAME (), 
+ *         Author:  Shuai YUAN (yszheda AT gmail.com), 
  *        Company:  
  *
  * =====================================================================================

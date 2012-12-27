@@ -1,12 +1,20 @@
 NVCC = nvcc
 CC = gcc
+CCFLAGS = -g
+NVCCFLAGS = -G
 
 RS: matrix.o encode.o decode.o main.o
 	$(NVCC) matrix.o encode.o decode.o main.o -o $@ 
 
+%.o: %.cu
+	$(NVCC) $(CCFLAGS) $(NVCCFLAGS) -c $< -o $@
 
-.cu .o:
-	$(NVCC) -o $@ -c $< 
+%.o: %.c
+	$(CC) $(CCFLAGS) -c $< -o $@
+
+#.cu .o:
+#	$(NVCC) -o $@ -c $< 
+
 #.c .o:
 #	$(CC) -o $@ -c $<
 
@@ -14,7 +22,7 @@ RS: matrix.o encode.o decode.o main.o
 #encode:
 #	$(NVCC) -o encode.o encode.cu
 clean:
-	rm knn.o
+	rm *.o && rm RS
 test:
 	$(CC) -o test-seq test-seq.c
 

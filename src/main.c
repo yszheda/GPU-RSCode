@@ -10,7 +10,7 @@
  *       Revision:  none
  *       Compiler:  gcc
  *
- *         Author:  YOUR NAME (), 
+ *         Author:  Shuai YUAN (yszheda AT gmail.com), 
  *        Company:  
  *
  * =====================================================================================
