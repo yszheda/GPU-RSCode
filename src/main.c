@@ -25,7 +25,9 @@ int main(int argc, char *argv[])
 {
 	int nativeBlockNum = 4;
 	int parityBlockNum = 2;
-	char *file = NULL;
+	char *inFile = NULL;
+	char *confFile = NULL;
+	char *outFile = NULL;
 
 	enum func
 	{
@@ -67,8 +69,8 @@ int main(int argc, char *argv[])
 	switch(op)
 	{
 		case encode:
-			file = argv[4];
-			encode_file(file, nativeBlockNum, parityBlockNum);
+			inFile = argv[4];
+			encode_file(inFile, nativeBlockNum, parityBlockNum);
 			break;
 
 		case decode:
@@ -83,11 +85,21 @@ int main(int argc, char *argv[])
 				decode_file(NULL, nativeBlockNum, parityBlockNum);
 			}
 			*/
-			if(argc > 4)
+			if(argc == 5)
 			{
-				file = argv[4];
+				confFile = argv[4];
 			}
-			decode_file(file, nativeBlockNum, parityBlockNum);
+			else if(argc == 7 && strcmp(argv[5], "-o") == 0)
+			{
+				confFile = argv[4];
+				outFile = argv[6];
+			}
+			else
+			{
+				printf("Invalid command!\n");
+				exit(-1);
+			}
+			decode_file(confFile, outFile, nativeBlockNum, parityBlockNum);
 			break;
 	}
 

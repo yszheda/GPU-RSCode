@@ -557,6 +557,22 @@ int get_pivot_index(uint8_t *vector, int index, int size)
     return pivotIndex;
 }
 
+#ifdef DEBUG
+void show_squre_matrix_debug(uint8_t *matrix, int size)
+{
+	int i;
+	int j;
+	for(i=0; i<size; i++)
+	{
+		for(j=0; j<size; j++)
+		{
+			printf("%d ", matrix[i*size+j]);
+		}
+		printf("\n");
+	}
+		printf("\n");
+}
+#endif
 
 // compute the inverse of a given matrix
 // Guassian elimination
@@ -599,6 +615,17 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 		dim3 ebrBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
         eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, size);
 		cudaDeviceSynchronize();
+
+#ifdef DEBUG
+uint8_t matrix_host[size*size];
+cudaMemcpy(matrix_host, matrix_dev, size*size, cudaMemcpyDeviceToHost);
+printf("matrix:\n");
+show_squre_matrix_debug(matrix_host, size);
+uint8_t result_host[size*size];
+cudaMemcpy(result_host, result_dev, size*size, cudaMemcpyDeviceToHost);
+printf("result:\n");
+show_squre_matrix_debug(result_host, size);
+#endif
     }
 
 }
