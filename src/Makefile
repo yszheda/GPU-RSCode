@@ -15,10 +15,18 @@ RS: matrix.o encode.o decode.o main.o
 #.cu .o:
 #	$(NVCC) -o $@ -c $< 
 
-clean:
-	rm *.o && rm RS
+#.c .o:
+#	$(CC) -o $@ -c $<
+
+
+#encode:
+#	$(NVCC) -o encode.o encode.cu
 test:
 	$(CC) -o test-seq test-seq.c
+CPU:
+	$(CC) -o CPU-RS -lm -lrt $(CCFLAGS) cpu-rs.c
+clean:
+	rm *.o && rm RS
 
 include .depend
 
