@@ -2,7 +2,7 @@ NVCC = nvcc
 CC = gcc
 CCFLAGS = -g
 NVCCFLAGS = -G
-VPATH = src/
+VPATH = src
 #BIN_PATH = bin/
 
 RS: matrix.o encode.o decode.o main.o
@@ -23,10 +23,10 @@ RS: matrix.o encode.o decode.o main.o
 #	$(CC) -o $@ -c $<
 
 test:
-	$(CC) -o test-seq test-seq.c
+	$(CC) -o test-seq $(VPATH)/test-seq.c
 #	$(CC) -o $(BIN_PATH)/test-seq test-seq.c
 CPU:
-	$(CC) -o CPU-RS -lm -lrt $(CCFLAGS) cpu-rs.c
+	$(CC) -o CPU-RS -lm -lrt $(CCFLAGS) $(VPATH)/cpu-rs.c
 #	$(CC) -o $(BIN_PATH)/CPU-RS -lm -lrt $(CCFLAGS) cpu-rs.c
 clean:
 	rm *.o && rm RS
