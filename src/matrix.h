@@ -32,6 +32,11 @@
 
 #define SINGLE_GRID_SIZE 16384 // MAX 
 
+//#define STREAM_MAX_CHUNK_SIZE 4194304
+//#define STREAM_MAX_CHUNK_SIZE 16777216
+//#define STREAM_MAX_CHUNK_SIZE 134217728
+#define STREAM_MAX_CHUNK_SIZE 268435456
+
 #define W 8
 #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
 
