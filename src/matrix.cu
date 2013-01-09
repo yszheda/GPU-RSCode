@@ -396,7 +396,8 @@ __global__ void switch_columns(uint8_t *matrix, uint8_t *result, int colSrc, int
 } 
 
 // normalize the row by the pivot value
-__global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, int size)
+//__global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, int size)
+__global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
 	int col = blockDim.y*blockIdx.y + ty;
@@ -411,7 +412,8 @@ __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, i
     	// let the first thread of loads the pivotValue
         if ( ty == 0 )
 		{
-            pivotValue = matrix[ IDC2D(row, row, size) ];
+//            pivotValue = matrix[ IDC2D(row, row, size) ];
+            pivotValue = matrix[ IDC2D(row, pivotIndex, size) ];
 		}
         __syncthreads();
 	// Normalize the pivot row!
@@ -447,7 +449,8 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 }
 
 //eliminate by row to make the pivot column become reduced echelon form
-__global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
+//__global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
+__global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotRow, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
 
@@ -468,8 +471,10 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
     {
         if ( ty == 0 )
         {
-            matrixPivotValue = matrix[ IDC2D(pivotIndex, col, size) ];
-            resultPivotValue = result[ IDC2D(pivotIndex, col, size) ];
+//            matrixPivotValue = matrix[ IDC2D(pivotIndex, col, size) ];
+//            resultPivotValue = result[ IDC2D(pivotIndex, col, size) ];
+            matrixPivotValue = matrix[ IDC2D(pivotRow, col, size) ];
+            resultPivotValue = result[ IDC2D(pivotRow, col, size) ];
         }
         pivotCol[ty] = matrix[ IDC2D(row, pivotIndex, size) ];
         
@@ -479,7 +484,8 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 
 		// substraction in GF
 		// make the pivotCol become reduced echelon form
-        if ( row != pivotIndex )
+//        if ( row != pivotIndex )
+        if ( row != pivotRow )
         {
 			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
 			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
@@ -544,19 +550,33 @@ __global__ void get_identity_matrix(uint8_t *result, int size)
 	}
 }
 
+
 //find the pivot index in the given row/column
-int get_pivot_index(uint8_t *vector, int index, int size)
+int get_pivot_index(uint8_t *vector, int *pivotIndexs, int index, int size)
 {
     int pivotIndex = -1;
-    int i = index;
+    int i = 0;
     while( pivotIndex == -1 && i < size )
     {
-        pivotIndex = (vector[i] > 0)? i: -1;        
+		if(vector[i] != 0)
+		{
+			pivotIndex = i;
+		}
+		int j;
+		for(j=0; j<index; j++)
+		{
+			if(pivotIndex == pivotIndexs[j])
+			{
+				pivotIndex = -1;
+			}
+		}
+//        pivotIndex = (vector[i] > 0)? i: -1;        
         i++;
     }
     return pivotIndex;
 }
 
+//#define DEBUG
 #ifdef DEBUG
 void show_squre_matrix_debug(uint8_t *matrix, int size)
 {
@@ -583,6 +603,7 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 	int pivotIndex;
     uint8_t currentRow[size];
     int currentRowSize = size*sizeof(uint8_t);
+	int pivotIndexs[size];
 
     dim3 gimGrid( (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)), (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)) );
     dim3 gimBlock( min(size, SQUARE_BLOCK_SIZE), min(size, SQUARE_BLOCK_SIZE) );
@@ -594,7 +615,9 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 		// check whether the leading coefficient of the current row is in the 'index'th column
 		int index = row;
         cudaMemcpy(currentRow, matrix_dev+row*size, currentRowSize, cudaMemcpyDeviceToHost);
-        pivotIndex = get_pivot_index(currentRow, index, size);
+        pivotIndex = get_pivot_index(currentRow, pivotIndexs, row, size);
+		pivotIndexs[row] = pivotIndex;
+/*
         if( pivotIndex != row )
 		{
 			dim3 scGrid(1, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
@@ -602,18 +625,20 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
             switch_columns<<< scGrid, scBlock >>>(matrix_dev, result_dev, index, pivotIndex, size);
 		}
 		cudaDeviceSynchronize();
-
+*/
 		dim3 nprGrid(1, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 nprBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
     	// Normalize the pivot row
-        normalize_pivot_row<<< nprGrid, nprBlock >>>(matrix_dev, result_dev, index, size);
+//        normalize_pivot_row<<< nprGrid, nprBlock >>>(matrix_dev, result_dev, index, size);
+        normalize_pivot_row<<< nprGrid, nprBlock >>>(matrix_dev, result_dev, index, pivotIndex, size);
 //    	// Normalize the pivot column
 //        normalize_pivot_col<<< nprGrid, linearBlock >>>(matrix_dev, result_dev, index, size);
 		cudaDeviceSynchronize();
 
 		dim3 ebrGrid(size, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 ebrBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
-        eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, size);
+//        eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, size);
+        eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, pivotIndex, size);
 		cudaDeviceSynchronize();
 
 #ifdef DEBUG
