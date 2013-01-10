@@ -1,4 +1,5 @@
 matrix.o: matrix.cu
 encode.o: encode.cu matrix.o
 decode.o: decode.cu matrix.o
-RS: encode.o decode.o
+main.o: main.c encode.o decode.o
+RS: matrix.o encode.o decode.o main.o
