@@ -575,7 +575,7 @@ void show_squre_matrix_debug(uint8_t *matrix, int size)
 #endif
 
 // compute the inverse of a given matrix
-// Guassian elimination
+// Gaussian/Gauss–Jordan elimination
 extern "C"
 void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 {
