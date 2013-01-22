@@ -1,3 +1,4 @@
+#not used in autotools
 matrix.o: matrix.cu
 encode.o: encode.cu matrix.o
 decode.o: decode.cu matrix.o
