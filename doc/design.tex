@@ -310,20 +310,38 @@ Experiment Setting:
 \begin{itemize}
   \item CPU: Intel(R) Xeon(R) CPU E5620  @ 2.40GHz
   \item GPU: nVidia Corporation GF100 [Tesla C2050]
+  \item nVidia Corporation GF100 [Tesla C2050]
+	\begin{itemize}
+	  \item 448 CUDA cores @ 1.15GHz
+	  \item 3GB GDDR5 (1.44GB/s)
+	  \item 64KB L1 cache + shared memory / 32 cores, 768KB L2 cache
+	\end{itemize}
+%  \item k=4, n=6 for GPU vs CPU
 %  \item $k=4, n=6$
 \end{itemize}
 
-\subsection{Time of Each Step}
+\subsection{GPU Cost Breakdown}
 
 In this experiment, we set $k=4, n=6$.
 
 The following figure shows the time of GPU encoding progress steps.
 
-\includegraphics[scale=0.48]{GPU-encode.pdf}
+\includegraphics[scale=0.48]{result-graph/GPU-encode-steps.pdf}
+
+\includegraphics[scale=0.42]{result-graph/GPU-RS-encode.pdf}
 
 The following figure shows the time of GPU decoding progress steps.
 
-\includegraphics[scale=0.48]{GPU-decode.eps}
+\includegraphics[scale=0.48]{result-graph/GPU-decode-steps.pdf}
+
+\includegraphics[scale=0.42]{result-graph/GPU-RS-decode.pdf}
+
+Conclusion:
+\begin{enumerate}
+\item GPU computation time becomes almost constant when the file size is large enough.
+\item Matrix multiplication time occupies much more percentage than matrix generation time in the breakdown of GPU computation time.
+\item GPU spends more time in communication and the communication time is getting more as the file size becomes larger. This phenomenon explains why GPU performance speed-up gets slower.
+\end{enumerate}
 
 \subsection{CPU vs GPU}
 
@@ -331,7 +349,7 @@ We set $k=4, n=6$, the same as the above experiment.
 
 The following figure shows the bandwidth comparison between CPU and GPU in the Reed-Solomon encoding progress.
 
-\includegraphics[scale=0.68]{encode-CPU-vs-GPU-graph.pdf}
+\includegraphics[scale=0.48]{result-graph/encode-CPU-vs-GPU-graph.pdf}
 Table \ref{encoding-speed-up} is the performance speed-up of GPU in the Reed-Solomon encoding progress:
 \begin{table}
 \caption{
@@ -351,7 +369,7 @@ speed-up   &  -   & 9.87  & 25.73  & 58.06  & 64.72 \\
 
 The following figure shows the bandwidth comparison between CPU and GPU in the Reed-Solomon decoding progress.
 
-\includegraphics[scale=0.68]{decode-CPU-vs-GPU-graph.pdf}
+\includegraphics[scale=0.48]{result-graph/decode-CPU-vs-GPU-graph.pdf}
 Table \ref{decoding-speed-up} is the performance speed-up of GPU in the Reed-Solomon encoding progress:
 \begin{table}
 \caption{
@@ -369,24 +387,43 @@ speed-up   & 1.47 & 18.12 & 39.19  & 75.4   & 89.99 \\
 \label{decoding-speed-up}
 \end{table}
 
+Conclusion:
+\begin{enumerate}
+\item CPU bandwidth is nearly constant.
+\item GPU achieves better speed-up when the file size scales up.
+\item GPU performance speed-up gets slower.
+\end{enumerate}
 
-\subsection{Tuning k}
+%\subsection{Tuning k}
 
-Since double and triple fault tolerance is the most commonly used, we treat $k$ as a variable and run several experiments in these two cases.
+Since double and triple fault tolerance is the most commonly used, we treat $k$ as a variable with fixed file size of 1.1GB and run several experiments in these two cases.
 
 For double fault tolerance:
 
-\includegraphics[scale=0.5]{Total-GPU-encoding-time-2.pdf}
+\includegraphics[scale=0.5]{result-graph/Total-GPU-encoding-time-2.pdf}
 
-\includegraphics[scale=0.5]{Total-GPU-decoding-time-2.pdf}
+\includegraphics[scale=0.5]{result-graph/Total-GPU-decoding-time-2.pdf}
+
+\includegraphics[scale=0.5]{result-graph/Total-CPU-encoding-time-2.pdf}
+
+\includegraphics[scale=0.5]{result-graph/Total-CPU-decoding-time-2.pdf}
 
 For triple fault tolerance:
 
-\includegraphics[scale=0.5]{Total-GPU-encoding-time-3.pdf}
+\includegraphics[scale=0.5]{result-graph/Total-GPU-encoding-time-3.pdf}
 
-\includegraphics[scale=0.5]{Total-GPU-decoding-time-3.pdf}
+\includegraphics[scale=0.5]{result-graph/Total-GPU-decoding-time-3.pdf}
 
-We can find in the graphs that the performance of GPU acceleration will be poor if $k$ is no less than 32. But in reality we seldom cut the files into more than 30 fragments, so the overall performance would be still acceptable.
+\includegraphics[scale=0.5]{result-graph/Total-CPU-encoding-time-3.pdf}
+
+\includegraphics[scale=0.5]{result-graph/Total-CPU-decoding-time-3.pdf}
+
+%We can find in the graphs that the performance of GPU acceleration will be poor if $k$ is no less than 32. But in reality we seldom cut the files into more than 30 fragments, so the overall performance would be still acceptable.
+Conclusion:
+\begin{enumerate}
+\item If we divide the original data into more fragments (i.e. increasing $k$), we can achieve less storage overhead, meanwhile both CPU and GPU performance will become worse.
+\item In reality, we seldom cut the files into more than 30 fragments, so the overall performance of GPU would still be acceptable.
+\end{enumerate}
 
 \section{Appendix}
 
@@ -396,7 +433,7 @@ git clone https://github.com/yszheda/GPU-RSCode.git
 \end{minted}
 
 \bibliographystyle{plain}
-\bibliography{design.bib}
+\bibliography{report.bib}
 
 %\section{}
 
