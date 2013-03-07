@@ -21,65 +21,86 @@
 #include <stdint.h>
 #include <math.h>
 #include "matrix.h"
+// #include "gf16.h"
 
-__shared__ uint8_t gflog[256];
-__shared__ uint8_t gfexp[256];
+// __shared__ uint8_t gflog[256];
+// __shared__ uint8_t gfexp[256];
 
-__host__ __device__ int setup_tables(int w)
-{
-	unsigned int b;
-   	unsigned int log;
-	unsigned int x_to_w;
-	unsigned int prim_poly;
-//	unsigned int r;
-//	unsigned int x;
-//	unsigned int y;
+__constant__ uint8_t gfexp[16] = { 1,  2,  4,  8,  3,  6,  12,  11,  5,  10,  7,  14,  15,  13,  9,  0 }; 
+__constant__ uint8_t gflog[16] = { 0,  0,  1,  4,  2,  8,  5,  10,  3,  14,  9,  7,  6,  13,  11,  12 }; 
+__constant__ uint8_t gfmul_16[16][16] = { { 0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 ,  0 }, \
+ { 0 ,  1 ,  2 ,  3 ,  4 ,  5 ,  6 ,  7 ,  8 ,  9 ,  10 ,  11 ,  12 ,  13 ,  14 ,  15 }, \
+ { 0 ,  2 ,  4 ,  6 ,  8 ,  10 ,  12 ,  14 ,  3 ,  1 ,  7 ,  5 ,  11 ,  9 ,  15 ,  13 }, \
+ { 0 ,  3 ,  6 ,  5 ,  12 ,  15 ,  10 ,  9 ,  11 ,  8 ,  13 ,  14 ,  7 ,  4 ,  1 ,  2 }, \
+ { 0 ,  4 ,  8 ,  12 ,  3 ,  7 ,  11 ,  15 ,  6 ,  2 ,  14 ,  10 ,  5 ,  1 ,  13 ,  9 }, \
+ { 0 ,  5 ,  10 ,  15 ,  7 ,  2 ,  13 ,  8 ,  14 ,  11 ,  4 ,  1 ,  9 ,  12 ,  3 ,  6 }, \
+ { 0 ,  6 ,  12 ,  10 ,  11 ,  13 ,  7 ,  1 ,  5 ,  3 ,  9 ,  15 ,  14 ,  8 ,  2 ,  4 }, \
+ { 0 ,  7 ,  14 ,  9 ,  15 ,  8 ,  1 ,  6 ,  13 ,  10 ,  3 ,  4 ,  2 ,  5 ,  12 ,  11 }, \
+ { 0 ,  8 ,  3 ,  11 ,  6 ,  14 ,  5 ,  13 ,  12 ,  4 ,  15 ,  7 ,  10 ,  2 ,  9 ,  1 }, \
+ { 0 ,  9 ,  1 ,  8 ,  2 ,  11 ,  3 ,  10 ,  4 ,  13 ,  5 ,  12 ,  6 ,  15 ,  7 ,  14 }, \
+ { 0 ,  10 ,  7 ,  13 ,  14 ,  4 ,  9 ,  3 ,  15 ,  5 ,  8 ,  2 ,  1 ,  11 ,  6 ,  12 }, \
+ { 0 ,  11 ,  5 ,  14 ,  10 ,  1 ,  15 ,  4 ,  7 ,  12 ,  2 ,  9 ,  13 ,  6 ,  8 ,  3 }, \
+ { 0 ,  12 ,  11 ,  7 ,  5 ,  9 ,  14 ,  2 ,  10 ,  6 ,  1 ,  13 ,  15 ,  3 ,  4 ,  8 }, \
+ { 0 ,  13 ,  9 ,  4 ,  1 ,  12 ,  8 ,  5 ,  2 ,  15 ,  11 ,  6 ,  3 ,  14 ,  10 ,  7 }, \
+ { 0 ,  14 ,  15 ,  1 ,  13 ,  3 ,  2 ,  12 ,  9 ,  7 ,  6 ,  8 ,  4 ,  10 ,  11 ,  5 }, \
+ { 0 ,  15 ,  13 ,  2 ,  9 ,  6 ,  4 ,  11 ,  1 ,  14 ,  12 ,  3 ,  8 ,  7 ,  5 ,  10 }, \
+}; 
 
-	unsigned int prim_poly_4 = 023;
-	unsigned int prim_poly_8 = 0435;
-	//uint8_t prim_poly_8 = 285;
-	unsigned int prim_poly_16 = 0210013;
-	switch(w) 
-	{
-		case 4: prim_poly = prim_poly_4; break;
-		case 8: prim_poly = prim_poly_8; break;
-		case 16: prim_poly = prim_poly_16; break;
-		default: return -1;
-	}
-	x_to_w = 1 << w;
-	b = 1;
-//	r = 0;
-	for (log = 0; log < x_to_w-1; log++) 
-	{
-		/*
-		r = 0;
-		x = 1;
-		y = log;
-		while(y)
-		{
-			printf("y=%d\n",y);
-			if(y & 1)
-			{
-				r = r ^ b;
-			}
-			y = y >> 1;
-			x = x << 1;
-			if (x & x_to_w) x = x ^ prim_poly;
-		}
-			printf("r=%d\n",r);
-			printf("log=%d\n",log);
-		*/
-		if(b>x_to_w) break;
-		gflog[b] = (uint8_t) log;
-		gfexp[log] = (uint8_t) b;
-		b = b << 1;
-		if (b & x_to_w) 
-		{
-			b = b ^ prim_poly;
-		}
-	}
-	return 0;
-}
+// __host__ __device__ int setup_tables(int w)
+// {
+// 	unsigned int b;
+//    	unsigned int log;
+// 	unsigned int x_to_w;
+// 	unsigned int prim_poly;
+// //	unsigned int r;
+// //	unsigned int x;
+// //	unsigned int y;
+// 
+// 	unsigned int prim_poly_4 = 023;
+// 	unsigned int prim_poly_8 = 0435;
+// 	//uint8_t prim_poly_8 = 285;
+// 	unsigned int prim_poly_16 = 0210013;
+// 	switch(w) 
+// 	{
+// 		case 4: prim_poly = prim_poly_4; break;
+// 		case 8: prim_poly = prim_poly_8; break;
+// 		case 16: prim_poly = prim_poly_16; break;
+// 		default: return -1;
+// 	}
+// 	x_to_w = 1 << w;
+// 	b = 1;
+// //	r = 0;
+// 	for (log = 0; log < x_to_w-1; log++) 
+// 	{
+// 		/*
+// 		r = 0;
+// 		x = 1;
+// 		y = log;
+// 		while(y)
+// 		{
+// 			printf("y=%d\n",y);
+// 			if(y & 1)
+// 			{
+// 				r = r ^ b;
+// 			}
+// 			y = y >> 1;
+// 			x = x << 1;
+// 			if (x & x_to_w) x = x ^ prim_poly;
+// 		}
+// 			printf("r=%d\n",r);
+// 			printf("log=%d\n",log);
+// 		*/
+// 		if(b>x_to_w) break;
+// 		gflog[b] = (uint8_t) log;
+// 		gfexp[log] = (uint8_t) b;
+// 		b = b << 1;
+// 		if (b & x_to_w) 
+// 		{
+// 			b = b ^ prim_poly;
+// 		}
+// 	}
+// 	return 0;
+// }
 
 __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b)
 {
@@ -93,119 +114,148 @@ __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b)
 
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 {
-	int sum_log;
-	if (a == 0 || b == 0)
-	{
-		return 0;
-	}
-//	sum_log = (gflog[a] + gflog[b]) % (NW-1);
-	sum_log = gflog[a] + gflog[b];
-	if (sum_log >= NW-1)
+	uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	uint8_t b_high_nibble = ( b >> 4 ) & 0x0f;
+	uint8_t result_high_nibble = gfmul_16[a_high_nibble][b_high_nibble];
+	uint8_t a_low_nibble = a & 0x0f;
+	uint8_t b_low_nibble = b & 0x0f;
+	uint8_t result_low_nibble = gfmul_16[a_low_nibble][b_low_nibble];
+
+	return (result_high_nibble | result_low_nibble);
+}
+
+// __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
+// {
+// 	int sum_log;
+// 	if (a == 0 || b == 0)
+// 	{
+// 		return 0;
+// 	}
+// 	sum_log = gflog[a] + gflog[b];
+// 	if (sum_log >= NW-1)
+// 	{	
+// 		sum_log -= NW-1;
+// 	}
+// 	return gfexp[sum_log];
+// }
+// 
+// __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
+// {
+// 	uint8_t sum_log;
+// 	while(b)
+// 	{
+// 		if(b & 1)
+// 		{
+// 			sum_log ^= a;
+// 		}
+// 		a = (a << 1) ^ (a & 0x80? 0x1d: 0);
+// 		b >>= 1;
+// 	}
+// 	return sum_log;
+// }
+// 
+// __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
+// {
+// 	uint8_t sum_log;
+// 	while(b)
+// 	{
+// 		if(b & 1)
+// 		{
+// 			sum_log ^= a;
+// 		}
+// 		a = (a << 1) ^ (a & 0x80? 0x1d: 0);
+// 		b >>= 1;
+// 	}
+// 	return sum_log;
+// }
+
+// __device__ uint8_t gf_div_nibble(uint8_t a_nibble, uint8_t b_nibble)
+inline void gf_div_nibble(uint8_t a_nibble, uint8_t b_nibble, int *result_nibble)
+{
+	int diff_log;
+	if (a_nibble == 0)
 	{	
-		sum_log -= NW-1;
+//		return 0;
+		*(result_nibble) = 0;
 	}
-	return gfexp[sum_log];
-}
-
-__host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
-{
-	int sum_log;
-	if (a == 0 || b == 0)
+	/* Can’t divide by 0 */
+	if (b_nibble == 0)
 	{
-		return 0;
+//		return -1;
+		*(result_nibble) = -1;
 	}
-//	sum_log = (gflog[a] + gflog[b]) % (NW-1);
-	sum_log = gflog[a] + gflog[b];
-	if (sum_log >= NW-1)
+	diff_log = gflog[a_nibble] - gflog[b_nibble];
+	if (diff_log < 0)
 	{	
-		sum_log -= NW-1;
+		diff_log += NW-1;
 	}
-	return gfexp[sum_log];
-}
-
-__host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
-{
-	uint8_t sum_log;
-	while(b)
-	{
-		if(b & 1)
-		{
-			sum_log ^= a;
-		}
-		a = (a << 1) ^ (a & 0x80? 0x1d: 0);
-		b >>= 1;
-	}
-	return sum_log;
-}
-
-__host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
-{
-	uint8_t sum_log;
-	while(b)
-	{
-		if(b & 1)
-		{
-			sum_log ^= a;
-		}
-		a = (a << 1) ^ (a & 0x80? 0x1d: 0);
-		b >>= 1;
-	}
-	return sum_log;
+//	return gfexp[diff_log];
+	*(result_nibble) = gfexp[diff_log];
 }
 
 __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 {
-	int diff_log;
-	if (a == 0)
-	{	
-		return 0;
-	}
+	uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	uint8_t b_high_nibble = ( b >> 4 ) & 0x0f;
+
+	uint8_t a_low_nibble = a & 0x0f;
+	uint8_t b_low_nibble = b & 0x0f;
+
+//	int result_high_nibble = gf_div_nibble(a_high_nibble, b_high_nibble);
+//	int result_low_nibble = gf_div_nibble(a_low_nibble, b_low_nibble);
+
+	int result_high_nibble;
+	int result_low_nibble;
+	gf_div_nibble(a_high_nibble, b_high_nibble, &result_high_nibble);
+	gf_div_nibble(a_low_nibble, b_low_nibble, &result_low_nibble);
+
 	/* Can’t divide by 0 */
-	if (b == 0)
+	if (result_high_nibble == -1 | result_low_nibble == -1)
 	{
 		return -1;
 	}
-//	diff_log = (gflog[a] - gflog[b]) % (NW-1);
-	diff_log = gflog[a] - gflog[b];
-	if (diff_log < 0)
-	{	
-		diff_log += NW-1;
-	}
-	return gfexp[diff_log];
+
+	return (result_high_nibble | result_low_nibble);
 }
 
-__host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
-{
-	int diff_log;
-	if (a == 0)
-	{	
-		return 0;
-	}
-	/* Can’t divide by 0 */
-	if (b == 0)
-	{
-		return -1;
-	}
-//	diff_log = (gflog[a] - gflog[b]) % (NW-1);
-	diff_log = gflog[a] - gflog[b];
-	if (diff_log < 0)
-	{	
-		diff_log += NW-1;
-	}
-	return gfexp[diff_log];
-}
+// __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
+// {
+// 	int diff_log;
+// 	if (a == 0)
+// 	{	
+// 		return 0;
+// 	}
+// 	/* Can’t divide by 0 */
+// 	if (b == 0)
+// 	{
+// 		return -1;
+// 	}
+// //	diff_log = (gflog[a] - gflog[b]) % (NW-1);
+// 	diff_log = gflog[a] - gflog[b];
+// 	if (diff_log < 0)
+// 	{	
+// 		diff_log += NW-1;
+// 	}
+// 	return gfexp[diff_log];
+// }
 
 __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power)
 {
-	int pow_log = (gflog[a] * power) % (NW-1);
-	return gfexp[pow_log];
+	uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	uint8_t a_low_nibble = a & 0x0f;
+	int pow_log_high_nibble = (gflog[a_high_nibble] * power) % (NW-1);
+	int pow_log_low_nibble = (gflog[a_low_nibble] * power) % (NW-1);
+	return (gfexp[pow_log_high_nibble] | gfexp[pow_log_low_nibble]);
 }
 
-__host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp)
-{
-	int pow_log = (gflog[a] * power) % (NW-1);
-	return gfexp[pow_log];
-}
+// __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp)
+// {
+// 	uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+// 	uint8_t a_low_nibble = a & 0x0f;
+// 	int pow_log_high_nibble = (gflog[a_high_nibble] * power) % (NW-1);
+// 	int pow_log_low_nibble = (gflog[a_low_nibble] * power) % (NW-1);
+// 	return (gfexp[pow_log_high_nibble] | gfexp[pow_log_low_nibble]);
+// }
 
 // input matrix A and B, compute the product matrix C=AB
 // A: nxp
@@ -226,137 +276,65 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	int px;
 	int py;	
 
-	setup_tables(8);
+//	setup_tables(8);
 	__syncthreads();
 
-for(bx=blockIdx.x; bx< (int)(ceil((float)m/gridDim.x)); bx+=gridDim.x )
-{
-	for(py=ty; py<TILE_WIDTH_ROW; py+=blockDim.y)
+	for(bx=blockIdx.x; bx< (int)(ceil((float)m/gridDim.x)); bx+=gridDim.x )
 	{
-		for(px=tx; px<TILE_WIDTH_COL; px+=blockDim.x)
+		for(py=ty; py<TILE_WIDTH_ROW; py+=blockDim.y)
 		{
-			row = by*TILE_WIDTH_ROW+py;
-			col = bx*TILE_WIDTH_COL+px;
-			product[py][px] = 0;
-			__syncthreads();
-		
-if(row < n && col < m)
-{
-			for(int i=0; i<(int)(ceil((float)p/TILE_DEPTH)); i++)
+			for(px=tx; px<TILE_WIDTH_COL; px+=blockDim.x)
 			{
-				int bound = min(p, TILE_DEPTH);
-/*
-				for(int j=tx; j<TILE_DEPTH; j+=blockDim.x)
-				{
-					rowVector[py][j] = A[row*p+i*TILE_DEPTH+j];
-				}
-				for(int j=ty; j<TILE_DEPTH; j+=blockDim.y)
-				{		
-					colVector[j][px] = B[col+(i*TILE_DEPTH+j)*m];
-				}
+				row = by*TILE_WIDTH_ROW+py;
+				col = bx*TILE_WIDTH_COL+px;
+				product[py][px] = 0;
 				__syncthreads();
-		
-				for(int j=0; j<TILE_DEPTH; j++)
+				
+				if(row < n && col < m)
 				{
-					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
-//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+					for(int i=0; i<(int)(ceil((float)p/TILE_DEPTH)); i++)
+					{
+						int bound = min(p, TILE_DEPTH);
+		/*
+						for(int j=tx; j<TILE_DEPTH; j+=blockDim.x)
+						{
+							rowVector[py][j] = A[row*p+i*TILE_DEPTH+j];
+						}
+						for(int j=ty; j<TILE_DEPTH; j+=blockDim.y)
+						{		
+							colVector[j][px] = B[col+(i*TILE_DEPTH+j)*m];
+						}
+						__syncthreads();
+					
+						for(int j=0; j<TILE_DEPTH; j++)
+						{
+							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+		//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+						}
+		*/
+						for(int j=tx; j<bound; j+=blockDim.x)
+						{
+							rowVector[py][j] = A[row*p+i*bound+j];
+						}
+						for(int j=ty; j<bound; j+=blockDim.y)
+						{		
+							colVector[j][px] = B[col+(i*bound+j)*m];
+						}
+						__syncthreads();
+					
+						for(int j=0; j<bound; j++)
+						{
+							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+		//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+						}
+						__syncthreads();
+					}
+					C[row*m+col] = product[py][px];
 				}
-*/
-				for(int j=tx; j<bound; j+=blockDim.x)
-				{
-					rowVector[py][j] = A[row*p+i*bound+j];
-				}
-				for(int j=ty; j<bound; j+=blockDim.y)
-				{		
-					colVector[j][px] = B[col+(i*bound+j)*m];
-				}
-				__syncthreads();
-		
-				for(int j=0; j<bound; j++)
-				{
-					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
-//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
-				}
-				__syncthreads();
 			}
-			C[row*m+col] = product[py][px];
-}
-}
 		}
 	}
 }
-
-
-//// C=AB
-//// A: nxp
-//// B: pxm
-//// C: nxm
-//__device__ void matrix_mul(uint8_t *A, uint8_t *B, uint8_t *C, int n, int p, int m)
-//{
-//	__shared__ int rowVector[TILE_WIDTH][TILE_DEPTH];
-//	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH];
-//	__shared__ int product[TILE_WIDTH][TILE_WIDTH];
-//
-//	int bx = blockIdx.x;
-//   	int by = blockIdx.y;
-//	int tx = threadIdx.x;
-//	int ty = threadIdx.y;
-//	int row;
-//	int col;
-//	int px;
-//	int py;	
-//
-//	setup_tables(8);
-//	__syncthreads();
-//
-//	for(py=ty; py<TILE_WIDTH; py+=blockDim.y)
-//	{
-//		for(px=tx; px<TILE_WIDTH; px+=blockDim.x)
-//		{
-//			row = by*TILE_WIDTH+py;
-//			col = bx*TILE_WIDTH+px;
-//			product[py][px] = 0;
-//			__syncthreads();
-//		
-//			for(int i=0; i<(int)(ceil((float)p/TILE_DEPTH)); i++)
-//			{
-//				for(int j=tx; j<TILE_DEPTH; j+=blockDim.x)
-//				{
-//					rowVector[py][j] = A[row*p+i*TILE_DEPTH+j];
-//				}
-//				for(int j=ty; j<TILE_DEPTH; j+=blockDim.y)
-//				{		
-//					colVector[j][px] = B[col+(i*TILE_DEPTH+j)*m];
-//				}
-//				__syncthreads();
-//		
-//				for(int j=0; j<TILE_DEPTH; j++)
-//				{
-//					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
-////					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
-//				}
-//				__syncthreads();
-//			}
-//			C[row*m+col] = product[py][px];
-//		}
-//	}
-//	/*
-//	int i;
-//	int j;
-//	int k;
-//	setup_tables(8);
-//	for(i=0; i<n; i++)
-//	{
-//		for(j=0; j<m; j++)
-//		{
-//			for(k=0; k<p; k++)
-//			{
-//				C[i*m+j] = gf_add( C[i*m+j], gf_mul( A[i*p+k], B[k*m+j] ) );
-//			}
-//		}
-//	}
-//	*/
-//}
 
 // switch rows if the current row is not the pivot row
 __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int rowDes, int size)
@@ -403,7 +381,7 @@ __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, i
 
     __shared__ uint8_t pivotValue;
 
-	setup_tables(8);
+//	setup_tables(8);
 	__syncthreads();
 
     if( col < size )
@@ -428,7 +406,7 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 
     __shared__ uint8_t pivotValue;
 
-	setup_tables(8);
+//	setup_tables(8);
 	__syncthreads();
 
     if( col < size )
@@ -461,7 +439,7 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-	setup_tables(8);
+//	setup_tables(8);
 	__syncthreads();
 
     if ( row < size )
@@ -502,7 +480,7 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-	setup_tables(8);
+//	setup_tables(8);
 	__syncthreads();
 
     if ( row < size )
@@ -634,7 +612,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 {
 	int i = threadIdx.x;
 	int j = threadIdx.y;
-	setup_tables(8);
+//	setup_tables(8);
 	__syncthreads();
 	encodingMatrix[i*col + j] = gf_pow(j+1, i);
 }
