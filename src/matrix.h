@@ -32,7 +32,7 @@
 
 #define SINGLE_GRID_SIZE 16384 // MAX 
 
-#define W 8
+#define W 4
 #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
 
 #define gf uint8_t

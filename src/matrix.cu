@@ -23,6 +23,7 @@
 #include "matrix.h"
 // #include "gf16.h"
 
+#define DEBUG
 // __shared__ uint8_t gflog[256];
 // __shared__ uint8_t gfexp[256];
 
@@ -121,7 +122,54 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 	uint8_t b_low_nibble = b & 0x0f;
 	uint8_t result_low_nibble = gfmul_16[a_low_nibble][b_low_nibble];
 
-	return (result_high_nibble | result_low_nibble);
+	return ( (result_high_nibble << 4) | result_low_nibble);
+}
+
+// a: a byte composed of two nibbles
+// b: a byte that is zero-extended from a nibble
+__host__ __device__ uint8_t gf_nibble_mul_byte(uint8_t a, uint8_t b)
+{
+	uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	// b_high_nibble is supposed to be 0
+	// uint8_t b_high_nibble = ( b >> 4 ) & 0x0f;
+	uint8_t a_low_nibble = a & 0x0f;
+	uint8_t b_low_nibble = b & 0x0f;
+	uint8_t result_high_nibble = gfmul_16[a_high_nibble][b_low_nibble];
+	uint8_t result_low_nibble = gfmul_16[a_low_nibble][b_low_nibble];
+
+	return ( (result_high_nibble << 4) | result_low_nibble);
+}
+
+__host__ __device__ uint8_t gf_byte_mul_nibble(uint8_t a, uint8_t b)
+{
+//	return gf_nibble_mul_byte(b, a);
+
+	// a_high_nibble is supposed to be 0
+	// uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	uint8_t a_low_nibble = a & 0x0f;
+	uint8_t b_low_nibble = b & 0x0f;
+	uint8_t b_high_nibble = ( b >> 4 ) & 0x0f;
+	uint8_t result_high_nibble = gfmul_16[a_low_nibble][b_high_nibble];
+	uint8_t result_low_nibble = gfmul_16[a_low_nibble][b_low_nibble];
+
+	return ( (result_high_nibble << 4) | result_low_nibble);
+}
+
+// each of a and b is a byte that is zero-extended from a nibble
+__host__ __device__ uint8_t gf_byte_mul_byte(uint8_t a, uint8_t b)
+{
+	// a_high_nibble is supposed to be 0
+	// uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	// b_high_nibble is supposed to be 0
+	// uint8_t b_high_nibble = ( b >> 4 ) & 0x0f;
+	// uint8_t a_low_nibble = a & 0x0f;
+	// uint8_t b_low_nibble = b & 0x0f;
+	// uint8_t result_high_nibble = gfmul_16[a_high_nibble][b_low_nibble];
+	// uint8_t result_low_nibble = gfmul_16[a_low_nibble][b_low_nibble];
+
+	// return (result_high_nibble | result_low_nibble);
+
+	return gfmul_16[a][b];
 }
 
 // __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
@@ -215,7 +263,32 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 		return -1;
 	}
 
-	return (result_high_nibble | result_low_nibble);
+	return ( (result_high_nibble << 4) | result_low_nibble);
+}
+
+// each of a and b is a byte that is zero-extended from a nibble
+__host__ __device__ uint8_t gf_byte_div_byte(uint8_t a, uint8_t b)
+{
+	int diff_log;
+	if (a == 0)
+	{	
+		return 0;
+	}
+	/* Can’t divide by 0 */
+	if (b == 0)
+	{
+		return -1;
+	}
+	diff_log = gflog[a] - gflog[b];
+	if (diff_log < 0)
+	{	
+		diff_log += NW-1;
+	}
+
+	assert( gfmul_16[ gfexp[diff_log] ][b] == a );
+		
+	return gfexp[diff_log];
+	
 }
 
 // __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
@@ -245,7 +318,14 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power)
 	uint8_t a_low_nibble = a & 0x0f;
 	int pow_log_high_nibble = (gflog[a_high_nibble] * power) % (NW-1);
 	int pow_log_low_nibble = (gflog[a_low_nibble] * power) % (NW-1);
-	return (gfexp[pow_log_high_nibble] | gfexp[pow_log_low_nibble]);
+	return ( (gfexp[pow_log_high_nibble] << 4) | gfexp[pow_log_low_nibble]);
+}
+
+// each of a and power is a byte that is zero-extended from a nibble
+__host__ __device__ uint8_t gf_byte_pow_byte(uint8_t a, uint8_t power)
+{
+	int pow_log = (gflog[a] * power) % (NW-1);
+	return gfexp[pow_log];
 }
 
 // __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp)
@@ -324,7 +404,9 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 					
 						for(int j=0; j<bound; j++)
 						{
-							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+//							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+							product[py][px] ^= gf_byte_mul_nibble(rowVector[py][j], colVector[j][px]);
+
 		//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
 						}
 						__syncthreads();
@@ -394,8 +476,10 @@ __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, i
         __syncthreads();
 	// Normalize the pivot row!
 	// Every thread divides the element of its position with the pivotValue
-        matrix[ IDC2D(row, col, size)] = gf_div(matrix[ IDC2D(row, col, size) ], pivotValue);
-        result[ IDC2D(row, col, size)] = gf_div(result[ IDC2D(row, col, size) ], pivotValue);
+//        matrix[ IDC2D(row, col, size)] = gf_div(matrix[ IDC2D(row, col, size) ], pivotValue);
+//        result[ IDC2D(row, col, size)] = gf_div(result[ IDC2D(row, col, size) ], pivotValue);
+        matrix[ IDC2D(row, col, size)] = gf_byte_div_byte(matrix[ IDC2D(row, col, size) ], pivotValue);
+        result[ IDC2D(row, col, size)] = gf_byte_div_byte(result[ IDC2D(row, col, size) ], pivotValue);
     }
 }
 // normalize the column by the pivot value
@@ -419,8 +503,10 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
         __syncthreads();
 	// Normalize the pivot row!
 	// Every thread divides the element of its position with the pivotValue
-        matrix[ IDC2D(row, col, size)] = gf_div(matrix[ IDC2D(row, col, size) ], pivotValue);
-        result[ IDC2D(row, col, size)] = gf_div(result[ IDC2D(row, col, size) ], pivotValue);
+//        matrix[ IDC2D(row, col, size)] = gf_div(matrix[ IDC2D(row, col, size) ], pivotValue);
+//        result[ IDC2D(row, col, size)] = gf_div(result[ IDC2D(row, col, size) ], pivotValue);
+        matrix[ IDC2D(row, col, size)] = gf_byte_div_byte(matrix[ IDC2D(row, col, size) ], pivotValue);
+        result[ IDC2D(row, col, size)] = gf_byte_div_byte(result[ IDC2D(row, col, size) ], pivotValue);
     }
 }
 
@@ -459,8 +545,10 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotCol become reduced echelon form
         if ( row != pivotIndex )
         {
-			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
-			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
+//			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
+//			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
+			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_byte_mul_byte(pivotCol[ty], matrixPivotValue);
+			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_byte_mul_byte(pivotCol[ty], resultPivotValue);
         }
     }
 }
@@ -500,8 +588,10 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotRow become reduced echelon form
         if ( col != pivotIndex )
         {
-			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
-			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+//			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
+//			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+			matrix[ IDC2D(row, col, size) ] = matrixCol[ty] ^ gf_byte_mul_byte(pivotRow[ty], matrixPivotValue);
+			result[ IDC2D(row, col, size) ] = resultCol[ty] ^ gf_byte_mul_byte(pivotRow[ty], resultPivotValue);
         }
     }
 }
@@ -614,7 +704,8 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	int j = threadIdx.y;
 //	setup_tables(8);
 	__syncthreads();
-	encodingMatrix[i*col + j] = gf_pow(j+1, i);
+//	encodingMatrix[i*col + j] = gf_pow(j+1, i);
+	encodingMatrix[i*col + j] = gf_byte_pow_byte(j+1, i);
 }
 
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
