@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <assert.h>
 #include "matrix.h"
 // #include "gf16.h"
 
