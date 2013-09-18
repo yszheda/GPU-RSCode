@@ -290,16 +290,16 @@ After knowing which $k$ fragments are used for decoding, we know the correspondi
 These rows form the $k \times k$ matrix $V'$, and we need to compute its inverse.
 Unfortunately, we found no standard APIs for inversing a matrix in Galois Field, 
 %and modifying source code
-so we implement Gauss-Jordon elimination to compute inverse matrix: 
+so we implement Gauss elimination to compute inverse matrix: 
 augment the square matrix $V'$ with the identity matrix $I$ of the same dimensions to obtain $[V' | I]$ and then apply matrix operations to transfer $[V' | I]$ into its reduced row echelon form: $V'^{-1}[V' | I] = [I | V'^{-1}]$.
 
-Gauss-Jordon elimination contains the following steps:
+Gauss elimination contains the following steps:
 \begin{enumerate}
 \item Check whether the diagonal item in the current row of $V'$ is nonzero. If if is zero, find a nonzero item and switch the two columns. The same column switching should also apply to $I$. Then the diagonal item in the current row of $V'$ is our pivot.
 \item Normalize the current row by the pivot.
 \item Eliminate other rows so that the reverse column of the the current row becomes reduced echelon form.
 \end{enumerate}
-Step 2 and Step 3 are suitable for GPU to parallely execute, but since we have to set barriers between steps, Gauss-Jordon elimination is still not a fully-paralleled algorithm.
+Step 2 and Step 3 are suitable for GPU to parallely execute, but since we have to set barriers between steps, Gauss elimination is still not a fully-paralleled algorithm.
 
 Finally, we multiply matrix $V'^{-1}$ with the matrix of $k$ fragments,
 and the original data is reconstructed. This part is the same as the matrix multiplication in the encoding process.
@@ -432,8 +432,14 @@ The source code of this project is available under the GPLv3. And the project's 
 git clone https://github.com/yszheda/GPU-RSCode.git
 \end{minted}
 
+The \textbf{master} branch is the implementation of GF(256) Reed-Solomon Code, and the \textbf{extend} is the implementation of GF(16) Reed-Solomon Code, use the following command to checkout one of the branch:
+\begin{minted}[frame=lines,mathescape]{bash}
+git checkout <branch>
+\end{minted}
+
+
 \bibliographystyle{plain}
-\bibliography{report.bib}
+\bibliography{design.bib}
 
 %\section{}
 
