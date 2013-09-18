@@ -179,16 +179,37 @@ Here gf256mul[a][b] stores the result of binary word $b$ multiplied by binary wo
 Therefore, when computing multiplication, we simply need to find the corresponding item in the multiplication table.
 Such an approach can speed up computation while sacrificing more memory space.
 
-However, 
-this method is not suitable for GPU.
+For a large-width finite field, 
+this method might not be suitable for GPU.
 %GPU has great computation power and memory access can be another bottleneck.
 GPU has greater computation power than CPU, but memory access can be another bottleneck. One common optimization technique is to allocate shared memory space for the multiplication table.
 But in GF($2^8$),
 the multiplication table has $256 \times 256$ items, which consumes so large space that shared memory may not be able to provide.
 In addition, note that $a \times b = b \times a$, there are redundancies in the multiplication table (e.g. gf256mul[a][b] is the same as gf256mul[b][a]), which is a waste of space.
 
+However, this approach can still be applied in a field with smaller width,
+and we have implemented it in GF($2^4$).
+We use the multiplication table with $16 \times 16$ items and two helper tables(exponential and logarithm tables, will be introduced later) with $16$ items correspondingly for the convenience of div and pow operations. 
+These tables are stored in the Constant Memory of GPU, which will be cached.
+Since a byte is the smallest addressable unit, we need to transfer byte operations into multiple nibble (4-bit) operations.
+(Note that simply extending 4bits to 8bits is not appropriate, since it is equivalent to doubling the file size and will increase the execution time.)
+Here shows how we perform byte multiplication in GF($2^4$):
+\begin{minted}[frame=lines]{c}
+__host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
+{
+	uint8_t a_high_nibble = ( a >> 4 ) & 0x0f;
+	uint8_t b_high_nibble = ( b >> 4 ) & 0x0f;
+	uint8_t result_high_nibble = gfmul_16[a_high_nibble][b_high_nibble];
+	uint8_t a_low_nibble = a & 0x0f;
+	uint8_t b_low_nibble = b & 0x0f;
+	uint8_t result_low_nibble = gfmul_16[a_low_nibble][b_low_nibble];
 
-Therefore, we need to make a trade-off between computation and memory: 
+	return ( (result_high_nibble << 4) | result_low_nibble);
+}
+\end{minted}
+
+For a large-width finite field, 
+we need to make a trade-off between computation and memory: 
 we still need to use shared memory to accelerate,
 without produce much memory overhead like the multiplication table method.
 Here comes the third approach \cite{plank1997tutorial}:
@@ -266,7 +287,7 @@ the workload of all the threads is balanced.
 Matrix multiplication to generate code fragments is the most suitable part for CUDA to accelerate.
 Some common techniques like tile algorithm are used to optimize the computation/communication ratio.
 %Here I use some common techniques like tile algorithm to optimize the computation/communication ratio.
-
+Tile algorithm is used to improve the temporary locality and reduce cache misses when an array is accessed in a row major order and in a column major order at the same time (Matrix multiplication is such a good example). This technique is introduced in the classical computer architecture textbook \cite{hennessy2012computer} as \textbf{blocking}. For further details of the technique, please refer to \cite{nvidia2010cuda}.
 
 \subsection{Accelerate decoding process}
 
@@ -424,6 +445,82 @@ Conclusion:
 \item If we divide the original data into more fragments (i.e. increasing $k$), we can achieve less storage overhead, meanwhile both CPU and GPU performance will become worse.
 \item In reality, we seldom cut the files into more than 30 fragments, so the overall performance of GPU would still be acceptable.
 \end{enumerate}
+
+\subsection{GF(16) method vs GF(256) method}
+In this experiment, we set $k=4, n=6$, and use 1.1GB as file size.
+
+Table \ref{GF16vsGF256} is the performance speed-up of GPU in the Reed-Solomon encoding progress:
+\begin{table}
+\caption{
+GPU cost breakdown comparison between GF(16) and GF(256) methods
+}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+GPU cost breakdown  & GF(16) & GF(256) \\
+\hline
+Copy data from CPU to GPU(ms)	& 277.482697	& 265.243866 \\
+\hline
+Generating encoding matrix(ms)	& 0.047328	& 0.252352 \\
+\hline
+Copy encoding matrix from GPU to CPU(ms)	& 0.023104	& 0.02352 \\
+\hline
+Encoding file(ms)	& 9.11728	& 160.520676 \\
+\hline
+copy code from GPU to CPU(ms)	& 193.164154	& 139.608734 \\
+\hline
+Total computation time(ms)	& 9.164608	& 160.773026 \\
+\hline
+Total communication time(ms)	& 470.669952	& 404.876129 \\
+\hline
+Total GPU encoding time(ms)	& 505.69104	& 770.560547 \\
+\hline
+GPU bandwidth(MB/s)	& 2067.514	& 1356.835 \\
+\hline
+Copy code from CPU to GPU(ms)	& 276.235229	& 257.23764 \\
+\hline
+Copy encoding matrix from CPU to GPU(ms)	& 0.013536	& 0.030016 \\
+\hline
+Generating decoding matrix (inverse matrix)(ms)		& & 1.93504 \\
+\hline
+Decoding file(ms)	& 16.037184	& 166.371994 \\
+\hline
+copy data from GPU to CPU(ms)	& 386.210175	& 272.606415 \\
+\hline
+Total computation time(ms)	& 16.498079	& 168.307037 \\
+\hline
+Total communication time(ms)	& 662.458984	& 529.874084 \\
+\hline
+Total GPU decoding time(ms)	& 712.471741	& 731.763733 \\
+\hline
+GPU bandwidth(MB/s)	& 1467.46	& 1428.772 \\
+\hline
+\end{tabular}
+\label{GF16vsGF256}
+\end{center}
+\end{table}
+
+Analysis:
+
+For a Galois Field multiplication operation, GF(256) method costs three table-lookups in shared memory (programmable cache in GPU) and one addition and modular in the rational field, while GF(16) costs two table-lookups in constant memory (normally is cached, will costs one additional memory access only on a cache miss) and eight bit-operations ($>>$, $\&$ and $|$).
+Thus, the GF(256) method has more communication costs and less computation costs than the GF(16) one.
+In the experiment, the GF(16) method is faster in performing matrix multiplication.
+However, there is little gap between the overall performance of the two methods.
+
+\section{Future Works}
+\begin{itemize}
+	\item 
+	\item Increase the parallelism of matrix inversion algorithm.
+	\item Better CPU/GPU cooperation:								
+	\begin{itemize}
+		\item 
+	\end{itemize}
+	\item Implementation Issues:
+	\begin{itemize}
+		\item While GPU is computing the encoding matrix, CPU can load the input file(s) into memory,
+thus making the IO and computation processing roughly at the same time.
+	\end{itemize}
+\end{itemize}
 
 \section{Appendix}
 
