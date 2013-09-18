@@ -509,16 +509,27 @@ However, there is little gap between the overall performance of the two methods.
 
 \section{Future Works}
 \begin{itemize}
-	\item 
-	\item Increase the parallelism of matrix inversion algorithm.
-	\item Better CPU/GPU cooperation:								
-	\begin{itemize}
-		\item 
-	\end{itemize}
-	\item Implementation Issues:
+	\item Improve the performance of Galois Field operations (we might have several policies for different fields).
+	\item Improve the performance of matrix multiplication by taking better advantage of the GPU memory hierarchy (parameter tuning).
+	\item Increase the parallelism of the general matrix inversion algorithm.
+	\item Test whether it is better to solve decoding equations than compute the decoding matrix.
+	\item There is a faster method for inversing the Vandermonde matrix, but we still need to check whether it is correct in the Galois Field. 
+	\item Achieve better CPU/GPU cooperation:
 	\begin{itemize}
 		\item While GPU is computing the encoding matrix, CPU can load the input file(s) into memory,
 thus making the IO and computation processing roughly at the same time.
+		\item Find the bound of file size under which CPU performance is better than that of GPU.
+	\end{itemize}
+	\item Other parallelism improvement issues: 
+	\begin{itemize}
+		\item (optional) Use aggressive read (i.e.read all $n$ fragments) for decoding. 
+		\item CUDA streams (Previous test has showed performance degradation).
+	\end{itemize}
+	\item Implementation Issues:
+	\begin{itemize}
+		\item Refractor for better code reuse. e.g. Make the Galois Field as a C++ class template to contain fields with different widths. (We still need to check whether the compiler supports some C++ features. In the previous Fermi architecture, We failed to separate the Galois Field class declaration and implementation.)
+		\item Design a compile-time/runtime (automatic) policies dispatcher for the Galois Field and matrix operations. 
+It is challenging in C++ implementation. We might find out as many policies as we can, and use a naive dispatcher first.
 	\end{itemize}
 \end{itemize}
 
