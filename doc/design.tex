@@ -455,45 +455,29 @@ Table \ref{GF16vsGF256} is the performance speed-up of GPU in the Reed-Solomon e
 GPU cost breakdown comparison between GF(16) and GF(256) methods
 }
 \begin{center}
-\begin{tabular}{|c|c|c|}
+\begin{tabular}{|c|c|c|c|}
 \hline
-GPU cost breakdown  & GF(16) & GF(256) \\
+\multicolumn{2}{|c|}{GPU cost breakdown}  & GF(16) & GF(256) \\
 \hline
-Copy data from CPU to GPU(ms)	& 277.482697	& 265.243866 \\
+Encode & Copy data from CPU to GPU(ms)	& 277.482697	& 265.243866 \\
+& Generating encoding matrix(ms)	& 0.047328	& 0.252352 \\
+& Copy encoding matrix from GPU to CPU(ms)	& 0.023104	& 0.02352 \\
+& Encoding file(ms)	& 9.11728	& 160.520676 \\
+& copy code from GPU to CPU(ms)	& 193.164154	& 139.608734 \\
+& Total computation time(ms)	& 9.164608	& 160.773026 \\
+& Total communication time(ms)	& 470.669952	& 404.876129 \\
+& Total GPU encoding time(ms)	& 505.69104	& 770.560547 \\
+& GPU bandwidth(MB/s)	& 2067.514	& 1356.835 \\
 \hline
-Generating encoding matrix(ms)	& 0.047328	& 0.252352 \\
-\hline
-Copy encoding matrix from GPU to CPU(ms)	& 0.023104	& 0.02352 \\
-\hline
-Encoding file(ms)	& 9.11728	& 160.520676 \\
-\hline
-copy code from GPU to CPU(ms)	& 193.164154	& 139.608734 \\
-\hline
-Total computation time(ms)	& 9.164608	& 160.773026 \\
-\hline
-Total communication time(ms)	& 470.669952	& 404.876129 \\
-\hline
-Total GPU encoding time(ms)	& 505.69104	& 770.560547 \\
-\hline
-GPU bandwidth(MB/s)	& 2067.514	& 1356.835 \\
-\hline
-Copy code from CPU to GPU(ms)	& 276.235229	& 257.23764 \\
-\hline
-Copy encoding matrix from CPU to GPU(ms)	& 0.013536	& 0.030016 \\
-\hline
-Generating decoding matrix (inverse matrix)(ms)		& & 1.93504 \\
-\hline
-Decoding file(ms)	& 16.037184	& 166.371994 \\
-\hline
-copy data from GPU to CPU(ms)	& 386.210175	& 272.606415 \\
-\hline
-Total computation time(ms)	& 16.498079	& 168.307037 \\
-\hline
-Total communication time(ms)	& 662.458984	& 529.874084 \\
-\hline
-Total GPU decoding time(ms)	& 712.471741	& 731.763733 \\
-\hline
-GPU bandwidth(MB/s)	& 1467.46	& 1428.772 \\
+Decode & Copy code from CPU to GPU(ms)	& 276.235229	& 257.23764 \\
+& Copy encoding matrix from CPU to GPU(ms)	& 0.013536	& 0.030016 \\
+& Generating decoding matrix (inverse matrix)(ms)		& & 1.93504 \\
+& Decoding file(ms)	& 16.037184	& 166.371994 \\
+& copy data from GPU to CPU(ms)	& 386.210175	& 272.606415 \\
+& Total computation time(ms)	& 16.498079	& 168.307037 \\
+& Total communication time(ms)	& 662.458984	& 529.874084 \\
+& Total GPU decoding time(ms)	& 712.471741	& 731.763733 \\
+& GPU bandwidth(MB/s)	& 1467.46	& 1428.772 \\
 \hline
 \end{tabular}
 \label{GF16vsGF256}
@@ -505,7 +489,7 @@ Analysis:
 For a Galois Field multiplication operation, GF(256) method costs three table-lookups in shared memory (programmable cache in GPU) and one addition and modular in the rational field, while GF(16) costs two table-lookups in constant memory (normally is cached, will costs one additional memory access only on a cache miss) and eight bit-operations ($>>$, $\&$ and $|$).
 Thus, the GF(256) method has more communication costs and less computation costs than the GF(16) one.
 In the experiment, the GF(16) method is faster in performing matrix multiplication.
-However, there is little gap between the overall performance of the two methods.
+However, there is not so much gap between the overall performance (especially for decoding) of the two methods.
 
 \section{Future Works}
 \begin{itemize}
