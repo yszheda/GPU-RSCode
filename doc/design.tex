@@ -325,6 +325,26 @@ Step 2 and Step 3 are suitable for GPU to parallely execute, but since we have t
 Finally, we multiply matrix $V'^{-1}$ with the matrix of $k$ fragments,
 and the original data is reconstructed. This part is the same as the matrix multiplication in the encoding process.
 
+
+\section{Baseline CPU single-thread implementation}
+The baseline implementation we want to compare is the following CPU single-thread program:
+\begin{itemize}
+\item Galois Field operations: we use the method based on exponential and logarithm tables in the CPU implementation.
+Multiplication in Galois Field is slower than the multiplication table approach, 
+but division and exponential operations are faster.
+\item Matrix multiplication: No improvement techniques are involved. A matrix of dimensions $p \times q$ multiply another matrix of dimensions $q \times r$ will cost $pqr$ multiplication operations in Galois Field (Here we omit addition operations since they are much faster).
+\item Encoding matrix generation: we use Vandermonde’s Matrix, thus exponential operations in Galois Field are involved.
+\item Decoding matrix generation/Matrix inversion: we apply Gauss elimination to computer the inverted matrix.				
+\end{itemize}
+
+Here we list the major problems of baseline implementation and explain why the GPGPU implementation is better:
+\begin{itemize}
+\item	CPU implementation uses table-lookup methods to accelerate Galois Field operations, but the cost of table lookup is memory access, while such lookup operation just costs cache access in the GPGPU implementation.				
+If a page fault is encountered, the access latency of CPU implementation is even higher.
+\item	Performing matrix operations are independent from each other. CPU implementation doesn't take advantage of this feature while GPGPU implementation parallelized these operations.
+\item	In the CPU program, the implementation of matrix multiplication has the locality problem illustrated in \cite{hennessy2012computer}. This problem is solved by the tiling algorithm in the GPGPU implementation.  
+\end{itemize}
+
 \section{Experiment Result}
 %\subsection{CPU vs GPU}
 Experiment Setting:
