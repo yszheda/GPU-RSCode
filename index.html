@@ -193,15 +193,135 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 						</code></pre>
 						<p class="frame roll-in">
 						<ul>
-										<li>Pros: least computation operations.</li>
+										<li>Pros: least computation operations: only one table-lookup.</li>
 										<li>Cons:
 										<ul>
-														<li>large memory consumption.</li>
+														<li>large memory consumption: $O(2^w \times 2^w)$ for $GF(2^w)$.</li>
 														<li>redundancies in the table: <br>e.g. gf256_mul_table[a][b] = gf256_mul_table[b][a]</li>
 										</ul>
 										</li>
 						</ul>				
 						</p>
+					</section>
+					<section>
+						<h2>Double Table/Left-Right Table Method</h2>
+						<p>
+						Split the full multiplication table of $2^w \times 2^w$ entries into two tables of $2^{w/2} \times 2^w$ entries each.
+						\begin{align}
+						a(x) \times b(x) &= (a_{0} + a_{1}x + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
+						&= (a_{0} + a_{1}x + ... + a_{w/2-1}x^{w/2-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
+						&+ (a_{w/2}x^{w/2}  + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1})
+						\end{align}
+						<small>Note: add operations in Galois Field are equivalent to XOR.</small>
+						</p>
+					</section>
+					<section>
+						<h2>Double Table/Left-Right Table Method</h2>
+						<small>e.g. Implementation of left-right table method in $GF(2^8)$:</small>
+						<pre><code data-trim contenteditable>
+uint8_t gf256_left_table[16][256];
+uint8_t gf256_right_table[16][256];
+uint8_t gf256_mul(uint8_t a, uint8_t b)
+{
+	return (gf256_left_table[(a >> 4) & 0x0f][b]) ^ (gf256_left_table[a & 0x0f][b]);
+}
+						</code></pre>
+						</p>
+						<p class="frame roll-in">
+						<ul>
+										<li>Space complexity: $O(2^{3w/2+1})$ for $GF(2^w)$.</li>
+										<li>Computation complexity: 2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT operations.</li>
+						</ul>				
+						</p>
+					</section>
+					<section>
+						<h2>Log&Exp Table Method</h2>
+						<p>
+						Observation: $a \times b = exp(log(a) + log(b))$
+						</p>
+						<p>
+						Construct two tables:
+						<ul>
+										<li>
+										exponential table: maps from a binary element $b$ to power $j$ such that $x^j$ is equivalent to $b$.
+										</li>
+										<li>
+										logarithm table: maps from a power $j$ to its binary element $b$ such that $x^j$ is equivalent to $b$.
+										</li>
+						</ul>
+						</p>
+						<p>
+						Multiplication in $GF(2^w)$ consists of 
+						<ul>
+										<li>
+										looking each binary number in the logarithm table for its logarithm (equivalent to finding the polynomial), 
+										</li>
+										<li>
+										adding the logarithms modulo $2^w-1$ (equivalent to multiplying the polynomial modulo $q(x)$) 
+										</li>
+										<li>
+										looking up exponential table to convert the result back to a binary number.
+										</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Log&Exp Table Method</h2>
+						<small>e.g. Implementation of log-exp table method in $GF(2^8)$:</small>
+						<pre><code data-trim contenteditable>
+uint8_t gf256_log_table[256];
+uint8_t gf256_exp_table[256];
+// width of GF(2^8)
+const int width = 8;
+// number of elements in GF(2^8)
+const int NW = 1 << width;
+uint8_t gf256_mul(uint8_t a, uint8_t b)
+{
+  int result;
+  if (a == 0 || b == 0)
+  {
+    return 0;
+  }
+  result = (gf256_log_table[a] + gf256_log_table[b]) % (NW-1);
+  return gf256_exp_table[result];
+}
+						</code></pre>
+						</p>
+						<p class="frame roll-in">
+						<ul>
+										<li>Space complexity: $O(2^w \times 2)$ for $GF(2^w)$.</li>
+										<li>Computation complexity: 3 table-lookup, 1 MOD, 1 ADD, and 2 branch operations.</li>
+						</ul>				
+						</p>
+					</section>
+					<section>
+						<h2>Log&Exp Table Method - Improvment I</h2>
+						Remove expensive MOD operation.
+						<pre><code data-trim contenteditable>
+uint8_t gf256_log_table[256];
+uint8_t gf256_exp_table[256];
+// width of GF(2^8)
+const int width = 8;
+// number of elements in GF(2^8)
+const int NW = 1 << width;
+uint8_t gf256_mul(uint8_t a, uint8_t b)
+{
+  int result;
+  if (a == 0 || b == 0)
+  {
+    return 0;
+  }
+	result = (gf256_log_table[a] + gf256_log_table[b]) & (NW-1) + (gf256_log_table[a] + gf256_log_table[b]) >> width;
+  return gf256_exp_table[result];
+}
+						</code></pre>
+					</section>
+					<section>
+						<h2>Log&Exp Table Method - Improvment II</h2>
+						Remove expensive MOD operation.
+					</section>
+					<section>
+						<h2>Log&Exp Table Method - Improvment III</h2>
+						Remove expensive MOD and branch operations.
 					</section>
 
 				</section>
