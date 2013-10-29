@@ -407,17 +407,29 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 }
 						</code></pre>
 					</section>
-
 				</section>
 
 				<section>
 					<section>
 						<h2>Accelerate Encoding Matrix Generation</h2>
+						<p>
+						We use Vandermonde’s Matrix as the encoding matrix.
+						The generation of encoding matrix can be paralleled in GPU by letting every thread compute few items of Vandermonde’s Matrix.
+						</p>
 					</section>
 				</section>
+
 				<section>
 					<section>
 						<h2>Accelerate Encoding/Decoding (Matrix Multiplication)</h2>
+						<p>
+Some common techniques like tile algorithm are used
+to optimize the computation/communication ratio. Tile algorithm is used to
+improve the temporary locality and reduce cache misses when an array is accessed in a row major order and in a column major order at the same time
+(Matrix multiplication is such a good example). This technique is introduced
+in the classical computer architecture textbook [1] as blocking. For further
+details of the technique, please refer to [3].
+						</p>
 					</section>
 				</section>
 				<section>
