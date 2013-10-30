@@ -2,6 +2,8 @@ GPU-RSCode
 ==========
 Accelerate Reed-Solomon coding for Fault-Tolerance in RAID-like system.
 
+Online presentation: http://yszheda.github.io/GPU-RSCode/
+
 Motivation
 ==========
 In a RAID-like system, storage is distributed among several devices, and the probability of one of these devices failing becomes significant. Therefore, fault-tolerance must
