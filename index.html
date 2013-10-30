@@ -20,6 +20,9 @@
 		<!-- For syntax highlighting -->
 		<link rel="stylesheet" href="lib/css/zenburn.css">
 
+		<!-- For displaying theorems in LaTeX ways -->
+		<link rel="stylesheet" href="css/theorems.css">
+
 		<!-- If the query includes 'print-pdf', use the PDF print sheet -->
 		<script>
 			document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
@@ -62,17 +65,264 @@
 						</p>
 					</section>
 					<section>
+						<h2>Why Fault-Tolerance?</h2>
+						<p align="left">
+In a RAID-like system, storage is distributed among several devices, the probability of one of these devices failing becomes significant:
+						</p>
+						<p align="left">
+If the MTTF (mean time to failure) of one device is $P$, then the MTTF of a system of $n$ devices is $\dfrac{P}{n}$.
+						</p>
+						<p>
+Therefore in such systems, fault-tolerance must be taken into account.
+						</p>
+					</section>
+					<section>
 						<h2>Why Reed-Solomon Codes?</h2>
+						<table>
+						<tr align="center">
+						<td>
+						<img src="./images/dot-graph/e-c.png">
+						</td>
+						<td>
+						<img src="./images/dot-graph/replica.png">
+						</td>
+						</tr>
+						<tr align="center">
+						<td>
+						Reed-Solomon Code (n=4, k=2)
+						</td>
+						<td>
+						Replication
+						</td>
+						</tr>
+						</table>
+						<p>
+						Save 50% space!
+						</p>
 					</section>
 					<section>
 						<h2>Reed-Solomon Code Overview</h2>
+						<table>
+						<tr align="center">
+						<td>
+						<img src="./images/dot-graph/encode.png">
+						</td>
+						<td>
+						<img src="./images/dot-graph/decode.png">
+						</td>
+						<tr align="center">
+						<td>
+						Reed-Solomon Encoding
+						</td>
+						<td>
+						Reed-Solomon Decoding
+						</td>
+						</tr>
+						</tr>
+						</table>
 					</section>
 					<section>
 						<h2>Reed-Solomon Coding Mechanism</h2>
 					</section>
 					<section>
+						<h2>Reed-Solomon Encoding Mechanism</h2>
+						<p>
+Given file $F$:
+divide it into $k$ equal-size native chunks: 
+$F = [F_{i}]_{i=1,2,\dots,k}$.
+Encode them into $(n-k)$ code chunks: 
+$C = [C_{i}]_{i=1,2,\dots,n-k}$.
+
+Use Encoding Matrix $EM_{(n-k) \times k}$ to produce code chunks:
+$$
+C^{T} = EM \times F^{T} 
+$$
+$C_{i}$ is the linear combination of $F_{1}, F_{2}, \dots, F_{k}$.
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon Encoding Mechanism</h2>
+						<p>
+In our case,
+\begin{align}
+\begin{array}{rcl}
+F &=& \begin{pmatrix} A & B \end{pmatrix} \\
+EM &=& 	\begin{pmatrix}
+		  1 & 1 \\
+		  1 & 2 \\
+		\end{pmatrix} \\
+%C &=& \begin{pmatrix} A & B & A+B & A+2B \end{pmatrix}
+C^{T} &=& \begin{pmatrix} 1 & 1 \\  1 & 2 \\ \end{pmatrix} \times \begin{pmatrix} A \\ B \end{pmatrix} \\
+&=& \begin{pmatrix} A+B \\ A+2B \end{pmatrix}
+\end{array}
+\end{align}
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon Encoding Mechanism</h2>
+						<p align="left">
+Let $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$ be the $n$ chunks in storage, 
+$EM' = \begin{pmatrix} I \\ EM \end{pmatrix}$,
+Here 
+$$
+I = \begin{pmatrix} 
+  1 & 0 & \ldots & 0 \\ 
+  0 & 1 & \ldots & 0 \\
+  \vdots & \vdots & \ddots & \vdots \\
+  0 & 0 & \ldots & 1 
+\end{pmatrix}
+$$
+then
+\begin{align}
+\begin{array}{rcl}
+P^{T} &=& EM' \times F^{T} \\
+&=& \begin{pmatrix} F^{T} \\ C^{T} \end{pmatrix}
+\end{array}
+\end{align}
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon Encoding Mechanism</h2>
+						<p>
+In our case,
+<small>
+\begin{align}
+\begin{array}{rcl}
+EM' &=& \begin{pmatrix} I \\ EM \end{pmatrix} 
+  = \begin{pmatrix}
+	1 & 0 \\
+	0 & 1 \\
+	1 & 1 \\
+	1 & 2 \\
+	\end{pmatrix} \\	
+P^{T} &=& EM' \times F^{T} \\
+&=& \begin{pmatrix}
+	1 & 0 \\
+	0 & 1 \\
+	1 & 1 \\
+	1 & 2 \\
+	\end{pmatrix}
+	\times
+	\begin{pmatrix} A \\ B \end{pmatrix} \\
+	&=& \begin{pmatrix}
+	A \\
+	B \\
+	A+B \\
+	A+2B
+	\end{pmatrix}
+\end{array}
+\end{align}
+</small>
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon encoding Mechanism</h2>
+						<p>
+$EM'$ is the key of MDS property!
+						</p>
+						<div class="theorem">
+[necessary and sufficient condition]Every possible $k \times k$ submatrix obtained by removing $(n-k)$ rows from $EM'$ has full rank.
+<br>equivalent expression of full rank:
+<ul>
+<li>
+rank = $k$
+</li>
+<li>
+non-singular
+</li>
+<li>
+$\vdots$
+</li>
+</ul>
+						</div>
+						<p>
+Alternative view:
+
+Consider the linear space of $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$,
+its dimension is $k$, and any $k$ out of $n$ vectors form a basis of the linear space.
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon encoding Mechanism</h2>
+						<p>
+Reed-Solomon Codes uses Vandermonde matrix $V$ as $EM$
+$$
+V =
+\begin{bmatrix}
+1 & 1 & 1 & \ldots & 1 \\
+1 & 2 & 3 & \ldots & k \\
+1^2 & 2^2 & 3^2 & \ldots & k^2 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+1^{(n-k)} & 2^{(n-k)} & 3^{(n-k)} & \ldots & k^{(n-k)}
+\end{bmatrix}
+$$
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon encoding Mechanism</h2>
+						<p>
+$$
+EM' =
+\begin{bmatrix}
+1 & 0 & 0 & \ldots & 0 \\
+0 & 1 & 0 & \ldots & 0 \\
+0 & 0 & 1 & \ldots & 0 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+0 & 0 & 0 & \ldots & 1 \\
+1 & 1 & 1 & \ldots & 1 \\
+1 & 2 & 3 & \ldots & k \\
+1^2 & 2^2 & 3^2 & \ldots & k^2 \\
+\vdots & \vdots & \vdots & \ddots & \vdots \\
+1^{(n-k)} & 2^{(n-k)} & 3^{(n-k)} & \ldots & k^{(n-k)}
+\end{bmatrix}
+$$
+						</p>
+					</section>
+					<section>
+						<h2>Reed-Solomon encoding Mechanism</h2>
+						<p>
+<!--
+%\begin{displaymath}
+%\begin{array}{rcl}
+%\textrm{For } i=1,2,\dots,n(n-k) &&\\
+%For $i=1,2,\dots,n(n-k)$
+%\begin{displaymath}
+%\begin{array}{rcl}
+%P_{i} &=& ECV_{i} \times F^{T} \\
+%&=& \sum_{j=1}^{k(n-k)} \alpha_{i,j}F_{j}
+%\end{array}
+%\end{displaymath}
+%$ECV_{i}$: encoding coeffient vector of $P_{i}$.
+-->
+Remark:
+<ul>
+<li>				
+All arithmetic operations in Galois Field GF($2^{w}$). Then every number is less than $2^{w}$.
+</li>
+<li>
+$EM'$ satisfies MDS property.
+</li>
+</ul>
+					</section>
+					<section>
+						<h2>Reed-Solomon Decoding Mechanism</h2>
+						<p>
+We randomly select $k$ out of $n$ fragments, say $X = [x_{1}, x_{2}, \cdots, x_{k}]^{T}$.
+
+Then we use the coefficients of each fragments $x_{i}$ to construct a $k \times k$ matrix $V'$.
+
+Original data can be regenerated by multiplying matrix $X$ with the inverse of matrix $V'$:
+
+$$
+F = V'^{-1} X 
+$$
+					</p>
+					</section>
+					<!--
+					<section>
 						<h2>Optimization Motivation</h2>
 					</section>
+					-->
 				</section>
 
 				<section>
@@ -242,6 +492,9 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 						Every element in a finite field can be represented uniquely by a power of a primitive element $\alpha$, except for 0.
 						<br>Observation: $a \times b = exp(log(a) + log(b))$
 						</p>
+					</section>
+					<section>
+						<h2>Log&Exp Table Method</h2>
 						<p>
 						Construct two tables:
 						<ul>
@@ -423,23 +676,53 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 					<section>
 						<h2>Accelerate Encoding/Decoding (Matrix Multiplication)</h2>
 						<p>
-Some common techniques like tile algorithm are used
-to optimize the computation/communication ratio. Tile algorithm is used to
-improve the temporary locality and reduce cache misses when an array is accessed in a row major order and in a column major order at the same time
-(Matrix multiplication is such a good example). This technique is introduced
-in the classical computer architecture textbook [1] as blocking. For further
-details of the technique, please refer to [3].
+Tile algorithm is used to
+improve the temporary locality and reduce cache misses when an array is accessed in a row major order and in a column major order at the same time.
 						</p>
 					</section>
 				</section>
 				<section>
 					<section>
 						<h2>Accelerate Decoding Matrix Generation (Matrix Inversion)</h2>
+						<p>
+After knowing which $k$ fragments are used for decoding, we know the corresponding rows of coefficients in the encoding matrix $V$ . These rows form the $k \times k$ matrix $V′$ , and we need to compute its inverse. 
+						</p>
+						<p>
+We use Gauss elimination to compute inverse matrix: augment the square matrix $V′$
+with the identity matrix $I$ of the same dimensions to obtain $[V′ | I]$ and then
+apply matrix operations to transfer $[V′ | I]$ into its reduced row echelon form:
+$V′^{−1} [V′ | I] = [I | V′^{−1}]$.
+						</p>
+					</section>
+					<section>
+						<h2>Accelerate Decoding Matrix Generation (Matrix Inversion)</h2>
+						<p>
+Gauss elimination contains the following steps:
+<ol>
+				<li>
+				Check whether the diagonal item in the current row of $V$ is nonzero. If it is zero, find a nonzero item and switch the two columns. The same column switching should also apply to $I$. Then the diagonal item in the current row of $V′$ is our pivot.
+				</li>
+				<li>
+				Normalize the current row by the pivot.
+				</li>
+				<li>
+				Eliminate other rows so that the reverse column of the current row becomes reduced echelon form.
+				</li>
+</ol>
+						</p>
+						<p>
+Step 2 and Step 3 are suitable to be parallelized, but since we have
+to set barriers between steps, Gauss elimination is still not a fully-paralleled
+algorithm. CPU-GPU corporation may be an appropriate solution.
+						</p>
 					</section>
 				</section>
 				<section>
 					<section>
 						<h2>Reduce CPU-GPU Communication Overhead</h2>
+						<p>
+						Use CUDA stream to overlap communication on CPU-GPU bus and computation on GPU.
+						</p>
 					</section>
 				</section>
 
@@ -486,6 +769,7 @@ details of the technique, please refer to [3].
 			});
 
 		</script>
+<a href="https://github.com/yszheda/GPU-RSCode"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png" alt="Fork GPU-RSCode on GitHub"></a>
 
 	</body>
 </html>
