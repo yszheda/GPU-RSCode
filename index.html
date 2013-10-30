@@ -727,6 +727,42 @@ algorithm. CPU-GPU corporation may be an appropriate solution.
 				</section>
 
 				<section>
+				<h2>Future Work & Schedule</h2>
+				<ul>
+				<li>
+Improve the performance of Galois Field operations (we might have several policies for different fields like Jeasure). (2 weeks)
+				</li>
+				<li>
+Improve the performance of matrix multiplication by taking better advantage of the GPU memory hierarchy (parameter tuning).
+				</li>
+				<li>
+There is a faster method for inversing the Vandermonde matrix, but we still need to check whether it is correct in the Galois Field. (1-2 weeks)
+				</li>
+				<li>
+Increase the parallelism of the general matrix inversion algorithm. (a bit challenging for a GPU-only solution) 
+				</li>
+				<li>
+Test whether it is better to solve decoding equations than compute the decoding matrix. (1 month)
+				</li>
+				<li>
+CUDA streams (Previous test has showed performance degradation). (3 weeks)
+				</li>
+				<li>
+Achieve better CPU/GPU cooperation: (1 month)
+<ul>
+<li>				
+While GPU is computing the encoding matrix, CPU can load the
+input file(s) into memory, thus making the IO and computation processing roughly at the same time.
+</li>
+<li>
+Find the bound of file size under which CPU performance is better than that of GPU.
+</li>
+</ul>
+				</li>
+				</ul>
+				</section>
+
+				<section>
 					<h1>THE END</h1>
 					<h3>Q & A</h3>
 				</section>
