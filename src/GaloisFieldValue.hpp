@@ -5,7 +5,7 @@
 //    Description:  
 // 
 //        Version:  1.0
-//        Created:  2013/8/30 下午 11:29:29
+//        Created:  2013/8/30 ä¸å 11:29:29
 //       Revision:  none
 //       Compiler:  g++
 // 
@@ -19,7 +19,7 @@
 #include <iostream>
 #include <vector>
 
-enum class GaloisFieldPolicies {POLYMULT, FULLTABLE, LOGEXPTABLES};
+enum class GaloisFieldPolicies {LOOP, FULLTABLE, DOUBLETABLES, LOGEXPTABLES, LOGEXPTABLES_V1, LOGEXPTABLES_V2, LOGEXPTABLES_V3};
 
 // =====================================================================================
 //        Class:  GaloisFieldValue
@@ -31,9 +31,9 @@ class GaloisFieldValue
 {
 		public:
 				// ====================  LIFECYCLE     =======================================
-				GaloisFieldValue (): gf_value(0), policy(GaloisFieldPolicies::POLYMULT) { } // default constructor
-				GaloisFieldValue ( int gf_value ): gf_value(gf_value) { setup_tables(); } // constructor
-				GaloisFieldValue ( const GaloisFieldValue<gf_width> &other ): gf_value(other.gf_value), policy(other.policy) { }; // copy constructor
+				GaloisFieldValue ();	// default constructor
+				GaloisFieldValue ( const int gf_value ); // constructor
+				GaloisFieldValue ( const GaloisFieldValue<gf_width> &other ); // copy constructor
 				~GaloisFieldValue () { };                          // destructor
 
 				// ====================  ACCESSORS     =======================================
@@ -74,6 +74,11 @@ class GaloisFieldValue
 				}
 
 				// NOTE: ostream operator is also a template 
+				// gcc complains about the following declaration, absurd?
+				// friend std::ostream& operator << <>( std::ostream& os, const GaloisFieldValue<gf_width> &value );
+				// use another way like the following declaration:
+				// rename the template parameter is necessary,
+				// and no default template arguments are allowed
 				template < unsigned int width >
 				friend std::ostream& operator << ( std::ostream& os, const GaloisFieldValue<width> &value );
 
@@ -83,17 +88,36 @@ class GaloisFieldValue
 		private:
 				GaloisFieldValue ( GaloisFieldValue<gf_width> &&other );   // move constructor
 				GaloisFieldValue<gf_width>& operator = ( GaloisFieldValue<gf_width> &&other ); 		// move assignment operator
+				void setupTables ();
+				void setupFullTables ();
+				void setupDoubleTables ();
+				void setupLogExpTables ();
+				void setupLogExpTablesV1 ();
+				void setupLogExpTablesV2 ();
+				void setupLogExpTablesV3 ();
+
+				int loopMul ( const int x, const int y );
+				GaloisFieldValue<gf_width>& loopMulAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& fullTableMulAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& doubleTablesMulAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesMulAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesMulAssignV0 ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesMulAssignV1 ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesMulAssignV2 ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesMulAssignV3 ( const GaloisFieldValue<gf_width> &other );
+
 				// ====================  DATA MEMBERS  =======================================
 				int gf_value;		// the value of galois field poly
 				GaloisFieldPolicies policy;
 
-				void setup_tables();
-				void setup_full_tables();
-				void setup_log_exp_tables();
-
-				// mult/div tables are used for FULLTABLE policy
-				static std::vector<int> gf_mult_table;
+				// mul/div tables are used for FULLTABLE policy
+				static std::vector<int> gf_mul_table;
 				static std::vector<int> gf_div_table;
+				// used for DOUBLETABLES policy
+				static std::vector<int> gf_left_mult_table;
+				static std::vector<int> gf_right_mult_table;
+				static std::vector<int> gf_left_div_table;
+				static std::vector<int> gf_right_div_table;
 				// log/exp tables are used for LOGEXPTABLES policy
 				static std::vector<int> gf_log_table;
 				static std::vector<int> gf_exp_table;
