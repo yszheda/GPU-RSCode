@@ -333,17 +333,88 @@ $$
 				<section>
 					<section>
 						<h2>Accelerate Operations in Galois Field</h2>
-						<p class="fragment">
-						Galois Field/Finite Field $GF(2^w)$ is a set of $w$ elements closed under addition and multiplication, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
-					 
-						a set of all polynomials of degree at most $w-1$.
-$GF(2^w)$ field is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over $GF(2)$, and then enumerating the elements (which are polynomials) with the generator $x$.
-
+					</section>
+					<section>
+						<h2>Introduction of Galois Field</h2>
+						<p class="frame">
+Galois field/Finite field $GF(2^w)$ is a set of $w$ elements closed under addition and multiplication, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
 						</p>
+						<p class="frame" align="left">
+Suppose $n > 1$ is not a prime. Then the set $\{ 0; 1; ...; n \}$ where addition and
+multiplication are both performed modulo $n$ is not a field. 
+e.g. Let $n = 4$. Then the set $\{ 0; 1; 2; 3 \}$ is indeed closed under addition and multiplication modulo 4, however, the element 2 has no multiplicative inverse (there is no $a \in \{ 0; 1; 2; 3 \}$ such that $2a \equiv 1 (mod 4)$).
+						</p>
+					</section>
+					<section>
+						<h2>Introduction of Galois Field</h2>
+						<p>
+From another aspect, Galois field is a set of all polynomials of degree at most $w-1$.
+$GF(2^w)$ field is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over $GF(2)$, and then enumerating the elements (which are polynomials) with the generator $x$.
+						</p>
+					</section>
+					<section>
+						<h2>Introduction of Galois Field</h2>
+						<p>
+Generation of $GF(2^w)$: we start with the elements 0, 1, and $x$, and then
+continue to enumerate the elements by multiplying the last element by $x$ and taking the result
+modulo $q(x)$ if it has a degree no less than $w$. This enumeration ends at $2^w$ elements – the last element
+multiplied by $x$ mod $q(x)$ equals 1.
+						</p>
+						<p>
+e.g. Generation of $GF(2^2)$: $w = 2$, and $q(x) = x^2 + x + 1$.
+<br>Initial set: $\{ 0; 1; x \}$
+<br>$x^2 \textrm{ mod } q(x) = x + 1$, insert into the set: $\{ 0; 1; x; 1+x \}$.
+<br>$(x+1)x \textrm{ mod } q(x) = 1$, end of enumeration.
+						</p>
+					</section>
+					<section>
+						<h2>Introduction of Galois Field</h2>
+						<p>
+						Mapping from polynomial elements of Galois Field into binary elements: equivalent to letting the generator $x = 2$. 
+						</p>
+						<p>e.g. $GF(2^2)$
+						<table>
+								<tr>
+										<td>generated element</td>
+										<td>polynomial element</td>
+										<td>binary element $b$</td>
+										<td>decimal representation of $b$</td>
+								</tr>
+								<tr>
+										<td>0</td>
+										<td>0</td>
+										<td>00</td>
+										<td>0</td>
+								</tr>
+								<tr>
+										<td>$x^0$</td>
+										<td>1</td>
+										<td>01</td>
+										<td>1</td>
+								</tr>
+								<tr>
+										<td>$x^1$</td>
+										<td>$x$</td>
+										<td>10</td>
+										<td>2</td>
+								</tr>
+								<tr>
+										<td>$x^2$</td>
+										<td>$x+1$</td>
+										<td>11</td>
+										<td>3</td>
+								</tr>
+						</table>
+						</p>
+					</section>
+					<section>
+						<h2>Accelerate Operations in Galois Field</h2>
 						<p class="fragment fade-out">
 						</p>
 						<p class="fragment">
-						Addition/subtraction in this field is performed using polynomial addition.
+						Addition/subtraction in this field can be performed by bitwise XOR.
+						</p>
+						<p class="fragment">
 						Here we focus on the acceleration of multiplication on Galois Fields.
 						</p>
 					</section>
