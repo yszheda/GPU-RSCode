@@ -751,6 +751,14 @@ Tile algorithm is used to
 improve the temporary locality and reduce cache misses when an array is accessed in a row major order and in a column major order at the same time.
 						</p>
 					</section>
+					<section>
+						<h2>Accelerate Encoding/Decoding (Matrix Multiplication)</h2>
+						<img src="./images/matrix-multiplication-without-shared-memory.png">
+					</section>
+					<section>
+						<h2>Accelerate Encoding/Decoding (Matrix Multiplication)</h2>
+						<img src="./images/matrix-multiplication-with-shared-memory.png">
+					</section>
 				</section>
 				<section>
 					<section>
@@ -792,7 +800,16 @@ algorithm. CPU-GPU corporation may be an appropriate solution.
 					<section>
 						<h2>Reduce CPU-GPU Communication Overhead</h2>
 						<p>
-						Use CUDA stream to overlap communication on CPU-GPU bus and computation on GPU.
+						Use CUDA stream to overlap data transfers with kernel execution.
+						<br>
+						<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" src="CUDA-stream">
+						<br> Sequential vs. Concurrent copy and execute
+						</p>
+					</section>
+					<section>
+						<h2>Reduce CPU-GPU Communication Overhead</h2>
+						<p>
+						Access host memory directly from within a kernel (Unified Virtual Address Space).
 						</p>
 					</section>
 				</section>
