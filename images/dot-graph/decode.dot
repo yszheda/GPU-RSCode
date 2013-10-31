@@ -1,0 +1,17 @@
+digraph decode
+{
+DMFunc [shape=box, label="generate\ decoding\ matrix", color=blue];
+DM [label="decoding\ matrix"];
+EM [label="encoding\ matrix"];
+selected_chunks [label="k\ selected\ chunks"];
+selected_chunks -> DMFunc;
+//k -> DMFunc;
+EM -> DMFunc;
+DMFunc -> DM;
+data [label="original\ data"];
+decodeFunc [shape=box, label="decode\n\(matrix\ multiplication\ in\ Galois\ Field\)", color=blue];
+DM -> decodeFunc;
+selected_chunks -> decodeFunc;
+decodeFunc -> data;
+}
+

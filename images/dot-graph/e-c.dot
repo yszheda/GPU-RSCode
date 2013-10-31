@@ -1,0 +1,13 @@
+digraph ec
+{
+node [shape=record];
+struct1 [shape=record, label="<f0> A|<f1> B", width=1.5, size=1, color=blue];
+struct2 [shape=record, label="A", color=blue];
+struct3 [shape=record, label="B", color=blue];
+struct4 [shape=record, label="A+B", color=green];
+struct5 [shape=record, label="A+2B", color=green];
+struct1 -> struct2;
+struct1 -> struct3;
+struct1 -> struct4;
+struct1 -> struct5;
+}

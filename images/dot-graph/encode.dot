@@ -1,0 +1,17 @@
+digraph encode
+{
+EMFunc [shape=box, label="generate\ encoding\ matrix", color=blue];
+EM [label="encoding\ matrix"];
+n -> EMFunc;
+k -> EMFunc;
+EMFunc -> EM;
+data [label="original\ data"];
+native_chunk [label="k\ data\ chunks"];
+data -> native_chunk [style=dotted, label="seperate\ into"];
+encodeFunc [shape=box, label="encode\n\(matrix\ multiplication\ in\ Galois\ Field\)", color=blue];
+EM -> encodeFunc;
+native_chunk -> encodeFunc;
+code_chunks [label="(n-k)\ code\ chunks"];
+encodeFunc -> code_chunks;
+}
+
