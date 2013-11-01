@@ -16,18 +16,33 @@
 #include "GaloisFieldValue.hpp"
 #include <iostream>
 #include <vector>
+#include <cassert>
 // using namespace std;
+
+template < unsigned int gf_width >
+constexpr unsigned int GaloisFieldValue<gf_width>::prim_poly_table[33];
+// initialize static members
+template < unsigned int gf_width >
+bool GaloisFieldValue<gf_width>::full_table_ready = false;
+template < unsigned int gf_width >
+bool GaloisFieldValue<gf_width>::double_tables_ready = false;
+template < unsigned int gf_width >
+bool GaloisFieldValue<gf_width>::log_exp_tables_ready = false;
+template < unsigned int gf_width >
+bool GaloisFieldValue<gf_width>::log_exp_tables_v1_ready = false;
+template < unsigned int gf_width >
+bool GaloisFieldValue<gf_width>::log_exp_tables_v2_ready = false;
+template < unsigned int gf_width >
+bool GaloisFieldValue<gf_width>::log_exp_tables_v3_ready = false;
 
 inline int index(int row, int col, int table_size)
 {
 		return row * table_size + col;
 }
 
-template < unsigned int gf_width >
-constexpr unsigned int GaloisFieldValue<gf_width>::prim_poly_table[33];
 //--------------------------------------------------------------------------------------
 //       Class:  GaloisFieldValue
-//      Method:  setup_tables
+//      Method:  setupTables
 // Description:  setup corresponding tables
 //--------------------------------------------------------------------------------------
 template < unsigned int gf_width >
@@ -39,27 +54,45 @@ GaloisFieldValue<gf_width>::setupTables ()
 						break;
 
 				case GaloisFieldPolicies::FULLTABLE:	
-						setupFullTables();
+						if (full_table_ready == false)
+						{
+								setupFullTables();
+						}
 						break;
 
 				case GaloisFieldPolicies::DOUBLETABLES:	
-						setupDoubleTables();
+						if (double_tables_ready == false)
+						{
+								setupDoubleTables();
+						}
 						break;
 
 				case GaloisFieldPolicies::LOGEXPTABLES:
-						setupLogExpTables();	
+						if (log_exp_tables_ready == false)
+						{
+								setupLogExpTables();	
+						}
 						break;
 
 				case GaloisFieldPolicies::LOGEXPTABLES_V1:
-						setupLogExpTablesV1();	
+						if (log_exp_tables_v1_ready == false)
+						{
+								setupLogExpTablesV1();	
+						}
 						break;
 
 				case GaloisFieldPolicies::LOGEXPTABLES_V2:
-						setupLogExpTablesV2();	
+						if (log_exp_tables_v2_ready == false)
+						{
+								setupLogExpTablesV2();	
+						}
 						break;
 
 				case GaloisFieldPolicies::LOGEXPTABLES_V3:
-						setupLogExpTablesV3();	
+						if (log_exp_tables_v3_ready == false)
+						{
+								setupLogExpTablesV3();	
+						}
 						break;
 
 				default:	
@@ -97,12 +130,13 @@ GaloisFieldValue<gf_width>::setupFullTables ()
 						gf_div_table[index(prod, j, table_size)] = i;
 				}
 		}
+		full_table_ready = true;
 }
 
 //--------------------------------------------------------------------------------------
 //       Class:  GaloisFieldValue
-//      Method:  setupFullTables
-// Description:  setup full tables
+//      Method:  setupDoubleTables
+// Description:  setup double tables
 //--------------------------------------------------------------------------------------
 template < unsigned int gf_width >
 void 
@@ -126,6 +160,7 @@ GaloisFieldValue<gf_width>::setupDoubleTables ()
 						gf_right_mult_table[index(i, j, table_size)] = loopMul(i, j);
 				}
 		}
+		double_tables_ready = true;
 }
 
 //--------------------------------------------------------------------------------------
@@ -160,6 +195,7 @@ GaloisFieldValue<gf_width>::setupLogExpTables ()
 						exp = exp ^ prim_poly;
 				}
 		}
+		log_exp_tables_ready = true;
 }
 
 //--------------------------------------------------------------------------------------
@@ -199,6 +235,7 @@ GaloisFieldValue<gf_width>::setupLogExpTablesV1 ()
 				}
 		}
 		gf_exp_table[gf_max_value] = gf_exp_table[0];
+		log_exp_tables_v1_ready = true;
 }
 
 //--------------------------------------------------------------------------------------
@@ -241,6 +278,7 @@ GaloisFieldValue<gf_width>::setupLogExpTablesV2 ()
 						exp = exp ^ prim_poly;
 				}
 		}
+		log_exp_tables_v2_ready = true;
 }
 
 //--------------------------------------------------------------------------------------
@@ -284,7 +322,39 @@ GaloisFieldValue<gf_width>::setupLogExpTablesV3 ()
 						exp = exp ^ prim_poly;
 				}
 		}
+		log_exp_tables_v3_ready = true;
 }
+
+//--------------------------------------------------------------------------------------
+//       Class:  GaloisFieldValue
+//      Method:  destroyTables
+// Description:  destroy all tables
+//--------------------------------------------------------------------------------------
+template < unsigned int gf_width >
+void 
+GaloisFieldValue<gf_width>::destroyTables ()
+{
+		// completely clear vectors
+		std::vector<int>().swap(gf_mul_table);
+		std::vector<int>().swap(gf_div_table);
+		std::vector<int>().swap(gf_left_mult_table);
+		std::vector<int>().swap(gf_right_mult_table);
+		std::vector<int>().swap(gf_left_div_table);
+		std::vector<int>().swap(gf_right_div_table);
+		std::vector<int>().swap(gf_log_table);
+		std::vector<int>().swap(gf_exp_table);
+
+		// reset flags
+		full_table_ready = false;
+		double_tables_ready = false;
+		log_exp_tables_ready = false;
+		log_exp_tables_v1_ready = false;
+		log_exp_tables_v2_ready = false;
+		log_exp_tables_v3_ready = false;
+}
+
+
+
 
 //--------------------------------------------------------------------------------------
 //       Class:  GaloisFieldValue
@@ -294,7 +364,7 @@ GaloisFieldValue<gf_width>::setupLogExpTablesV3 ()
 template < unsigned int gf_width >
 GaloisFieldValue<gf_width>::GaloisFieldValue ( ): gf_value(0), policy(GaloisFieldPolicies::LOOP)
 {
-		this->setup_tables();
+		this->setupTables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -305,7 +375,7 @@ GaloisFieldValue<gf_width>::GaloisFieldValue ( ): gf_value(0), policy(GaloisFiel
 template < unsigned int gf_width >
 GaloisFieldValue<gf_width>::GaloisFieldValue ( const int gf_value ): gf_value(gf_value)
 {
-		this->setup_tables();
+		this->setupTables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -316,7 +386,8 @@ GaloisFieldValue<gf_width>::GaloisFieldValue ( const int gf_value ): gf_value(gf
 template < unsigned int gf_width >
 GaloisFieldValue<gf_width>::GaloisFieldValue ( const GaloisFieldValue<gf_width> &other ): gf_value(other.gf_value), policy(other.policy)
 {
-		this->setup_tables();
+		this->destroyTables();
+		this->setupTables();
 }
 
 //--------------------------------------------------------------------------------------
@@ -331,8 +402,11 @@ GaloisFieldValue<gf_width>::operator = ( const GaloisFieldValue &other )
 {
 		if ( this != &other ) {
 				gf_value = other.gf_value;
+				policy = other.policy;
+
 		}
-		this->setup_tables();
+		this->destroyTables();
+		this->setupTables();
 		return *this;
 }  // -----  end of method GaloisFieldValue::operator =  (assignment operator)  -----
 
@@ -409,6 +483,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::fullTableMulAssign ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(full_table_ready == true);
 		int field_size = 1 << gf_width;
 		int table_size = field_size * field_size;
 		this->gf_value = gf_mul_table[index(this->gf_value, other.gf_value, table_size)];
@@ -424,6 +499,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::doubleTablesMulAssign ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(double_tables_ready == true);
 		int mask = (1 << (gf_width/2)) - 1;
 		int left_value = (this->gf_value >> (gf_width/2)) & mask;
 		int right_value = (this->gf_value) & mask;
@@ -443,6 +519,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::logExpTablesMulAssign ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(log_exp_tables_ready == true);
 		if (this->gf_value == 0 || other.gf_value == 0) {
 				gf_value = 0;
 		} else {
@@ -465,6 +542,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::logExpTablesMulAssignV0 ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(log_exp_tables_ready == true);
 		if (this->gf_value == 0 || other.gf_value == 0) {
 				gf_value = 0;
 		} else {
@@ -484,6 +562,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::logExpTablesMulAssignV1 ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(log_exp_tables_v1_ready == true);
 		if (this->gf_value == 0 || other.gf_value == 0) {
 				gf_value = 0;
 		} else {
@@ -503,6 +582,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::logExpTablesMulAssignV2 ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(log_exp_tables_v2_ready == true);
 		if (this->gf_value == 0 || other.gf_value == 0) {
 				gf_value = 0;
 		} else {
@@ -521,6 +601,7 @@ template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::logExpTablesMulAssignV3 ( const GaloisFieldValue<gf_width> &other )
 {
+//		assert(log_exp_tables_v3_ready == true);
 		int sum_log = gf_log_table[gf_value] + gf_log_table[other.gf_value];
 		gf_value = gf_exp_table[sum_log];
 		return *this;
@@ -581,7 +662,7 @@ GaloisFieldValue<gf_width>&
 GaloisFieldValue<gf_width>::operator /= ( const GaloisFieldValue<gf_width> &other )
 {
 		static_assert(other.gf_value != 0, "Cannot divide by zero!");
-		if (this.gf_value == 0) {
+		if (this->gf_value == 0) {
 				gf_value = 0;
 		} else {
 			int gf_max_value = (1 << gf_width) - 1;

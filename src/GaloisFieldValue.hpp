@@ -95,6 +95,7 @@ class GaloisFieldValue
 				void setupLogExpTablesV1 ();
 				void setupLogExpTablesV2 ();
 				void setupLogExpTablesV3 ();
+				void destroyTables ();
 
 				int loopMul ( const int x, const int y );
 				GaloisFieldValue<gf_width>& loopMulAssign ( const GaloisFieldValue<gf_width> &other );
@@ -121,6 +122,14 @@ class GaloisFieldValue
 				// log/exp tables are used for LOGEXPTABLES policy
 				static std::vector<int> gf_log_table;
 				static std::vector<int> gf_exp_table;
+
+				// flags used for marking corresponding tables are set up.
+				static bool full_table_ready;
+				static bool double_tables_ready;
+				static bool log_exp_tables_ready;
+				static bool log_exp_tables_v1_ready;
+				static bool log_exp_tables_v2_ready;
+				static bool log_exp_tables_v3_ready;
 
 				// constexpr is a C++11 feature
 #if __cplusplus > 201100L
