@@ -5,7 +5,7 @@
 //    Description:  
 // 
 //        Version:  1.0
-//        Created:  2013/8/30 ä¸å 11:29:29
+//        Created:  2013/8/30 下午 11:29:29
 //       Revision:  none
 //       Compiler:  g++
 // 
@@ -98,6 +98,10 @@ class GaloisFieldValue
 				void destroyTables ();
 
 				int loopMul ( const int x, const int y );
+				int loopDiv ( const int x, const int y );
+				int loopInv ( const int x );
+				void invertBinaryMatrix( int* mat, int* inv );
+
 				GaloisFieldValue<gf_width>& loopMulAssign ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& fullTableMulAssign ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& doubleTablesMulAssign ( const GaloisFieldValue<gf_width> &other );
@@ -107,6 +111,14 @@ class GaloisFieldValue
 				GaloisFieldValue<gf_width>& logExpTablesMulAssignV2 ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& logExpTablesMulAssignV3 ( const GaloisFieldValue<gf_width> &other );
 
+				GaloisFieldValue<gf_width>& loopDivAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& fullTableDivAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& doubleTablesDivAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesDivAssign ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesDivAssignV1 ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesDivAssignV2 ( const GaloisFieldValue<gf_width> &other );
+				GaloisFieldValue<gf_width>& logExpTablesDivAssignV3 ( const GaloisFieldValue<gf_width> &other );
+
 				// ====================  DATA MEMBERS  =======================================
 				int gf_value;		// the value of galois field poly
 				GaloisFieldPolicies policy;
@@ -115,8 +127,8 @@ class GaloisFieldValue
 				static std::vector<int> gf_mul_table;
 				static std::vector<int> gf_div_table;
 				// used for DOUBLETABLES policy
-				static std::vector<int> gf_left_mult_table;
-				static std::vector<int> gf_right_mult_table;
+				static std::vector<int> gf_left_mul_table;
+				static std::vector<int> gf_right_mul_table;
 				static std::vector<int> gf_left_div_table;
 				static std::vector<int> gf_right_div_table;
 				// log/exp tables are used for LOGEXPTABLES policy
