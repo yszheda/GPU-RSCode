@@ -33,6 +33,7 @@ class GaloisFieldValue
 				// ====================  LIFECYCLE     =======================================
 				GaloisFieldValue ();	// default constructor
 				GaloisFieldValue ( const int gf_value ); // constructor
+				GaloisFieldValue ( const int gf_value, const GaloisFieldPolicies policy ); // constructor
 				GaloisFieldValue ( const GaloisFieldValue<gf_width> &other ); // copy constructor
 				~GaloisFieldValue () { };                          // destructor
 
@@ -47,7 +48,7 @@ class GaloisFieldValue
 				GaloisFieldValue<gf_width>& operator -= ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& operator *= ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& operator /= ( const GaloisFieldValue<gf_width> &other );
-				GaloisFieldValue<gf_width>& operator ^= ( const int &rhs );
+				GaloisFieldValue<gf_width>& operator ^= ( const int rhs );
 				inline bool operator == ( const GaloisFieldValue<gf_width> &other ) const 
 				{
 						return (this.gf_value == other.gf_value);

@@ -379,7 +379,18 @@ GaloisFieldValue<gf_width>::GaloisFieldValue ( ): gf_value(0), policy(GaloisFiel
 // Description:  constructor
 //--------------------------------------------------------------------------------------
 template < unsigned int gf_width >
-GaloisFieldValue<gf_width>::GaloisFieldValue ( const int gf_value ): gf_value(gf_value)
+GaloisFieldValue<gf_width>::GaloisFieldValue ( const int gf_value ): gf_value(gf_value), policy(GaloisFieldPolicies::LOOP)
+{
+		this->setupTables();
+}
+
+//--------------------------------------------------------------------------------------
+//       Class:  GaloisFieldValue
+//      Method:  constructor
+// Description:  constructor
+//--------------------------------------------------------------------------------------
+template < unsigned int gf_width >
+GaloisFieldValue<gf_width>::GaloisFieldValue ( const int gf_value, const GaloisFieldPolicies policy	): gf_value(gf_value), policy(policy)
 {
 		this->setupTables();
 }
@@ -930,12 +941,36 @@ GaloisFieldValue<gf_width>::operator /= ( const GaloisFieldValue<gf_width> &othe
 //--------------------------------------------------------------------------------------
 template < unsigned int gf_width >
 GaloisFieldValue<gf_width>&
-GaloisFieldValue<gf_width>::operator ^= ( const int &other )
+GaloisFieldValue<gf_width>::operator ^= ( const int rhs )
 {
-		int gf_max_value = (1 << gf_width) - 1;
-		int pow_log = (gf_log_table[gf_value] * other) % gf_max_value;
-		gf_value = gf_exp_table[pow_log];
-		return *this;
+		switch ( policy ) {
+				case GaloisFieldPolicies::LOOP:	
+				case GaloisFieldPolicies::FULLTABLE:	
+				case GaloisFieldPolicies::DOUBLETABLES:	
+						// I abandon copy ctr here
+						// to avoid additional table setup overhead
+						GaloisFieldValue<gf_width> base(this->gf_value, this->policy);
+						for (int i = 0; i < rhs; ++i)
+						{
+								*this += base;
+						}
+						return *this;
+						break;
+
+				case GaloisFieldPolicies::LOGEXPTABLES:
+				case GaloisFieldPolicies::LOGEXPTABLES_V1:
+				case GaloisFieldPolicies::LOGEXPTABLES_V2:
+				case GaloisFieldPolicies::LOGEXPTABLES_V3:
+						int gf_max_value = (1 << gf_width) - 1;
+						int pow_log = (gf_log_table[gf_value] * rhs) % gf_max_value;
+						gf_value = gf_exp_table[pow_log];
+						return *this;
+						break;
+
+				default:	
+						return *this;
+						break;
+		}				/* -----  end switch  ----- */
 }
 
 // ===  FUNCTION  ======================================================================
