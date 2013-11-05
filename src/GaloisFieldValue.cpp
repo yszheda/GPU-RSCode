@@ -5,7 +5,7 @@
 //    Description:  
 // 
 //        Version:  1.0
-//        Created:  2013/9/2 ä¸å 07:47:50
+//        Created:  2013/9/2 07:47:50
 //       Revision:  none
 //       Compiler:  g++
 // 
