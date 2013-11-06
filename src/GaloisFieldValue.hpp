@@ -5,7 +5,7 @@
 //    Description:  
 // 
 //        Version:  1.0
-//        Created:  2013/8/30 下午 11:29:29
+//        Created:  2013/8/30 11:29:29
 //       Revision:  none
 //       Compiler:  g++
 // 
@@ -33,7 +33,6 @@ class GaloisFieldValue
 				// ====================  LIFECYCLE     =======================================
 				GaloisFieldValue ();	// default constructor
 				GaloisFieldValue ( const int gf_value ); // constructor
-				GaloisFieldValue ( const int gf_value, const GaloisFieldPolicies policy ); // constructor
 				GaloisFieldValue ( const GaloisFieldValue<gf_width> &other ); // copy constructor
 				~GaloisFieldValue () { };                          // destructor
 
@@ -48,7 +47,7 @@ class GaloisFieldValue
 				GaloisFieldValue<gf_width>& operator -= ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& operator *= ( const GaloisFieldValue<gf_width> &other );
 				GaloisFieldValue<gf_width>& operator /= ( const GaloisFieldValue<gf_width> &other );
-				GaloisFieldValue<gf_width>& operator ^= ( const int rhs );
+				GaloisFieldValue<gf_width>& operator ^= ( const int &rhs );
 				inline bool operator == ( const GaloisFieldValue<gf_width> &other ) const 
 				{
 						return (this.gf_value == other.gf_value);
@@ -89,6 +88,7 @@ class GaloisFieldValue
 		private:
 				GaloisFieldValue ( GaloisFieldValue<gf_width> &&other );   // move constructor
 				GaloisFieldValue<gf_width>& operator = ( GaloisFieldValue<gf_width> &&other ); 		// move assignment operator
+
 				void setupTables ();
 				void setupFullTables ();
 				void setupDoubleTables ();

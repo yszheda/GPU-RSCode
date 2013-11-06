@@ -258,7 +258,7 @@ GaloisFieldValue<gf_width>::setupLogExpTablesV2 ()
 		int field_size = 1 << gf_width;
 		int gf_max_value = field_size - 1;
 		int log_table_size = field_size;
-		int exp_table_size = gf_max_value * 2 - 2;
+		int exp_table_size = gf_max_value * 2 - 1;
 		gf_log_table.reserve(log_table_size);
 		gf_exp_table.reserve(exp_table_size);
 		for (int i = 0; i < log_table_size; i++) {
