@@ -666,10 +666,7 @@ printf("chunk size: %d\n", chunkSize);
 
 	if(outFile == NULL)
 	{
-		char output_file_name[100];
-		printf("Enter the name of the decoded file:\n");
-		scanf("%s", output_file_name);
-		fp_out = fopen(output_file_name, "wb");
+		fp_out = fopen(inFile, "wb");
 	}
 	else
 	{
@@ -681,6 +678,18 @@ printf("chunk size: %d\n", chunkSize);
 	free(dataBuf);
 	free(codeBuf);
 
+}
+
+void show_help_info()
+{
+	printf("Usage:\n");
+	printf("[-h]: show usage information\n");
+	printf("Encode: [-k|-K nativeBlockNum] [-n|-N totalBlockNum] [-e|-E fileName]\n");
+	printf("Decode: [-d|-D] [-k|-K nativeBlockNum] [-n|-N totalBlockNum] \n\t [-i|-I originalFileName] [-c|-C config] [-o|-O output]\n");
+	printf("For encoding, the -k, -n, and -e options are all necessary.\n");
+	printf("For decoding, the -d, -i, and -c options are all necessary.\n");
+	printf("If the -o option is not set, the original file name will be chosen as the output file name by default.\n");
+	exit(0);
 }
 
 int main(int argc, char *argv[])
@@ -701,7 +710,7 @@ int main(int argc, char *argv[])
 	int func_flag = 0;
 	
 	int option;
-	while((option = getopt(argc, argv, "Kk:Nn:Ee:Ii:Cc:Oo:Dd")) != -1) {
+	while((option = getopt(argc, argv, "Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
 		switch ( option ) {
 			case 'K':	
 			case 'k':	
@@ -734,6 +743,7 @@ int main(int argc, char *argv[])
 				}
 				else
 				{
+					show_help_info();
 				}
 				break;
 
@@ -743,6 +753,10 @@ int main(int argc, char *argv[])
 				{
 					confFile = optarg;
 				}
+				else
+				{
+					show_help_info();
+				}
 				break;
 
 			case 'O':	
@@ -751,9 +765,18 @@ int main(int argc, char *argv[])
 				{
 					outFile = optarg;
 				}
+				else
+				{
+					show_help_info();
+				}
+				break;
+
+			case 'h':	
+				show_help_info();
 				break;
 
 			default:	
+				show_help_info();
 				break;
 		}	/* -----  end switch  ----- */
 	}
