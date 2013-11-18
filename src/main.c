@@ -18,13 +18,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <getopt.h>
+#include <assert.h>
 #include "encode.h"
 #include "decode.h"
 
+void show_help_info()
+{
+	printf("Usage:\n");
+	printf("[-h]: show usage information\n");
+	printf("Encode: [-k|-K nativeBlockNum] [-n|-N totalBlockNum] [-e|-E fileName]\n");
+	printf("Decode: [-d|-D] [-k|-K nativeBlockNum] [-n|-N totalBlockNum] \n\t [-i|-I originalFileName] [-c|-C config] [-o|-O output]\n");
+	printf("For encoding, the -k, -n, and -e options are all necessary.\n");
+	printf("For decoding, the -d, -i, and -c options are all necessary.\n");
+	printf("If the -o option is not set, the original file name will be chosen as the output file name by default.\n");
+	exit(0);
+}
+
 int main(int argc, char *argv[])
 {
-	int nativeBlockNum = 4;
-	int parityBlockNum = 2;
+	int nativeBlockNum = 0;
+	int parityBlockNum = 0;
+	int totalBlockNum = 0;
 	char *inFile = NULL;
 	char *confFile = NULL;
 	char *outFile = NULL;
@@ -35,73 +50,101 @@ int main(int argc, char *argv[])
 		decode
 	};
 	enum func op;
+	int func_flag = 0;
+	
+	int option;
+	while((option = getopt(argc, argv, "Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
+		switch ( option ) {
+			case 'K':	
+			case 'k':	
+				nativeBlockNum = (int) atoi(optarg);
+				break;
 
-	nativeBlockNum = atoi(argv[1]);
-	parityBlockNum = atoi(argv[2]);
+			case 'N':	
+			case 'n':	
+				totalBlockNum = (int) atoi(optarg);
+				break;
 
-	if( strcmp(argv[3], "-e") == 0 )
-	{
-		op = encode;
-	}
-	else if( strcmp(argv[3], "-d") == 0 )
-	{
-		op = decode;
-	}
-	else
-	{
-		printf("Invalid option!\n");
-		exit(-1);
-	}
-/*	
-	if(op == encode)
-	{
-		file = argv[4];
-		encode_file(file, nativeBlockNum, parityBlockNum);
-	}
+			case 'E':	
+			case 'e':	
+				inFile = optarg;
+				op = encode;
+				func_flag = 1;
+				break;
 
-	if(op == decode)
-	{
-		file = argv[4];
-		decode_file(file, nativeBlockNum, parityBlockNum);
-	}
-*/
+			case 'D':	
+			case 'd':	
+				op = decode;
+				func_flag = 1;
+				break;
 
-	switch(op)
-	{
-		case encode:
-			inFile = argv[4];
+			case 'I':	
+			case 'i':	
+				if (func_flag == 1 && op == decode)
+				{
+					inFile = optarg;
+				}
+				else
+				{
+					show_help_info();
+				}
+				break;
+
+			case 'C':	
+			case 'c':	
+				if (func_flag == 1 && op == decode)
+				{
+					confFile = optarg;
+				}
+				else
+				{
+					show_help_info();
+				}
+				break;
+
+			case 'O':	
+			case 'o':	
+				if (func_flag == 1 && op == decode)
+				{
+					outFile = optarg;
+				}
+				else
+				{
+					show_help_info();
+				}
+				break;
+
+			case 'h':	
+				show_help_info();
+				break;
+
+			default:	
+				show_help_info();
+				break;
+		}	/* -----  end switch  ----- */
+	}
+	
+	// setup table for GF(2^8)
+	setup_tables(8);
+
+	switch ( op ) {
+		case encode:	
+			assert(nativeBlockNum != 0);
+			assert(totalBlockNum != 0);
+			parityBlockNum = totalBlockNum - nativeBlockNum;
 			encode_file(inFile, nativeBlockNum, parityBlockNum);
 			break;
 
-		case decode:
-			/*
-			if(argc > 4)
-			{
-				file = argv[4];
-				decode_file(file, nativeBlockNum, parityBlockNum);
-			}
-			else
-			{
-				decode_file(NULL, nativeBlockNum, parityBlockNum);
-			}
-			*/
-			if(argc == 5)
-			{
-				confFile = argv[4];
-			}
-			else if(argc == 7 && strcmp(argv[5], "-o") == 0)
-			{
-				confFile = argv[4];
-				outFile = argv[6];
-			}
-			else
-			{
-				printf("Invalid command!\n");
-				exit(-1);
-			}
-			decode_file(confFile, outFile, nativeBlockNum, parityBlockNum);
+		case decode:	
+			assert(inFile != NULL);
+			assert(confFile != NULL);
+			assert(outFile != NULL);
+			decode_file(inFile, confFile, outFile);
 			break;
-	}
+
+		default:	
+			break;
+	}		/* -----  end switch  ----- */
 
 	return 0;
 

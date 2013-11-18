@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include "matrix.h"
 
-#define DEBUG
+// #define DEBUG
 
 void show_squre_matrix(uint8_t *matrix, int size)
 {
@@ -35,6 +35,34 @@ void show_squre_matrix(uint8_t *matrix, int size)
 			printf("%d ", matrix[i*size+j]);
 		}
 		printf("\n");
+	}
+}
+
+void gen_total_encoding_matrix(uint8_t *totalEncodingMatrix, int nativeBlockNum, int parityBlockNum)
+{
+	int i;
+	int j;
+	setup_tables(8);
+	for (i = 0; i < nativeBlockNum; ++i)
+	{
+		for (j = 0; j < nativeBlockNum; ++j)
+		{
+			if (i == j)
+			{
+				totalEncodingMatrix[i*nativeBlockNum + j] = 1;
+			}
+			else
+			{
+				totalEncodingMatrix[i*nativeBlockNum + j] = 0;
+			}
+		}
+	}
+	for (i = 0; i < parityBlockNum; ++i)
+	{
+		for (j = 0; j < nativeBlockNum; ++j)
+		{
+			totalEncodingMatrix[(i+nativeBlockNum)*nativeBlockNum + j] = gf_pow(j+1, i);
+		}
 	}
 }
 
@@ -172,8 +200,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 }
 
 extern "C"
-void decode_file(char *confFile, char *outFile, int nativeBlockNum, int parityBlockNum)
-//void decode_file(char *confFile, int nativeBlockNum, int parityBlockNum)
+void decode_file(char *inFile, char *confFile, char *outFile)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -191,26 +218,29 @@ void decode_file(char *confFile, char *outFile, int nativeBlockNum, int parityBl
 	int matrixSize;
 	uint8_t *totalEncodingMatrix;	//host
 	uint8_t *encodingMatrix;	//host
-	if( ( fp_in = fopen(".METADATA","rb") ) == NULL )
+	char metadata_file_name[strlen(inFile) + 15];
+	sprintf(metadata_file_name, "%s.METADATA", inFile);
+	if((fp_in = fopen(metadata_file_name, "rb")) == NULL)
 	{
-		printf("Can not open source file!\n");
+		printf("Can not open metadata file!\n");
 		exit(0);
 	}
 	fscanf(fp_in, "%d", &totalSize);
 	fscanf(fp_in, "%d %d", &parityBlockNum, &nativeBlockNum);
+	fclose(fp_in);
+
 	chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
 //	chunkSize = (int) (ceil( (double)totalSize / nativeBlockNum )); 
+
 #ifdef DEBUG
 printf("chunk size: %d\n", chunkSize);
 #endif
+
 	totalMatrixSize = nativeBlockNum * ( nativeBlockNum + parityBlockNum );
 	totalEncodingMatrix = (uint8_t*) malloc( totalMatrixSize );
 	matrixSize = nativeBlockNum * nativeBlockNum;
 	encodingMatrix = (uint8_t*) malloc( matrixSize );
-	for(int i =0; i<nativeBlockNum*(nativeBlockNum+parityBlockNum); i++)
-	{
-		fscanf(fp_in, "%d", totalEncodingMatrix+i);
-	}
+	gen_total_encoding_matrix(totalEncodingMatrix, nativeBlockNum, parityBlockNum);
 
 	dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
@@ -219,58 +249,15 @@ printf("chunk size: %d\n", chunkSize);
 	codeBuf = (uint8_t*) malloc( codeSize);
 	memset(codeBuf, 0, codeSize);
 
-	if(confFile != NULL)
+	FILE *fp_conf;
+	char input_file_name[strlen(inFile) + 20];
+	int index;
+	fp_conf = fopen(confFile, "r");
+
+	for(int i = 0; i < nativeBlockNum; i++)
 	{
-		FILE *fp_conf;
-		char input_file_name[100];
-		int index;
-		fp_conf = fopen(confFile, "r");
-
-		for(int i=0; i<nativeBlockNum; i++)
-		{
-			fscanf(fp_conf, "%s", input_file_name);
-			index = atoi(input_file_name+1);
-
-			copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
-
-			fp_in = fopen(input_file_name, "rb");
-			fseek(fp_in, 0L, SEEK_SET);
-			// this part can be process in parallel with computing inversed matrix
-			fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
-			fclose(fp_in);
-		}
-		fclose(fp_conf);
-	}
-	else
-	{
-		for(int i=0; i<nativeBlockNum; i++)
-		{
-			char input_file_name[100];
-			int index;
-			printf("Please enter the file name of fragment:\n");
-			scanf("%s", input_file_name);
-			index = atoi(input_file_name+1);
-			printf("#%dth fragment\n", index);
-
-			copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
-
-			fp_in = fopen(input_file_name, "rb");
-			fseek(fp_in, 0L, SEEK_SET);
-			// this part can be process in parallel with computing inversed matrix
-			fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
-			fclose(fp_in);
-
-		}
-	}
-/*
-	for(int i=0; i<nativeBlockNum; i++)
-	{
-		char input_file_name[20];
-		int index;
-		printf("Please enter the file name of fragment:\n");
-		scanf("%s", input_file_name);
+		fscanf(fp_conf, "%s", input_file_name);
 		index = atoi(input_file_name+1);
-		printf("#%dth fragment\n", index);
 
 		copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
 
@@ -279,18 +266,14 @@ printf("chunk size: %d\n", chunkSize);
 		// this part can be process in parallel with computing inversed matrix
 		fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
 		fclose(fp_in);
-
 	}
-*/
+	fclose(fp_conf);
 	
 	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize);
 
 	if(outFile == NULL)
 	{
-		char output_file_name[100];
-		printf("Enter the name of the decoded file:\n");
-		scanf("%s", output_file_name);
-		fp_out = fopen(output_file_name, "wb");
+		fp_out = fopen(inFile, "wb");
 	}
 	else
 	{

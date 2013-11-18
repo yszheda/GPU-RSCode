@@ -22,8 +22,7 @@
 #define SQUARE_BLOCK_SIZE 16
 #define SINGLE_BLOCK_SIZE 512
 
-//#define IDC2D(i,j,ld) (((j)*(ld))+(i))
-#define IDC2D(i,j,ld) (((i)*(ld))+(j))
+#define index(i, j, size) (((i) * (size)) + (j))
 
 #define TILE_WIDTH_ROW 2
 #define TILE_WIDTH_COL 64

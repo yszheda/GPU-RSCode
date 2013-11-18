@@ -23,46 +23,21 @@
 #include <math.h>
 #include "matrix.h"
 
-void write_metadata(int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t *encodingMatrix)
+void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum)
 {
 	FILE *fp;
-	if( ( fp = fopen(".METADATA", "wb") ) == NULL )
+	if( ( fp = fopen(fileName, "wb") ) == NULL )
 	{
 		printf("Can not open META file!\n");
 		exit(0);
 	}
 	fprintf(fp, "%d\n", totalSize);
 	fprintf(fp, "%d %d\n", parityBlockNum, nativeBlockNum);
-	int i;
-	int j;
-	for(i=0; i<nativeBlockNum; i++)
-	{
-		for(j=0; j<nativeBlockNum; j++)
-		{
-			if(i == j)
-			{
-				fprintf(fp, "1 ");
-			}
-			else
-			{
-				fprintf(fp, "0 ");
-			}
-		}
-		fprintf(fp, "\n");
-	}
-	for(i=0; i<parityBlockNum; i++)
-	{
-		for(j=0; j<nativeBlockNum; j++)
-		{
-			fprintf(fp, "%d ", encodingMatrix[i*nativeBlockNum+j]);
-		}
-		fprintf(fp, "\n");
-	}
 	fclose(fp);
 }
 
 extern "C"
-void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
+void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
 {
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
@@ -121,6 +96,7 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBl
 	totalComputationTime += stepTime;
 
 	// record event
+#ifdef DEBUG
 	cudaEventRecord(stepStart);
 	cudaMemcpy(encodingMatrix, encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t), cudaMemcpyDeviceToHost);
 	// record event and synchronize
@@ -129,9 +105,10 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBl
 	// get event elapsed time
 	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
 	printf("Copy encoding matrix from GPU to CPU: %fms\n", stepTime);
-	write_metadata(totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
 	totalCommunicationTime += stepTime;
+#endif
 
+	// TO-DO: better tiling
 //	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
 //	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
 //	dim3 grid(gridDimX, gridDimY);
@@ -176,8 +153,10 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBl
 	printf("Total communication time: %fms\n", totalCommunicationTime);
 	printf("Total GPU encoding time: %fms\n", totalTime);
 
+	char metadata_file_name[strlen(fileName) + 15];
+	sprintf(metadata_file_name, "%s.METADATA", file);
+	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum);
 	free(encodingMatrix);
-
 }
 
 extern "C"
@@ -195,7 +174,7 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
 	}
 
 	fseek(fp_in, 0L, SEEK_END);
-	//ftell() get the total size of the file
+	// ftell() get the total size of the file
 	totalSize = ftell(fp_in);
 	chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
 //	chunkSize = (ftell(fp_in) / nativeBlockNum) + ( ftell(fp_in)%nativeBlockNum != 0 ); 
