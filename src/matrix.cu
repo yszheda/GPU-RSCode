@@ -22,42 +22,29 @@
 #include <math.h>
 #include "matrix.h"
 
+const int width = 8;
+const int field_size = 1 << width;
+
 __shared__ uint8_t gflog[256];
 __shared__ uint8_t gfexp[256];
 
-__host__ __device__ int setup_tables(int w)
+__host__ __device__ int setup_tables()
 {
-	unsigned int b;
-   	unsigned int log;
-	unsigned int x_to_w;
-	unsigned int prim_poly;
-//	unsigned int r;
-//	unsigned int x;
-//	unsigned int y;
-
-	unsigned int prim_poly_4 = 023;
-	unsigned int prim_poly_8 = 0435;
-	//uint8_t prim_poly_8 = 285;
-	unsigned int prim_poly_16 = 0210013;
-	switch(w) 
+//	const int width = 8;
+//	const int field_size = 1 << width;
+	const unsigned int prim_poly = 0435;
+   	int log;
+	int exp = 1;
+	// use int as book-keeping index instead of unsigned int
+	for (log = 0; log < field_size - 1; log++) 
 	{
-		case 4: prim_poly = prim_poly_4; break;
-		case 8: prim_poly = prim_poly_8; break;
-		case 16: prim_poly = prim_poly_16; break;
-		default: return -1;
-	}
-	x_to_w = 1 << w;
-	b = 1;
-//	r = 0;
-	for (log = 0; log < x_to_w-1; log++) 
-	{
-		if(b>x_to_w) break;
-		gflog[b] = (uint8_t) log;
-		gfexp[log] = (uint8_t) b;
-		b = b << 1;
-		if (b & x_to_w) 
+		if(exp > field_size) break;
+		gflog[exp] = (uint8_t) log;
+		gfexp[log] = (uint8_t) exp;
+		exp = exp << 1;
+		if (exp & field_size) 
 		{
-			b = b ^ prim_poly;
+			exp = exp ^ prim_poly;
 		}
 	}
 	return 0;
@@ -65,7 +52,7 @@ __host__ __device__ int setup_tables(int w)
 
 __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b)
 {
-	return a^b;
+	return a ^ b;
 }
 
 __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b)
@@ -80,11 +67,11 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 	{
 		return 0;
 	}
-//	sum_log = (gflog[a] + gflog[b]) % (NW-1);
+//	sum_log = (gflog[a] + gflog[b]) % (field_size-1);
 	sum_log = gflog[a] + gflog[b];
-	if (sum_log >= NW-1)
+	if (sum_log >= field_size - 1)
 	{	
-		sum_log -= NW-1;
+		sum_log -= field_size - 1;
 	}
 	return gfexp[sum_log];
 }
@@ -96,11 +83,11 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 	{
 		return 0;
 	}
-//	sum_log = (gflog[a] + gflog[b]) % (NW-1);
+//	sum_log = (gflog[a] + gflog[b]) % (field_size-1);
 	sum_log = gflog[a] + gflog[b];
-	if (sum_log >= NW-1)
+	if (sum_log >= field_size - 1)
 	{	
-		sum_log -= NW-1;
+		sum_log -= field_size - 1;
 	}
 	return gfexp[sum_log];
 }
@@ -142,16 +129,19 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 	{	
 		return 0;
 	}
-	/* Can't divide by 0 */
+	// optimize out exception cases
+	/*
+	// Can't divide by 0
 	if (b == 0)
 	{
 		return -1;
 	}
-//	diff_log = (gflog[a] - gflog[b]) % (NW-1);
+	*/
+//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
 	diff_log = gflog[a] - gflog[b];
 	if (diff_log < 0)
 	{	
-		diff_log += NW-1;
+		diff_log += field_size - 1;
 	}
 	return gfexp[diff_log];
 }
@@ -163,29 +153,32 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 	{	
 		return 0;
 	}
-	/* Can't divide by 0 */
+	// optimize out exception cases
+	/*
+	// Can't divide by 0
 	if (b == 0)
 	{
 		return -1;
 	}
-//	diff_log = (gflog[a] - gflog[b]) % (NW-1);
+	*/
+//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
 	diff_log = gflog[a] - gflog[b];
 	if (diff_log < 0)
 	{	
-		diff_log += NW-1;
+		diff_log += field_size - 1;
 	}
 	return gfexp[diff_log];
 }
 
 __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power)
 {
-	int pow_log = (gflog[a] * power) % (NW-1);
+	int pow_log = (gflog[a] * power) % (field_size - 1);
 	return gfexp[pow_log];
 }
 
 __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp)
 {
-	int pow_log = (gflog[a] * power) % (NW-1);
+	int pow_log = (gflog[a] * power) % (field_size - 1);
 	return gfexp[pow_log];
 }
 
@@ -208,7 +201,7 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	int px;
 	int py;	
 
-	setup_tables(8);
+	setup_tables();
 	__syncthreads();
 
 	for(bx = blockIdx.x; bx < (int)(ceil((float)m / gridDim.x)); bx += gridDim.x)
@@ -297,7 +290,7 @@ __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, i
 
     __shared__ uint8_t pivotValue;
 
-	setup_tables(8);
+	setup_tables();
 	__syncthreads();
 
     if( col < size )
@@ -323,7 +316,7 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 
     __shared__ uint8_t pivotValue;
 
-	setup_tables(8);
+	setup_tables();
 	__syncthreads();
 
     if( col < size )
@@ -356,7 +349,7 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-	setup_tables(8);
+	setup_tables();
 	__syncthreads();
 
     if ( row < size )
@@ -397,7 +390,7 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-	setup_tables(8);
+	setup_tables();
 	__syncthreads();
 
     if ( row < size )
@@ -529,7 +522,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 {
 	int i = threadIdx.x;
 	int j = threadIdx.y;
-	setup_tables(8);
+	setup_tables();
 	__syncthreads();
 	encodingMatrix[i*col + j] = gf_pow(j+1, i);
 }
