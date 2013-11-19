@@ -3,7 +3,7 @@
  *
  *       Filename:  matrix.cu
  *
- *    Description:  Use the most optimized log&exp method.
+ *    Description:  original log&exp method.
  *
  *        Version:  1.0
  *        Created:  12/21/2012 07:38:17 PM
@@ -26,9 +26,9 @@ const int gf_width = 8;
 const int field_size = 1 << gf_width;
 
 __shared__ uint8_t gflog[256];
-__shared__ uint8_t gfexp[1021];
+__shared__ uint8_t gfexp[256];
 
-__device__ int setup_tables()
+__host__ __device__ int setup_tables()
 {
 //	const int gf_width = 8;
 //	const int field_size = 1 << gf_width;
@@ -41,20 +41,11 @@ __device__ int setup_tables()
 		if(exp > field_size) break;
 		gflog[exp] = (uint8_t) log;
 		gfexp[log] = (uint8_t) exp;
-		if (log < 255)
-		{
-			gfexp[log + 255] = (uint8_t) exp; 
-		}
 		exp = exp << 1;
 		if (exp & field_size) 
 		{
 			exp = exp ^ prim_poly;
 		}
-	}
-	int gf_max_value = field_size - 1;
-	for (log = 2 * gf_max_value; log < 4 * gf_max_value; ++log)
-	{
-		gfexp[log] = 0;
 	}
 	return 0;
 }
@@ -72,14 +63,32 @@ __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b)
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 {
 	int sum_log;
+	if (a == 0 || b == 0)
+	{
+		return 0;
+	}
+//	sum_log = (gflog[a] + gflog[b]) % (field_size-1);
 	sum_log = gflog[a] + gflog[b];
+	if (sum_log >= field_size - 1)
+	{	
+		sum_log -= field_size - 1;
+	}
 	return gfexp[sum_log];
 }
 
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
 {
 	int sum_log;
+	if (a == 0 || b == 0)
+	{
+		return 0;
+	}
+//	sum_log = (gflog[a] + gflog[b]) % (field_size-1);
 	sum_log = gflog[a] + gflog[b];
+	if (sum_log >= field_size - 1)
+	{	
+		sum_log -= field_size - 1;
+	}
 	return gfexp[sum_log];
 }
 
@@ -116,16 +125,48 @@ __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uin
 __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 {
 	int diff_log;
-	int gf_max_value = field_size - 1;
-	diff_log = gflog[a] + gf_max_value - gflog[b];
+	if (a == 0)
+	{	
+		return 0;
+	}
+	// optimize out exception cases
+	/*
+	// Can't divide by 0
+	if (b == 0)
+	{
+		return -1;
+	}
+	*/
+//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
+	diff_log = gflog[a] - gflog[b];
+	if (diff_log < 0)
+	{	
+		diff_log += field_size - 1;
+	}
 	return gfexp[diff_log];
 }
 
 __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
 {
 	int diff_log;
-	int gf_max_value = field_size - 1;
-	diff_log = gflog[a] + gf_max_value - gflog[b];
+	if (a == 0)
+	{	
+		return 0;
+	}
+	// optimize out exception cases
+	/*
+	// Can't divide by 0
+	if (b == 0)
+	{
+		return -1;
+	}
+	*/
+//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
+	diff_log = gflog[a] - gflog[b];
+	if (diff_log < 0)
+	{	
+		diff_log += field_size - 1;
+	}
 	return gfexp[diff_log];
 }
 
@@ -163,15 +204,12 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	setup_tables();
 	__syncthreads();
 
-	bx = blockIdx.x;
-	do {
-// Since we have used (TILE_WIDTH_COL, TILE_WIDTH_ROW) as blockDim, these for loops can be optimized out.
-//		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
-//		{
-//			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
-//			{
-				py = ty;
-				px = tx;
+	for(bx = blockIdx.x; bx < (int)(ceil((float)m / gridDim.x)); bx += gridDim.x)
+	{
+		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
+		{
+			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
+			{
 				row = by*TILE_WIDTH_ROW + py;
 				col = bx*TILE_WIDTH_COL + px;
 				product[py][px] = 0;
@@ -201,10 +239,9 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 					}
 					C[row*m+col] = product[py][px];
 				}
-//			}
-//		}
-		bx += gridDim.x;
-	} while (bx < (int) (ceil((float) m / gridDim.x)));
+			}
+		}
+	}
 }
 
 // switch rows if the current row is not the pivot row
