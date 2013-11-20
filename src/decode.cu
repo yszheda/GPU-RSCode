@@ -38,11 +38,35 @@ void show_squre_matrix(uint8_t *matrix, int size)
 	}
 }
 
+uint8_t gflog[256];
+uint8_t gfexp[256];
+
+int setup_host_tables()
+{
+	const int width = 8;
+	const int field_size = 1 << width;
+	const unsigned int prim_poly = 0435;
+   	int log;
+	int exp = 1;
+	// use int as book-keeping index instead of unsigned int
+	for (log = 0; log < field_size - 1; log++) 
+	{
+		if(exp > field_size) break;
+		gflog[exp] = (uint8_t) log;
+		gfexp[log] = (uint8_t) exp;
+		exp = exp << 1;
+		if (exp & field_size) 
+		{
+			exp = exp ^ prim_poly;
+		}
+	}
+	return 0;
+}
 void gen_total_encoding_matrix(uint8_t *totalEncodingMatrix, int nativeBlockNum, int parityBlockNum)
 {
 	int i;
 	int j;
-	setup_tables(8);
+	setup_host_tables();
 	for (i = 0; i < nativeBlockNum; ++i)
 	{
 		for (j = 0; j < nativeBlockNum; ++j)
@@ -204,6 +228,8 @@ void decode_file(char *inFile, char *confFile, char *outFile)
 {
 	int chunkSize = 1;
 	int totalSize;
+	int parityBlockNum;
+	int nativeBlockNum;
 
 	uint8_t *dataBuf;		//host
 	uint8_t *codeBuf;		//host

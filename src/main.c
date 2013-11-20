@@ -124,9 +124,6 @@ int main(int argc, char *argv[])
 		}	/* -----  end switch  ----- */
 	}
 	
-	// setup table for GF(2^8)
-	setup_tables(8);
-
 	switch ( op ) {
 		case encode:	
 			assert(nativeBlockNum != 0);
