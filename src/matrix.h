@@ -36,7 +36,6 @@
 
 #define gf uint8_t
 
-// __host__ __device__ int setup_tables(int w);
 __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b);
 __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b);
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b);

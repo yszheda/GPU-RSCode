@@ -154,20 +154,20 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	printf("Total GPU encoding time: %fms\n", totalTime);
 
 	char metadata_file_name[strlen(fileName) + 15];
-	sprintf(metadata_file_name, "%s.METADATA", file);
+	sprintf(metadata_file_name, "%s.METADATA", fileName);
 	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum);
 	free(encodingMatrix);
 }
 
 extern "C"
-void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
+void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 {
 	int chunkSize = 1;
 	int totalSize;
 
 	FILE *fp_in;
 	FILE *fp_out;
-	if( ( fp_in = fopen(file,"rb") ) == NULL )
+	if( ( fp_in = fopen(fileName,"rb") ) == NULL )
 	{
 		printf("Can not open source file!\n");
 		exit(0);
@@ -206,16 +206,15 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
-	encode(dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
+	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
 
-	char output_file_name[100];
+	char output_file_name[strlen(fileName) + 5];
 	for(i=0; i<nativeBlockNum; i++)
 	{
-		sprintf(output_file_name, "_%d_", i);
-		strcat(output_file_name, file);
+		sprintf(output_file_name, "_%d_%s", i, fileName);
 		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
 		{
-			printf("Can not open source file!\n");
+			printf("Can not open output file!\n");
 			exit(0);
 		}
 		if( fwrite(dataBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
@@ -227,11 +226,10 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
 	}
 	for(i=0; i<parityBlockNum; i++)
 	{
-		sprintf(output_file_name, "_%d_", i+nativeBlockNum);
-		strcat(output_file_name, file);
+		sprintf(output_file_name, "_%d_%s", i + nativeBlockNum, fileName);
 		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
 		{
-			printf("Can not open source file!\n");
+			printf("Can not open output file!\n");
 			exit(0);
 		}
 		if( fwrite(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )

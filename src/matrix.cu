@@ -28,7 +28,7 @@ const int field_size = 1 << width;
 __shared__ uint8_t gflog[256];
 __shared__ uint8_t gfexp[256];
 
-__host__ __device__ int setup_tables()
+__device__ int setup_tables()
 {
 //	const int width = 8;
 //	const int field_size = 1 << width;
