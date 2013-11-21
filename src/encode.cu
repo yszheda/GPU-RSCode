@@ -23,10 +23,10 @@
 #include <math.h>
 #include "matrix.h"
 
-void write_metadata(int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t *encodingMatrix)
+void write_metadata(char *metadataFile, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t *encodingMatrix)
 {
 	FILE *fp;
-	if( ( fp = fopen(".METADATA", "wb") ) == NULL )
+	if( ( fp = fopen(metadataFile, "wb") ) == NULL )
 	{
 		printf("Can not open META file!\n");
 		exit(0);
@@ -62,7 +62,7 @@ void write_metadata(int totalSize, int parityBlockNum, int nativeBlockNum, uint8
 }
 
 extern "C"
-void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
+void encode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
 {
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
@@ -102,7 +102,7 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBl
 	printf("Copy data from CPU to GPU: %fms\n", stepTime);
 	totalCommunicationTime += stepTime;
 
-	uint8_t *encodingMatrix;	//host
+//	uint8_t *encodingMatrix;	//host
 	uint8_t *encodingMatrix_d;	//device
 	encodingMatrix = (uint8_t*) malloc( parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
 	cudaMalloc( (void **)&encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
@@ -129,7 +129,7 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBl
 	// get event elapsed time
 	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
 	printf("Copy encoding matrix from GPU to CPU: %fms\n", stepTime);
-	write_metadata(totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
+//	write_metadata(totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
 	totalCommunicationTime += stepTime;
 
 //	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
@@ -176,7 +176,7 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBl
 	printf("Total communication time: %fms\n", totalCommunicationTime);
 	printf("Total GPU encoding time: %fms\n", totalTime);
 
-	free(encodingMatrix);
+//	free(encodingMatrix);
 
 }
 
@@ -226,15 +226,25 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
 		}
 	}
 	fclose(fp_in);
-	
-	encode(dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
 
-	char output_file_name[100];
+	uint8_t *encodingMatrix;	//host
+	encodingMatrix = (uint8_t*) malloc( parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
+	
+	encode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
+
+	char metadataFile[100];
+	strcpy(metadataFile, "_METADATA_");
+	strcat(metadataFile, file);
+	write_metadata(metadataFile, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
+
+	free(encodingMatrix);
+
+	char outputFile[100];
 	for(i=0; i<nativeBlockNum; i++)
 	{
-		sprintf(output_file_name, "_%d_", i);
-		strcat(output_file_name, file);
-		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
+		sprintf(outputFile, "_%d_", i);
+		strcat(outputFile, file);
+		if( ( fp_out = fopen(outputFile, "wb") ) == NULL )
 		{
 			printf("Can not open source file!\n");
 			exit(0);
@@ -248,9 +258,9 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
 	}
 	for(i=0; i<parityBlockNum; i++)
 	{
-		sprintf(output_file_name, "_%d_", i+nativeBlockNum);
-		strcat(output_file_name, file);
-		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
+		sprintf(outputFile, "_%d_", i+nativeBlockNum);
+		strcat(outputFile, file);
+		if( ( fp_out = fopen(outputFile, "wb") ) == NULL )
 		{
 			printf("Can not open source file!\n");
 			exit(0);
