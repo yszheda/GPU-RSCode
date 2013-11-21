@@ -23,7 +23,8 @@
 #include "matrix.h"
 
 const int width = 8;
-const int field_size = 1 << width;
+const int field_size = 1 << 8;
+// const int field_size = 1 << width;
 
 __shared__ uint8_t gflog[256];
 __shared__ uint8_t gfexp[256];
@@ -204,12 +205,15 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	setup_tables();
 	__syncthreads();
 
-	for(bx = blockIdx.x; bx < (int)(ceil((float)m / gridDim.x)); bx += gridDim.x)
-	{
-		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
-		{
-			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
-			{
+	bx = blockIdx.x;
+	do {
+// Since we have used (TILE_WIDTH_COL, TILE_WIDTH_ROW) as blockDim, these for loops can be optimized out.
+//		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
+//		{
+//			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
+//			{
+				py = ty;
+				px = tx;
 				row = by*TILE_WIDTH_ROW + py;
 				col = bx*TILE_WIDTH_COL + px;
 				product[py][px] = 0;
@@ -239,9 +243,10 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 					}
 					C[row*m+col] = product[py][px];
 				}
-			}
-		}
-	}
+//			}
+//		}
+		bx += gridDim.x;
+	} while (bx < (int) (ceil((float) m / gridDim.x)));
 }
 
 // switch rows if the current row is not the pivot row
