@@ -32,22 +32,20 @@
 
 #define SINGLE_GRID_SIZE 16384 // MAX 
 
-#define W 4
+#define W 8
 #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
 
-#define gf uint8_t
-
-// __host__ __device__ int setup_tables(int w);
+__host__ __device__ int setup_tables(int w);
 __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b);
 __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b);
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b);
-// __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp);
-// __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b);
-// __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp);
+__host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp);
+__host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b);
+__host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp);
 __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b);
-// __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp);
+__host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp);
 __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power);
-// __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp);
+__host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp);
 __device__ void matrix_mul(uint8_t *A, uint8_t *B, uint8_t *C, int n, int p, int m);
 
 __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col);

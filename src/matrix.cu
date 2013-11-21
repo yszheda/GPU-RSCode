@@ -229,61 +229,48 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	setup_tables(8);
 	__syncthreads();
 
-for(bx=blockIdx.x; bx< (int)(ceil((float)m/gridDim.x)); bx+=gridDim.x )
-{
-	for(py=ty; py<TILE_WIDTH_ROW; py+=blockDim.y)
-	{
-		for(px=tx; px<TILE_WIDTH_COL; px+=blockDim.x)
-		{
-			row = by*TILE_WIDTH_ROW+py;
-			col = bx*TILE_WIDTH_COL+px;
-			product[py][px] = 0;
-			__syncthreads();
-		
-if(row < n && col < m)
-{
-			for(int i=0; i<(int)(ceil((float)p/TILE_DEPTH)); i++)
-			{
-				int bound = min(p, TILE_DEPTH);
-/*
-				for(int j=tx; j<TILE_DEPTH; j+=blockDim.x)
-				{
-					rowVector[py][j] = A[row*p+i*TILE_DEPTH+j];
-				}
-				for(int j=ty; j<TILE_DEPTH; j+=blockDim.y)
-				{		
-					colVector[j][px] = B[col+(i*TILE_DEPTH+j)*m];
-				}
+	bx = blockIdx.x;
+	do {
+// Since we have used (TILE_WIDTH_COL, TILE_WIDTH_ROW) as blockDim, these for loops can be optimized out.
+//		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
+//		{
+//			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
+//			{
+		py = ty;
+		px = tx;
+				row = by * TILE_WIDTH_ROW + py;
+				col = bx * TILE_WIDTH_COL + px;
+				product[py][px] = 0;
 				__syncthreads();
-		
-				for(int j=0; j<TILE_DEPTH; j++)
+			
+				if(row < n && col < m)
 				{
-					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
-//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+					for(int i = 0; i < (int)( ceil( (float) p / TILE_DEPTH)); i++)
+					{
+						int bound = min(p, TILE_DEPTH);
+						for(int j = tx; j < bound; j += blockDim.x)
+						{
+							rowVector[py][j] = A[row*p+i*bound+j];
+						}
+						for(int j = ty; j < bound; j += blockDim.y)
+						{		
+							colVector[j][px] = B[col+(i*bound+j)*m];
+						}
+						__syncthreads();
+					
+						for(int j = 0; j < bound; j++)
+						{
+							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+				//			dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
+						}
+						__syncthreads();
+					}
+					C[row*m+col] = product[py][px];
 				}
-*/
-				for(int j=tx; j<bound; j+=blockDim.x)
-				{
-					rowVector[py][j] = A[row*p+i*bound+j];
-				}
-				for(int j=ty; j<bound; j+=blockDim.y)
-				{		
-					colVector[j][px] = B[col+(i*bound+j)*m];
-				}
-				__syncthreads();
-		
-				for(int j=0; j<bound; j++)
-				{
-					product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
-//					dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
-				}
-				__syncthreads();
-			}
-			C[row*m+col] = product[py][px];
-}
-}
-		}
-	}
+//			}
+//		}
+		bx += gridDim.x;
+	} while (bx < (int) (ceil((float) m / gridDim.x)));
 }
 
 
@@ -575,7 +562,7 @@ void show_squre_matrix_debug(uint8_t *matrix, int size)
 #endif
 
 // compute the inverse of a given matrix
-// Gaussian/Gauss–Jordan elimination
+// Guassian elimination
 extern "C"
 void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 {
