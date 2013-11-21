@@ -85,7 +85,7 @@ void gen_total_encoding_matrix(uint8_t *totalEncodingMatrix, int nativeBlockNum,
 	{
 		for (j = 0; j < nativeBlockNum; ++j)
 		{
-			totalEncodingMatrix[(i+nativeBlockNum)*nativeBlockNum + j] = gf_pow(j+1, i);
+			totalEncodingMatrix[(i+nativeBlockNum)*nativeBlockNum + j] = gf_pow(j+1, i, gflog, gfexp);
 		}
 	}
 }
