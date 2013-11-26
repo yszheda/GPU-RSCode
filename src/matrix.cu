@@ -25,8 +25,8 @@
 const int gf_width = 8;
 const int field_size = 1 << gf_width;
 
-__shared__ uint8_t gflog[256];
-__shared__ uint8_t gfexp[1021];
+__shared__ uint16_t gflog[256];
+__shared__ uint16_t gfexp[1021];
 
 __device__ int setup_tables()
 {
@@ -52,7 +52,8 @@ __device__ int setup_tables()
 		}
 	}
 	int gf_max_value = field_size - 1;
-	for (log = 2 * gf_max_value; log < 4 * gf_max_value; ++log)
+	gflog[0] = 2 * gf_max_value;
+	for (log = 2 * gf_max_value; log <= 4 * gf_max_value; ++log)
 	{
 		gfexp[log] = 0;
 	}
