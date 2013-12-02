@@ -23,7 +23,7 @@
 #include <math.h>
 #include "matrix.h"
 
-void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum)
+void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t* encodingMatrix)
 {
 	FILE *fp;
 	if( ( fp = fopen(fileName, "wb") ) == NULL )
@@ -33,6 +33,29 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 	}
 	fprintf(fp, "%d\n", totalSize);
 	fprintf(fp, "%d %d\n", parityBlockNum, nativeBlockNum);
+	for (int i = 0; i < nativeBlockNum; ++i)
+	{
+		for (int j = 0; j < nativeBlockNum; ++j)
+		{
+			if (i == j)
+			{
+				fprintf(fp, "1 ");
+			}
+			else
+			{
+				fprintf(fp, "0 ");
+			}
+		}
+		fprintf(fp, "\n");
+	}
+	for (int i = 0; i < parityBlockNum; ++i)
+	{
+		for (int j = 0; j < nativeBlockNum; ++j)
+		{
+			fprintf(fp, "%d ", encodingMatrix[i*nativeBlockNum + j]);
+		}
+		fprintf(fp, "\n");
+	}
 	fclose(fp);
 }
 
@@ -96,7 +119,6 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	totalComputationTime += stepTime;
 
 	// record event
-#ifdef DEBUG
 	cudaEventRecord(stepStart);
 	cudaMemcpy(encodingMatrix, encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t), cudaMemcpyDeviceToHost);
 	// record event and synchronize
@@ -106,7 +128,6 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
 	printf("Copy encoding matrix from GPU to CPU: %fms\n", stepTime);
 	totalCommunicationTime += stepTime;
-#endif
 
 	// TO-DO: better tiling
 //	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
@@ -155,7 +176,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
 	char metadata_file_name[strlen(fileName) + 15];
 	sprintf(metadata_file_name, "%s.METADATA", fileName);
-	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum);
+	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
 	free(encodingMatrix);
 }
 
