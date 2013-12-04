@@ -215,9 +215,12 @@ printf("chunk size: %d\n", chunkSize);
 	encodingMatrix = (uint8_t*) malloc( matrixSize );
 	for (int i = 0; i < totalMatrixSize; ++i)
 	{
-		fscanf(fp_meta, "%d", &totalEncodingMatrix[i]);
+//		fscanf(fp_meta, "%d", &totalEncodingMatrix[i]);
+		int j;
+		fscanf(fp_meta, "%d", &j);
+		totalEncodingMatrix[i] = (uint8_t) j; 
 	}
-//	fclose(fp_meta);
+	fclose(fp_meta);
 
 	dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
