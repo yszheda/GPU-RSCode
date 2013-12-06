@@ -188,6 +188,7 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 // A: nxp
 // B: pxm
 // C: nxm
+template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m)
 {
 	__shared__ uint8_t rowVector[TILE_WIDTH_ROW][TILE_DEPTH];
@@ -642,13 +643,19 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	encodingMatrix[i*col + j] = gf_pow(j+1, i);
 }
 
+template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	matrix_mul(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
+	matrix_mul<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
 }
 
+template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __global__ void decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	matrix_mul(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
+	matrix_mul<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
 }
 
+template 
+__global__ void encode_chunk<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
+template 
+__global__ void decode_chunk<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
