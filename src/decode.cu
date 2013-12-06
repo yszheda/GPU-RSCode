@@ -124,20 +124,14 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	free(decodingMatrix);
 #endif
 
-//	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-//	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
-//	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH, TILE_WIDTH);
-
-//	int gridDimX = (int)( ceil((float)chunkSize / TILE_WIDTH_COL) );
+	// TO-DO: better tiling
 	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
 	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH_ROW, TILE_WIDTH_COL);
 	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
 	// record event
 	cudaEventRecord(stepStart);
-	decode_chunk<<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
+	decode_chunk<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH><<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);

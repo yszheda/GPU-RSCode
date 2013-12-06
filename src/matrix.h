@@ -25,9 +25,12 @@
 #define index(i, j, size) (((i) * (size)) + (j))
 
 //#define TILE_WIDTH 2
-#define TILE_WIDTH_ROW 2
-#define TILE_WIDTH_COL 64
-#define TILE_DEPTH 2
+// #define TILE_WIDTH_ROW 2
+// #define TILE_WIDTH_COL 64
+// #define TILE_DEPTH 2
+const int TILE_WIDTH_ROW = 2;
+const int TILE_WIDTH_COL = 64;
+const int TILE_DEPTH = 2;
 
 #define SINGLE_GRID_SIZE 16384 // MAX 
 
@@ -47,8 +50,23 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 __device__ void matrix_mul(uint8_t *A, uint8_t *B, uint8_t *C, int n, int p, int m);
 
 __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col);
+template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
+template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __global__ void decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
+
+// template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
+// __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+// {
+// 	matrix_mul<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
+// }
+// 
+// template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
+// __global__ void decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+// {
+// 	matrix_mul<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
+// }
+
 
 extern "C"
 void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size);
