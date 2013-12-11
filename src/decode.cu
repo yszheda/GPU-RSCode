@@ -17,9 +17,10 @@
  */
 
 #include <stdio.h>
-#include <cuda.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include "matrix.h"
 
 // #define DEBUG
@@ -48,7 +49,7 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
 }
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize)
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize)
 {
 	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	int codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
@@ -124,16 +125,10 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	free(decodingMatrix);
 #endif
 
-//	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-//	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
-//	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH, TILE_WIDTH);
-
-//	int gridDimX = (int)( ceil((float)chunkSize / TILE_WIDTH_COL) );
-	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
+//	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
+	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), gridDimXSize);
 	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
 	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH_ROW, TILE_WIDTH_COL);
 	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
 	// record event
 	cudaEventRecord(stepStart);
@@ -172,7 +167,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 }
 
 extern "C"
-void decode_file(char *inFile, char *confFile, char *outFile)
+void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -249,7 +244,20 @@ printf("chunk size: %d\n", chunkSize);
 	}
 	fclose(fp_conf);
 	
-	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize);
+	cudaSetDevice(1);
+	cudaDeviceProp deviceProperties;
+	cudaGetDeviceProperties(&deviceProperties, 1);
+	int maxGridDimXSize = deviceProperties.maxGridSize[0];
+	if (gridDimXSize > maxGridDimXSize)
+	{
+		printf("max X dimension grid size is only %d!\n", maxGridDimXSize);
+		gridDimXSize = maxGridDimXSize;
+	}
+	if (gridDimXSize <= 0)
+	{
+		gridDimXSize = maxGridDimXSize;
+	}
+	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize, gridDimXSize);
 
 	if(outFile == NULL)
 	{

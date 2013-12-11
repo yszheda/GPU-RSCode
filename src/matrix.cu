@@ -246,6 +246,8 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //			}
 //		}
 		bx += gridDim.x;
+		col = bx*TILE_WIDTH_COL + px;
+		__syncthreads();
 	} while (col < m);
 }
 

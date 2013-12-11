@@ -17,10 +17,11 @@
  */
 
 #include <stdio.h>
-#include <cuda.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
 #include "matrix.h"
 
 void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t* encodingMatrix)
@@ -60,7 +61,7 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 }
 
 extern "C"
-void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
+void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int gridDimXSize)
 {
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
@@ -130,14 +131,10 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	totalCommunicationTime += stepTime;
 
 	// TO-DO: better tiling
-//	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-//	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
-//	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH, TILE_WIDTH);
-	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
+//	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
+	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), gridDimXSize);
 	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
 	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH_ROW, TILE_WIDTH_COL);
 	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
 	// record event
 	cudaEventRecord(stepStart);
@@ -181,7 +178,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 }
 
 extern "C"
-void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
+void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gridDimXSize)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -227,7 +224,20 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
-	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
+	cudaSetDevice(1);
+	cudaDeviceProp deviceProperties;
+	cudaGetDeviceProperties(&deviceProperties, 1);
+	int maxGridDimXSize = deviceProperties.maxGridSize[0];
+	if (gridDimXSize > maxGridDimXSize)
+	{
+		printf("max X dimension grid size is only %d!\n", maxGridDimXSize);
+		gridDimXSize = maxGridDimXSize;
+	}
+	if (gridDimXSize <= 0)
+	{
+		gridDimXSize = maxGridDimXSize;
+	}
+	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize, gridDimXSize);
 
 	char output_file_name[strlen(fileName) + 5];
 	for(i=0; i<nativeBlockNum; i++)
