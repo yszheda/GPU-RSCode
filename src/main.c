@@ -41,6 +41,7 @@ int main(int argc, char *argv[])
 	int parityBlockNum = 0;
 	int totalBlockNum = 0;
 	int gridDimXSize = 0;
+	int streamNum = 1;
 	char *inFile = NULL;
 	char *confFile = NULL;
 	char *outFile = NULL;
@@ -54,8 +55,13 @@ int main(int argc, char *argv[])
 	int func_flag = 0;
 	
 	int option;
-	while((option = getopt(argc, argv, "Pp:Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
+	while((option = getopt(argc, argv, "Ss:Pp:Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
 		switch ( option ) {
+			case 'S':	
+			case 's':	
+				streamNum = (int) atoi(optarg);
+				break;
+
 			case 'P':	
 			case 'p':	
 				gridDimXSize = (int) atoi(optarg);
@@ -135,14 +141,14 @@ int main(int argc, char *argv[])
 			assert(nativeBlockNum != 0);
 			assert(totalBlockNum != 0);
 			parityBlockNum = totalBlockNum - nativeBlockNum;
-			encode_file(inFile, nativeBlockNum, parityBlockNum, gridDimXSize);
+			encode_file(inFile, nativeBlockNum, parityBlockNum, gridDimXSize, streamNum);
 			break;
 
 		case decode:	
 			assert(inFile != NULL);
 			assert(confFile != NULL);
 			assert(outFile != NULL);
-			decode_file(inFile, confFile, outFile, gridDimXSize);
+			decode_file(inFile, confFile, outFile, gridDimXSize, streamNum);
 			break;
 
 		default:	

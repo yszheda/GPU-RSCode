@@ -1,7 +1,10 @@
 # AUTOMAKE_OPTIONS = subdir-objects
 
 CCFLAGS = -g
-NVCCFLAGS = -G -arch=sm_35
+# NVCCFLAGS = -G
+# NVCCFLAGS = -G -arch=sm_35
+# NVCCFLAGS = -G -gencode=arch=compute_30,code=sm_30
+NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35
 
 TARGET = RS
 OBJECTS = matrix.o encode.o decode.o main.o
