@@ -26,7 +26,7 @@ const int gf_width = 8;
 const int field_size = 1 << gf_width;
 
 __shared__ uint8_t gflog[256];
-__shared__ uint8_t gfexp[257];
+__shared__ uint8_t gfexp[256];
 
 __host__ __device__ int setup_tables()
 {
@@ -47,7 +47,7 @@ __host__ __device__ int setup_tables()
 			exp = exp ^ prim_poly;
 		}
 	}
-	gfexp[256] = gfexp[0];
+	gfexp[field_size - 1] = gfexp[0];
 	return 0;
 }
 
@@ -70,7 +70,7 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 	}
 	int gf_max_value = field_size - 1;
 	sum_log = gflog[a] + gflog[b];
-	return gfexp[sum_log & gf_max_value + sum_log >> gf_width];
+	return gfexp[(sum_log & gf_max_value) + (sum_log >> gf_width)];
 }
 
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
@@ -197,12 +197,15 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	setup_tables();
 	__syncthreads();
 
-	for(bx = blockIdx.x; bx < (int)(ceil((float)m / gridDim.x)); bx += gridDim.x)
-	{
-		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
-		{
-			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
-			{
+	bx = blockIdx.x;
+	do {
+// Since we have used (TILE_WIDTH_COL, TILE_WIDTH_ROW) as blockDim, these for loops can be optimized out.
+//		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
+//		{
+//			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
+//			{
+				py = ty;
+				px = tx;
 				row = by*TILE_WIDTH_ROW + py;
 				col = bx*TILE_WIDTH_COL + px;
 				product[py][px] = 0;
@@ -232,9 +235,11 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 					}
 					C[row*m+col] = product[py][px];
 				}
-			}
-		}
-	}
+//			}
+//		}
+		bx += gridDim.x;
+		col = bx*TILE_WIDTH_COL + px;
+	} while (col < m);
 }
 
 // switch rows if the current row is not the pivot row

@@ -205,7 +205,8 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //			}
 //		}
 		bx += gridDim.x;
-	} while (bx < (int) (ceil((float) m / gridDim.x)));
+		col = bx*TILE_WIDTH_COL + px;
+	} while (col < m);
 }
 
 // switch rows if the current row is not the pivot row
