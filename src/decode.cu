@@ -38,58 +38,6 @@ void show_squre_matrix(uint8_t *matrix, int size)
 	}
 }
 
-uint8_t gflog[256];
-uint8_t gfexp[256];
-
-int setup_host_tables()
-{
-	const int width = 8;
-	const int field_size = 1 << width;
-	const unsigned int prim_poly = 0435;
-   	int log;
-	int exp = 1;
-	// use int as book-keeping index instead of unsigned int
-	for (log = 0; log < field_size - 1; log++) 
-	{
-		if(exp > field_size) break;
-		gflog[exp] = (uint8_t) log;
-		gfexp[log] = (uint8_t) exp;
-		exp = exp << 1;
-		if (exp & field_size) 
-		{
-			exp = exp ^ prim_poly;
-		}
-	}
-	return 0;
-}
-void gen_total_encoding_matrix(uint8_t *totalEncodingMatrix, int nativeBlockNum, int parityBlockNum)
-{
-	int i;
-	int j;
-	setup_host_tables();
-	for (i = 0; i < nativeBlockNum; ++i)
-	{
-		for (j = 0; j < nativeBlockNum; ++j)
-		{
-			if (i == j)
-			{
-				totalEncodingMatrix[i*nativeBlockNum + j] = 1;
-			}
-			else
-			{
-				totalEncodingMatrix[i*nativeBlockNum + j] = 0;
-			}
-		}
-	}
-	for (i = 0; i < parityBlockNum; ++i)
-	{
-		for (j = 0; j < nativeBlockNum; ++j)
-		{
-			totalEncodingMatrix[(i+nativeBlockNum)*nativeBlockNum + j] = gf_pow(j+1, i, gflog, gfexp);
-		}
-	}
-}
-
 void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, int rowSize)
 {
 	int i;
@@ -237,6 +185,7 @@ void decode_file(char *inFile, char *confFile, char *outFile)
 	int dataSize;
 	int codeSize;
 
+	FILE *fp_meta;
 	FILE *fp_in;
 	FILE *fp_out;
 
@@ -246,18 +195,16 @@ void decode_file(char *inFile, char *confFile, char *outFile)
 	uint8_t *encodingMatrix;	//host
 	char metadata_file_name[strlen(inFile) + 15];
 	sprintf(metadata_file_name, "%s.METADATA", inFile);
-	if((fp_in = fopen(metadata_file_name, "rb")) == NULL)
+	if((fp_meta = fopen(metadata_file_name, "rb")) == NULL)
 	{
 		printf("Can not open metadata file!\n");
 		exit(0);
 	}
-	fscanf(fp_in, "%d", &totalSize);
-	fscanf(fp_in, "%d %d", &parityBlockNum, &nativeBlockNum);
-	fclose(fp_in);
+	fscanf(fp_meta, "%d", &totalSize);
+	fscanf(fp_meta, "%d %d", &parityBlockNum, &nativeBlockNum);
 
 	chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
 //	chunkSize = (int) (ceil( (double)totalSize / nativeBlockNum )); 
-
 #ifdef DEBUG
 printf("chunk size: %d\n", chunkSize);
 #endif
@@ -266,7 +213,14 @@ printf("chunk size: %d\n", chunkSize);
 	totalEncodingMatrix = (uint8_t*) malloc( totalMatrixSize );
 	matrixSize = nativeBlockNum * nativeBlockNum;
 	encodingMatrix = (uint8_t*) malloc( matrixSize );
-	gen_total_encoding_matrix(totalEncodingMatrix, nativeBlockNum, parityBlockNum);
+	for (int i = 0; i < totalMatrixSize; ++i)
+	{
+//		fscanf(fp_meta, "%d", &totalEncodingMatrix[i]);
+		int j;
+		fscanf(fp_meta, "%d", &j);
+		totalEncodingMatrix[i] = (uint8_t) j; 
+	}
+	fclose(fp_meta);
 
 	dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
