@@ -246,6 +246,8 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //			}
 //		}
 		bx += gridDim.x;
+		col = bx*TILE_WIDTH_COL + px;
+		__syncthreads();
 	} while (col < m);
 }
 
@@ -529,7 +531,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	int j = threadIdx.y;
 	setup_tables();
 	__syncthreads();
-	encodingMatrix[i*col + j] = gf_pow(j+1, i);
+	encodingMatrix[i*col + j] = gf_pow((j+1) % field_size, i);
 }
 
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
