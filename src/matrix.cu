@@ -95,7 +95,7 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 
 __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
 {
-	uint8_t sum_log;
+	uint8_t sum_log = 0;
 	while(b)
 	{
 		if(b & 1)
@@ -110,7 +110,7 @@ __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
 
 __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
 {
-	uint8_t sum_log;
+	uint8_t sum_log = 0;
 	while(b)
 	{
 		if(b & 1)
@@ -202,8 +202,8 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	int px;
 	int py;	
 
-	setup_tables();
-	__syncthreads();
+//	setup_tables();
+//	__syncthreads();
 
 	bx = blockIdx.x;
 	do {
@@ -357,8 +357,8 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-	setup_tables();
-	__syncthreads();
+//	setup_tables();
+//	__syncthreads();
 
     if ( row < size )
     {
@@ -400,8 +400,8 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-	setup_tables();
-	__syncthreads();
+//	setup_tables();
+//	__syncthreads();
 
     if ( row < size )
     {
