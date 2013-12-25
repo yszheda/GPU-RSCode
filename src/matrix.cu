@@ -357,8 +357,8 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-//	setup_tables();
-//	__syncthreads();
+	setup_tables();
+	__syncthreads();
 
     if ( row < size )
     {
@@ -377,10 +377,10 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotCol become reduced echelon form
         if ( row != pivotIndex )
         {
-//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
-//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul_bit(pivotCol[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul_bit(pivotCol[ty], resultPivotValue);
+			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
+			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
+//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul_bit(pivotCol[ty], matrixPivotValue);
+//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul_bit(pivotCol[ty], resultPivotValue);
         }
     }
 }
@@ -400,8 +400,8 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
     __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
     __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
-//	setup_tables();
-//	__syncthreads();
+	setup_tables();
+	__syncthreads();
 
     if ( row < size )
     {
@@ -420,10 +420,10 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotRow become reduced echelon form
         if ( col != pivotIndex )
         {
-//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
-//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul_bit(pivotRow[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul_bit(pivotRow[ty], resultPivotValue);
+			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
+			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul_bit(pivotRow[ty], matrixPivotValue);
+//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul_bit(pivotRow[ty], resultPivotValue);
         }
     }
 }
