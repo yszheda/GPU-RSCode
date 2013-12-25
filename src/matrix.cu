@@ -236,7 +236,8 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 					
 						for(int j = 0; j < bound; j++)
 						{
-							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+//							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
+							product[py][px] ^= gf_mul_bit(rowVector[py][j], colVector[j][px]);
 				//			dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
 						}
 						__syncthreads();
@@ -376,8 +377,10 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotCol become reduced echelon form
         if ( row != pivotIndex )
         {
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
+//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
+//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
+			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul_bit(pivotCol[ty], matrixPivotValue);
+			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul_bit(pivotCol[ty], resultPivotValue);
         }
     }
 }
@@ -417,8 +420,10 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotRow become reduced echelon form
         if ( col != pivotIndex )
         {
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
+//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul_bit(pivotRow[ty], matrixPivotValue);
+			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul_bit(pivotRow[ty], resultPivotValue);
         }
     }
 }
