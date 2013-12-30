@@ -82,7 +82,7 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 	}
 	int gf_max_value = field_size - 1;
 	sum_log = gflog[a] + gflog[b];
-	return gfexp[sum_log & gf_max_value + sum_log >> gf_width];
+	return gfexp[(sum_log & gf_max_value) + (sum_log >> gf_width)];
 }
 
 __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
