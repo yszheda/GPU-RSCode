@@ -1,9 +1,10 @@
 CC = /usr/bin/gcc
 NVCC = nvcc
 CCFLAGS = -g
-NVCCFLAGS = -G -arch=sm_35
+# NVCCFLAGS = -G -arch=sm_35
+NVCCFLAGS = -G -Xptxas -v
 
-TARGET = RS-log-exp RS-log-exp-V0 RS-log-exp-V1 RS-log-exp-V2
+TARGET = RS-log-exp-V3 RS-log-exp-V0 RS-log-exp-V0-1 RS-log-exp-V1 RS-log-exp-V2
 COMMON_OBJECTS = encode.o decode.o main.o
 OBJECTS = encode.o decode.o main.o matrix.o matrix-V0.o matrix-V1.o matrix-V2.o
 OBJDIR = ../bin
@@ -20,10 +21,13 @@ $(OBJDIR)/%.o: %.cu
 $(OBJDIR)/%.o: %.c
 	$(CC) -o $@ -c $< $(CCFLAGS)
 
-$(OBJDIR)/RS-log-exp: $(addprefix $(OBJDIR)/, $(COMMON_OBJECTS)) $(OBJDIR)/matrix.o
+$(OBJDIR)/RS-log-exp-V3: $(addprefix $(OBJDIR)/, $(COMMON_OBJECTS)) $(OBJDIR)/matrix.o
 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS)
 
 $(OBJDIR)/RS-log-exp-V0: $(addprefix $(OBJDIR)/, $(COMMON_OBJECTS)) $(OBJDIR)/matrix-V0.o
+	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS)
+
+$(OBJDIR)/RS-log-exp-V0-1: $(addprefix $(OBJDIR)/, $(COMMON_OBJECTS)) $(OBJDIR)/matrix-V0-1.o
 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS)
 
 $(OBJDIR)/RS-log-exp-V1: $(addprefix $(OBJDIR)/, $(COMMON_OBJECTS)) $(OBJDIR)/matrix-V1.o
