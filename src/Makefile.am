@@ -1,7 +1,7 @@
 # AUTOMAKE_OPTIONS = subdir-objects
 
 CCFLAGS = -g
-NVCCFLAGS = -G
+NVCCFLAGS = -G --ptxas-options=-v
 
 TARGET = RS
 OBJECTS = matrix.o encode.o decode.o main.o
