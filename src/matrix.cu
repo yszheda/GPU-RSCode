@@ -189,11 +189,11 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 // C: nxm
 __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
-	extern __shared__ int sMem[];
-//	__shared__ int sMem[2048];
+//	extern __shared__ int sMem[];
+	__shared__ int sMem[512];
 	int rowVectorSize = tileWidthRow * tileDepth;
 	int colVectorSize = tileDepth * tileWidthCol;
-	int product = 0;
+	int product;
 
 	int bx = blockIdx.x;
    	int by = blockIdx.y;
@@ -201,51 +201,47 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	int ty = threadIdx.y;
 	int row;
 	int col;
-	int px;
-	int py;	
 
 	setup_tables();
 	__syncthreads();
 
 	bx = blockIdx.x;
 	do {
-			py = ty;
-			px = tx;
-			row = by*tileWidthRow + py;
-			col = bx*tileWidthCol + px;
-			product = 0;
+		row = by*tileWidthRow + ty;
+		col = bx*tileWidthCol + tx;
+		product = 0;
+		__syncthreads();
+		
+		if(row < n && col < m)
+		{
+			for(int j = tx; j < tileDepth; j += blockDim.x)
+			{
+				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
+			}
+			for(int j = ty; j < tileDepth; j += blockDim.y)
+			{
+				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
+			}
+//			TODO: Assume removing the loop
+//			if (tx < tileDepth)
+//			{
+//				sMem[ index(ty, tx, tileDepth) ] = A[row*p + tx];
+//			}
+//			if (ty < tileDepth)
+//			{
+//				sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty*m];
+//			}
 			__syncthreads();
 			
-			if(row < n && col < m)
+			for(int j = 0; j < tileDepth; j++)
 			{
-				for(int j = tx; j < tileDepth; j += blockDim.x)
-				{
-					sMem[ index(py, j, tileDepth) ] = A[row*p + j];
-				}
-				for(int j = ty; j < tileDepth; j += blockDim.y)
-				{
-					sMem[rowVectorSize + index(j, px, tileWidthCol)] = B[col + j*m];
-				}
-//				TODO: Assume removing the loop
-//				if (tx < tileDepth)
-//				{
-//					sMem[ index(py, tx, tileDepth) ] = A[row*p + tx];
-//				}
-//				if (ty < tileDepth)
-//				{
-//					sMem[rowVectorSize + index(ty, px, tileWidthCol)] = B[col + ty*m];
-//				}
-				__syncthreads();
-				
-				for(int j = 0; j < tileDepth; j++)
-				{
-					product ^= gf_mul(sMem[ index(py, j, tileDepth) ], sMem[rowVectorSize + index(j, px, tileWidthCol)]);
-				}
-				__syncthreads();
-				C[row*m+col] = product;
+				product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
 			}
+			__syncthreads();
+			C[row*m+col] = product;
+		}
 		bx += gridDim.x;
-		col = bx*tileWidthCol + px;
+		col = bx*tileWidthCol + tx;
 		__syncthreads();
 	} while (col < m);
 }
@@ -333,7 +329,7 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
             pivotValue = matrix[ index(col, col, size) ];
 		}
         __syncthreads();
-		// Normalize the pivot row!
+		// Normalize the pivot row!1024
 		// Every thread divides the element of its position with the pivotValue
         matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
         result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
@@ -454,7 +450,7 @@ int get_pivot_index(uint8_t *vector, int index, int size)
 #ifdef DEBUG
 void show_squre_matrix_debug(uint8_t *matrix, int size)
 {
-	int i;
+	int i;1024
 	int j;
 	for(i=0; i<size; i++)
 	{
@@ -544,7 +540,7 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	dim3 block(tileWidthCol, tileWidthRow);
 	cudaDeviceProp deviceProp;
 	cudaGetDeviceProperties(&deviceProp, 0);
-	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 8192);
+	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 2048);
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
 	// create event
@@ -552,8 +548,8 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-//	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -573,7 +569,7 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	dim3 block(tileWidthCol, tileWidthRow);
 	cudaDeviceProp deviceProp;
 	cudaGetDeviceProperties(&deviceProp, 0);
-	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 8192);
+	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 2048);
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
 	// create event
@@ -581,8 +577,8 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
