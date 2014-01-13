@@ -183,17 +183,15 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 	return gfexp[pow_log];
 }
 
-
 // input matrix A and B, compute the product matrix C=AB
 // A: nxp
 // B: pxm
 // C: nxm
-template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m)
 {
-	__shared__ uint8_t rowVector[TILE_WIDTH_ROW][TILE_DEPTH];
-	__shared__ uint8_t colVector[TILE_DEPTH][TILE_WIDTH_COL];
-	__shared__ uint8_t product[TILE_WIDTH_ROW][TILE_WIDTH_COL];
+	__shared__ int rowVector[TILE_WIDTH_ROW][TILE_DEPTH];
+	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH_COL];
+	__shared__ int product[TILE_WIDTH_ROW][TILE_WIDTH_COL];
 
 	int bx = blockIdx.x;
    	int by = blockIdx.y;
@@ -248,117 +246,10 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //			}
 //		}
 		bx += gridDim.x;
-//	} while (bx < (int) (ceil((float) m / gridDim.x)));
-	} while (bx < (m + gridDim.x - 1)/ gridDim.x);
+		col = bx*TILE_WIDTH_COL + px;
+		__syncthreads();
+	} while (col < m);
 }
-
-
-/*
-// input matrix A and B, compute the product matrix C=AB
-// A: nxp
-// B: pxm
-// C: nxm
-__device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m)
-{
-	int ARows = n;
-	int ACols = p;
-	int BRows = p;
-	int BCols = m;
-	int CRows = n;
-	int CCols = m;
-	uint8_t CValue = 0;
-
-//    int Row = blockIdx.y*TILE_DIM + threadIdx.y;
-//    int Col = blockIdx.x*TILE_DIM + threadIdx.x;
-//
-//    __shared__ uint8_t As[TILE_DIM][TILE_DIM];
-//    __shared__ uint8_t Bs[TILE_DIM][TILE_DIM];
-//
-//    for (int i = 0; i < (TILE_DIM + ACols - 1)/TILE_DIM; i++) {
-//
-//         if (i*TILE_DIM + threadIdx.x < ACols && Row < ARows)   
-//		 {
-//			As[threadIdx.y][threadIdx.x] = A[Row*ACols + i*TILE_DIM + threadIdx.x];
-//		 }
-//         else                                                   
-//		 {
-//			As[threadIdx.y][threadIdx.x] = 0;
-//		 }
-//
-//         if (i*TILE_DIM + threadIdx.y < BRows && Col < BCols)   
-//		 {
-//			Bs[threadIdx.y][threadIdx.x] = B[(i*TILE_DIM + threadIdx.y)*BCols + Col];
-//		 }
-//         else                                                   
-//		 {
-//			Bs[threadIdx.y][threadIdx.x] = 0;
-//		 }
-//
-//         __syncthreads();
-//
-//         for (int j = 0; j < TILE_DIM; ++j) 
-//		 {
-//			CValue ^= gf_mul(As[threadIdx.y][j], Bs[j][threadIdx.x]);
-//		 }
-//
-//         __syncthreads();
-//    }
-
-	__shared__ uint8_t As[TILE_WIDTH_ROW][TILE_DEPTH];
-	__shared__ uint8_t Bs[TILE_DEPTH][TILE_WIDTH_COL];
-
-	setup_tables();
-	__syncthreads();
-	int bx = blockIdx.x;
-	do {
-		int Row = blockIdx.y*TILE_WIDTH_ROW + threadIdx.y;
-//    	int Col = blockIdx.x*TILE_WIDTH_COL + threadIdx.x;
-    	int Col = bx*TILE_WIDTH_COL + threadIdx.x;
-		CValue = 0;
-    	     __syncthreads();
-
-    	for (int i = 0; i < (TILE_DEPTH + ACols - 1)/TILE_DEPTH; i++) 
-		{
-    	     if (i*TILE_DEPTH + threadIdx.x < ACols && Row < ARows)   
-			 {
-				As[threadIdx.y][threadIdx.x] = A[Row*ACols + i*TILE_DEPTH + threadIdx.x];
-			 }
-    	     else                                                   
-			 {
-				As[threadIdx.y][threadIdx.x] = 0;
-			 }
-
-    	     if (i*TILE_DEPTH + threadIdx.y < BRows && Col < BCols)   
-			 {
-				Bs[threadIdx.y][threadIdx.x] = B[(i*TILE_DEPTH + threadIdx.y)*BCols + Col];
-			 }
-    	     else                                                   
-			 {
-				Bs[threadIdx.y][threadIdx.x] = 0;
-			 }
-
-//				As[threadIdx.y][threadIdx.x] = A[Row*ACols + i*TILE_DEPTH + threadIdx.x];
-//				Bs[threadIdx.y][threadIdx.x] = B[(i*TILE_DEPTH + threadIdx.y)*BCols + Col];
-    	     __syncthreads();
-
-    	     for (int j = 0; j < TILE_DEPTH; ++j) 
-			 {
-				CValue ^= gf_mul(As[threadIdx.y][j], Bs[j][threadIdx.x]);
-			 }
-
-    	     __syncthreads();
-    	}
-
-    	if (Row < CRows && Col < CCols) 
-		{
-//			C[((blockIdx.y * blockDim.y + threadIdx.y)*CCols)+(blockIdx.x*blockDim.x)+threadIdx.x]=CValue;
-			C[(Row * CCols) + Col] = CValue;
-		}
-		bx += gridDim.x;
-//	} while (bx < (int) (ceil((float) m / gridDim.x)));
-	} while (bx < (m + gridDim.x - 1)/ gridDim.x);
-}
-*/
 
 // switch rows if the current row is not the pivot row
 __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int rowDes, int size)
@@ -640,22 +531,16 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	int j = threadIdx.y;
 	setup_tables();
 	__syncthreads();
-	encodingMatrix[i*col + j] = gf_pow(j+1, i);
+	encodingMatrix[i*col + j] = gf_pow((j+1) % field_size, i);
 }
 
-template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	matrix_mul<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
+	matrix_mul(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
 }
 
-template <int TILE_WIDTH_ROW, int TILE_WIDTH_COL, int TILE_DEPTH>
 __global__ void decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	matrix_mul<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
+	matrix_mul(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
 }
 
-template 
-__global__ void encode_chunk<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
-template 
-__global__ void decode_chunk<TILE_WIDTH_ROW, TILE_WIDTH_COL, TILE_DEPTH>(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
