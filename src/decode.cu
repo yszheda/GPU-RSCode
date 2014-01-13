@@ -129,6 +129,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 //	dim3 grid(gridDimX, gridDimY);
 //	dim3 block(TILE_WIDTH, TILE_WIDTH);
 
+/*
 //	int gridDimX = (int)( ceil((float)chunkSize / TILE_WIDTH_COL) );
 	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
@@ -143,6 +144,10 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	cudaEventSynchronize(stepStop);
 	// get event elapsed time
 	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	printf("Decoding file completed: %fms\n", stepTime);
+	totalComputationTime += stepTime;
+*/
+	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
