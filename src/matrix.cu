@@ -189,12 +189,10 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 // C: nxm
 __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
-	// extern __shared__ int sMem[];
-	__shared__ int sMem[2048];
+	extern __shared__ int sMem[];
+//	__shared__ int sMem[2048];
 	int rowVectorSize = tileWidthRow * tileDepth;
 	int colVectorSize = tileDepth * tileWidthCol;
-//	__shared__ int rowVector[TILE_WIDTH_ROW][TILE_DEPTH];
-//	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH_COL];
 	int product = 0;
 
 	int bx = blockIdx.x;
@@ -211,64 +209,41 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 
 	bx = blockIdx.x;
 	do {
-// Since we have used (TILE_WIDTH_COL, TILE_WIDTH_ROW) as blockDim, these for loops can be optimized out.
-//		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
-//		{
-//			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
-//			{
-				py = ty;
-				px = tx;
-				row = by*tileWidthRow + py;
-				col = bx*tileWidthCol + px;
-				product = 0;
-				__syncthreads();
+			py = ty;
+			px = tx;
+			row = by*tileWidthRow + py;
+			col = bx*tileWidthCol + px;
+			product = 0;
+			__syncthreads();
 			
-				if(row < n && col < m)
+			if(row < n && col < m)
+			{
+				for(int j = tx; j < tileDepth; j += blockDim.x)
 				{
-//				    Assume using tileDepth = p to remove the loop
-//					for(int i = 0; i < (int)(ceil((float)p / TILE_DEPTH)); i++)
-//					{
-//						int bound = min(p, TILE_DEPTH);
-//						for(int j = tx; j < bound; j += blockDim.x)
-//						{
-//							rowVector[py][j] = A[row*p + i*bound + j];
-//						}
-//						for(int j = ty; j < bound; j += blockDim.y)
-//						{		
-//							colVector[j][px] = B[col + (i*bound + j)*m];
-//						}
-
-						for(int j = tx; j < tileDepth; j += blockDim.x)
-						{
-							sMem[ index(py, j, tileDepth) ] = A[row*p + j];
-						}
-						for(int j = ty; j < tileDepth; j += blockDim.y)
-						{
-							sMem[rowVectorSize + index(j, px, tileWidthCol)] = B[col + j*m];
-						}
-//						TODO: Assume removing the loop
-//						if (tx < tileDepth)
-//						{
-//							sMem[ index(py, tx, tileDepth) ] = A[row*p + tx];
-//						}
-//						if (ty < tileDepth)
-//						{
-//							sMem[rowVectorSize + index(ty, px, tileWidthCol)] = B[col + ty*m];
-//						}
-						__syncthreads();
-					
-						for(int j = 0; j < tileDepth; j++)
-						{
-				//			dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
-//							product ^= gf_mul(rowVector[py][j], colVector[j][px]);
-							product ^= gf_mul(sMem[ index(py, j, tileDepth) ], sMem[rowVectorSize + index(j, px, tileWidthCol)]);
-						}
-						__syncthreads();
-//					}
-					C[row*m+col] = product;
+					sMem[ index(py, j, tileDepth) ] = A[row*p + j];
 				}
-//			}
-//		}
+				for(int j = ty; j < tileDepth; j += blockDim.y)
+				{
+					sMem[rowVectorSize + index(j, px, tileWidthCol)] = B[col + j*m];
+				}
+//				TODO: Assume removing the loop
+//				if (tx < tileDepth)
+//				{
+//					sMem[ index(py, tx, tileDepth) ] = A[row*p + tx];
+//				}
+//				if (ty < tileDepth)
+//				{
+//					sMem[rowVectorSize + index(ty, px, tileWidthCol)] = B[col + ty*m];
+//				}
+				__syncthreads();
+				
+				for(int j = 0; j < tileDepth; j++)
+				{
+					product ^= gf_mul(sMem[ index(py, j, tileDepth) ], sMem[rowVectorSize + index(j, px, tileWidthCol)]);
+				}
+				__syncthreads();
+				C[row*m+col] = product;
+			}
 		bx += gridDim.x;
 		col = bx*tileWidthCol + px;
 		__syncthreads();
@@ -569,7 +544,7 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	dim3 block(tileWidthCol, tileWidthRow);
 	cudaDeviceProp deviceProp;
 	cudaGetDeviceProperties(&deviceProp, 0);
-	size_t sMemSize = deviceProp.sharedMemPerBlock;
+	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 8192);
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
 	// create event
@@ -577,8 +552,8 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-//	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -598,7 +573,7 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	dim3 block(tileWidthCol, tileWidthRow);
 	cudaDeviceProp deviceProp;
 	cudaGetDeviceProperties(&deviceProp, 0);
-	size_t sMemSize = deviceProp.sharedMemPerBlock;
+	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 8192);
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
 	// create event
@@ -606,8 +581,8 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-//	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
