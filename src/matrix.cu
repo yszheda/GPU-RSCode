@@ -189,8 +189,8 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 // C: nxm
 __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
-//	extern __shared__ int sMem[];
-	__shared__ int sMem[512];
+	extern __shared__ uint8_t sMem[];
+//	__shared__ uint8_t sMem[512];
 	int rowVectorSize = tileWidthRow * tileDepth;
 	int colVectorSize = tileDepth * tileWidthCol;
 	int product;
@@ -541,7 +541,17 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	dim3 block(tileWidthCol, tileWidthRow);
 	cudaDeviceProp deviceProp;
 	cudaGetDeviceProperties(&deviceProp, 0);
-	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 2048);
+	int sMemMaxSize = deviceProp.sharedMemPerBlock;
+	int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
+	int tunedSMemSize = 2048;
+	/* 
+	size_t sMemSize = tunedSMemSize;
+	if (sMemMinSize > tunedSMemSize)
+	{
+		sMemSize = sMemMinSize;
+	}
+	*/
+	size_t sMemSize = sMemMinSize;
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
 	// create event
@@ -549,8 +559,8 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-//	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -571,7 +581,17 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	dim3 block(tileWidthCol, tileWidthRow);
 	cudaDeviceProp deviceProp;
 	cudaGetDeviceProperties(&deviceProp, 0);
-	size_t sMemSize = min((int)deviceProp.sharedMemPerBlock, 2048);
+	int sMemMaxSize = deviceProp.sharedMemPerBlock;
+	int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
+	int tunedSMemSize = 2048;
+	/* 
+	size_t sMemSize = tunedSMemSize;
+	if (sMemMinSize > tunedSMemSize)
+	{
+		sMemSize = sMemMinSize;
+	}
+	*/
+	size_t sMemSize = sMemMinSize;
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
 	// create event
@@ -579,8 +599,8 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-//	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
