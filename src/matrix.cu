@@ -531,8 +531,9 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 
 __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	int tileWidthRow = 2;
-	int tileWidthCol = 64;
+	int threadsPerBlock = 128;
+	int tileWidthRow = parityBlockNum;
+	int tileWidthCol = threadsPerBlock / tileWidthRow;
 	int tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)parityBlockNum / tileWidthRow) );
@@ -560,8 +561,9 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 
 __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	int tileWidthRow = 2;
-	int tileWidthCol = 64;
+	int threadsPerBlock = 128;
+	int tileWidthRow = parityBlockNum;
+	int tileWidthCol = threadsPerBlock / tileWidthRow;
 	int tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)nativeBlockNum / tileWidthRow) );
