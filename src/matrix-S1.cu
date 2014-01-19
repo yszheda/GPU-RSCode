@@ -214,19 +214,20 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 		
 		if(row < n && col < m)
 		{
-			for(int j = 0; j < tileDepth; j ++)
-			{
-//				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
-				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
-			}
+//			for(int j = 0; j < tileDepth; j ++)
+//			{
+////				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
+//				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
+//			}
 //			for(int j = tx; j < tileDepth; j += blockDim.x)
 //			{
 //				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
 //			}
 //			for(int j = ty; j < tileDepth; j += blockDim.y)
-//			{
-//				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
-//			}
+			for(int j = ty; j < tileDepth; j += min(n, blockDim.y))
+			{
+				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
+			}
 //			TODO: Assume removing the loop
 			if (tx < tileDepth)
 			{
