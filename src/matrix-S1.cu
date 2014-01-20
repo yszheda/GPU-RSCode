@@ -212,38 +212,29 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 		product = 0;
 		__syncthreads();
 		
-		if(row < n && col < m)
+//		for(int j = ty; j < tileDepth; j +=blockDim.y)
+//		for(int j = 0; j < tileDepth; j ++)
+//		{
+//			sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
+//		}
+		if (tx < tileDepth)
 		{
-//			for(int j = 0; j < tileDepth; j ++)
-//			{
-////				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
-//				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
-//			}
-//			for(int j = tx; j < tileDepth; j += blockDim.x)
-//			{
-//				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
-//			}
-//			for(int j = ty; j < tileDepth; j += blockDim.y)
-			for(int j = ty; j < tileDepth; j += min(n, blockDim.y))
-			{
-				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
-			}
-//			TODO: Assume removing the loop
-			if (tx < tileDepth)
-			{
-				sMem[ index(ty, tx, tileDepth) ] = A[row*p + tx];
-			}
-//			if (ty < tileDepth)
-//			{
-//				sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty*m];
-//			}
-			__syncthreads();
-			
-			for(int j = 0; j < tileDepth; j++)
-			{
-				product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
-			}
-			__syncthreads();
+			sMem[ index(ty, tx, tileDepth) ] = A[row*p + tx];
+		}
+		if (ty < tileDepth)
+		{
+			sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty*m];
+		}
+		__syncthreads();
+		
+		for(int j = 0; j < tileDepth; j++)
+		{
+			product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
+		}
+		__syncthreads();
+
+		if (row < n && col < m)
+		{
 			C[row*m+col] = product;
 		}
 		bx += gridDim.x;
