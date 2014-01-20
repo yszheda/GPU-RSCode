@@ -226,15 +226,18 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //		}
 		__syncthreads();
 		
-		for(int j = 0; j < tileDepth; j++)
+		if (col < m)
 		{
-			product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
-		}
-		__syncthreads();
-
-		if (row < n && col < m)
-		{
-			C[row*m+col] = product;
+			for(int j = 0; j < tileDepth; j++)
+			{
+				product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
+			}
+			__syncthreads();
+	
+			if (row < n)
+			{
+				C[row*m+col] = product;
+			}
 		}
 		bx += gridDim.x;
 		col = bx*tileWidthCol + tx;
