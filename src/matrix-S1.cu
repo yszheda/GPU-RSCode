@@ -212,6 +212,8 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 		product = 0;
 		__syncthreads();
 		
+		if (col < m)
+		{
 		for(int j = ty; j < tileDepth; j += blockDim.y)
 		{
 			sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
@@ -226,8 +228,6 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //		}
 		__syncthreads();
 		
-		if (col < m)
-		{
 			for(int j = 0; j < tileDepth; j++)
 			{
 				product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
