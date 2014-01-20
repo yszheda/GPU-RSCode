@@ -212,19 +212,18 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 		product = 0;
 		__syncthreads();
 		
-//		for(int j = ty; j < tileDepth; j +=blockDim.y)
-//		for(int j = 0; j < tileDepth; j ++)
-//		{
-//			sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
-//		}
+		for(int j = ty; j < tileDepth; j += blockDim.y)
+		{
+			sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
+		}
 		if (tx < tileDepth)
 		{
 			sMem[ index(ty, tx, tileDepth) ] = A[row*p + tx];
 		}
-		if (ty < tileDepth)
-		{
-			sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty*m];
-		}
+//		if (ty < tileDepth)
+//		{
+//			sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty*m];
+//		}
 		__syncthreads();
 		
 		for(int j = 0; j < tileDepth; j++)
