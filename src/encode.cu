@@ -130,6 +130,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	totalCommunicationTime += stepTime;
 
 	// TO-DO: better tiling
+/*
 //	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
 //	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
 //	dim3 grid(gridDimX, gridDimY);
@@ -147,6 +148,11 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	cudaEventSynchronize(stepStop);
 	// get event elapsed time
 	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	printf("Encoding file completed: %fms\n", stepTime);
+	totalComputationTime += stepTime;
+*/
+
+	stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	printf("Encoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
@@ -227,6 +233,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
+	cudaSetDevice(1);
 	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
 
 	char output_file_name[strlen(fileName) + 5];
