@@ -93,21 +93,25 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-__top_builddir__RS_SOURCES = $(top_builddir)/RS.c
-am__dirstamp = $(am__leading_dot)dirstamp
-__top_builddir__RS_OBJECTS = $(top_builddir)/RS.$(OBJEXT)
+am___top_builddir__RS_OBJECTS = matrix.$(OBJEXT) encode.$(OBJEXT) \
+	decode.$(OBJEXT) main.$(OBJEXT)
+__top_builddir__RS_OBJECTS = $(am___top_builddir__RS_OBJECTS)
 __top_builddir__RS_LDADD = $(LDADD)
-__top_builddir__RS_tiling_S1_SOURCES = $(top_builddir)/RS-tiling-S1.c
+am__dirstamp = $(am__leading_dot)dirstamp
+am___top_builddir__RS_tiling_S1_OBJECTS = matrix-S1.$(OBJEXT) \
+	encode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
 __top_builddir__RS_tiling_S1_OBJECTS =  \
-	$(top_builddir)/RS-tiling-S1.$(OBJEXT)
+	$(am___top_builddir__RS_tiling_S1_OBJECTS)
 __top_builddir__RS_tiling_S1_LDADD = $(LDADD)
-__top_builddir__RS_tiling_S2_SOURCES = $(top_builddir)/RS-tiling-S2.c
+am___top_builddir__RS_tiling_S2_OBJECTS = matrix-S2.$(OBJEXT) \
+	encode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
 __top_builddir__RS_tiling_S2_OBJECTS =  \
-	$(top_builddir)/RS-tiling-S2.$(OBJEXT)
+	$(am___top_builddir__RS_tiling_S2_OBJECTS)
 __top_builddir__RS_tiling_S2_LDADD = $(LDADD)
-__top_builddir__RS_tiling_S3_SOURCES = $(top_builddir)/RS-tiling-S3.c
+am___top_builddir__RS_tiling_S3_OBJECTS = matrix-S3.$(OBJEXT) \
+	encode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
 __top_builddir__RS_tiling_S3_OBJECTS =  \
-	$(top_builddir)/RS-tiling-S3.$(OBJEXT)
+	$(am___top_builddir__RS_tiling_S3_OBJECTS)
 __top_builddir__RS_tiling_S3_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -136,10 +140,14 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(top_builddir)/RS.c $(top_builddir)/RS-tiling-S1.c \
-	$(top_builddir)/RS-tiling-S2.c $(top_builddir)/RS-tiling-S3.c
-DIST_SOURCES = $(top_builddir)/RS.c $(top_builddir)/RS-tiling-S1.c \
-	$(top_builddir)/RS-tiling-S2.c $(top_builddir)/RS-tiling-S3.c
+SOURCES = $(__top_builddir__RS_SOURCES) \
+	$(__top_builddir__RS_tiling_S1_SOURCES) \
+	$(__top_builddir__RS_tiling_S2_SOURCES) \
+	$(__top_builddir__RS_tiling_S3_SOURCES)
+DIST_SOURCES = $(__top_builddir__RS_SOURCES) \
+	$(__top_builddir__RS_tiling_S1_SOURCES) \
+	$(__top_builddir__RS_tiling_S2_SOURCES) \
+	$(__top_builddir__RS_tiling_S3_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -269,13 +277,10 @@ OBJECTS = matrix.o encode.o decode.o main.o
 CCLD = $(CC)
 # bin_PROGRAMS = $(addprefix $(top_builddir)/, $(TARGET))
 # bin_PROGRAMS = RS
-RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
-RS_tiling_S1_SOURCES = matrix-S1.cu encode.cu decode.cu main.c 
-RS_tiling_S2_SOURCES = matrix-S2.cu encode.cu decode.cu main.c 
-RS_tiling_S3_SOURCES = matrix-S3.cu encode.cu decode.cu main.c 
-cuAutotools_CFLAGS = $(CUDA_CFLAGS)
-cuAutotools_LDADD = $(CUDA_LIBS)
-cuAutotools_LDFLAGS = 
+__top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
+__top_builddir__RS_tiling_S1_SOURCES = matrix-S1.cu encode.cu decode.cu main.c 
+__top_builddir__RS_tiling_S2_SOURCES = matrix-S2.cu encode.cu decode.cu main.c 
+__top_builddir__RS_tiling_S3_SOURCES = matrix-S3.cu encode.cu decode.cu main.c 
 all: all-am
 
 .SUFFIXES:
@@ -355,32 +360,14 @@ clean-binPROGRAMS:
 $(top_builddir)/$(am__dirstamp):
 	@$(MKDIR_P) $(top_builddir)
 	@: > $(top_builddir)/$(am__dirstamp)
-$(top_builddir)/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) $(top_builddir)/$(DEPDIR)
-	@: > $(top_builddir)/$(DEPDIR)/$(am__dirstamp)
-$(top_builddir)/RS.$(OBJEXT): $(top_builddir)/$(am__dirstamp) \
-	$(top_builddir)/$(DEPDIR)/$(am__dirstamp)
-$(top_builddir)/RS-tiling-S1.$(OBJEXT):  \
-	$(top_builddir)/$(am__dirstamp) \
-	$(top_builddir)/$(DEPDIR)/$(am__dirstamp)
-$(top_builddir)/RS-tiling-S2.$(OBJEXT):  \
-	$(top_builddir)/$(am__dirstamp) \
-	$(top_builddir)/$(DEPDIR)/$(am__dirstamp)
-$(top_builddir)/RS-tiling-S3.$(OBJEXT):  \
-	$(top_builddir)/$(am__dirstamp) \
-	$(top_builddir)/$(DEPDIR)/$(am__dirstamp)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f $(top_builddir)/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/$(DEPDIR)/RS-tiling-S1.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/$(DEPDIR)/RS-tiling-S2.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/$(DEPDIR)/RS-tiling-S3.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@$(top_builddir)/$(DEPDIR)/RS.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 
 .c.obj:
 @am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
@@ -505,7 +492,6 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-test -z "$(top_builddir)/$(DEPDIR)/$(am__dirstamp)" || rm -f $(top_builddir)/$(DEPDIR)/$(am__dirstamp)
 	-test -z "$(top_builddir)/$(am__dirstamp)" || rm -f $(top_builddir)/$(am__dirstamp)
 
 maintainer-clean-generic:
@@ -516,7 +502,7 @@ clean: clean-am
 clean-am: clean-binPROGRAMS clean-generic mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf $(top_builddir)/$(DEPDIR)
+	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -562,7 +548,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf $(top_builddir)/$(DEPDIR)
+	-rm -rf ./$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -631,6 +617,10 @@ $(top_builddir)/RS-tiling-S3$(EXEEXT): $(COMMON_OBJECTS) matrix-S3.o
 
 CPU:
 	$(CC) -o $(top_builddir)/CPU-RS -lm -lrt $(CCFLAGS) cpu-rs.c
+
+# cuAutotools_CFLAGS  = $(CUDA_CFLAGS)
+# cuAutotools_LDADD  = $(CUDA_LIBS)
+# cuAutotools_LDFLAGS = 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

@@ -53,11 +53,12 @@ CCLD = $(CC)
 bin_PROGRAMS = $(top_builddir)/RS $(top_builddir)/RS-tiling-S1 $(top_builddir)/RS-tiling-S2 $(top_builddir)/RS-tiling-S3
 # bin_PROGRAMS = $(addprefix $(top_builddir)/, $(TARGET))
 # bin_PROGRAMS = RS
-RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
-RS_tiling_S1_SOURCES = matrix-S1.cu encode.cu decode.cu main.c 
-RS_tiling_S2_SOURCES = matrix-S2.cu encode.cu decode.cu main.c 
-RS_tiling_S3_SOURCES = matrix-S3.cu encode.cu decode.cu main.c 
 
-cuAutotools_CFLAGS  = $(CUDA_CFLAGS)
-cuAutotools_LDADD  = $(CUDA_LIBS)
-cuAutotools_LDFLAGS = 
+__top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
+__top_builddir__RS_tiling_S1_SOURCES = matrix-S1.cu encode.cu decode.cu main.c 
+__top_builddir__RS_tiling_S2_SOURCES = matrix-S2.cu encode.cu decode.cu main.c 
+__top_builddir__RS_tiling_S3_SOURCES = matrix-S3.cu encode.cu decode.cu main.c 
+
+# cuAutotools_CFLAGS  = $(CUDA_CFLAGS)
+# cuAutotools_LDADD  = $(CUDA_LIBS)
+# cuAutotools_LDFLAGS = 
