@@ -346,48 +346,21 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 	int row = blockDim.y * blockIdx.y + threadIdx.y;
 	int col = blockIdx.x;
 
-    __shared__ uint8_t pivotCol[SINGLE_BLOCK_SIZE];
-
-    __shared__ uint8_t matrixPivotValue;
-    __shared__ uint8_t resultPivotValue;
-    __shared__ uint8_t matrixCol[SINGLE_BLOCK_SIZE];
-    __shared__ uint8_t resultCol[SINGLE_BLOCK_SIZE];
-
 	setup_tables();
 	__syncthreads();
 
     if ( row < size )
     {
-        if ( ty == 0 )
-        {
-            matrixPivotValue = matrix[ index(pivotIndex, col, size) ];
-            resultPivotValue = result[ index(pivotIndex, col, size) ];
-        }
-        pivotCol[ty] = matrix[ index(row, pivotIndex, size) ];
-        
-        matrixCol[ty] = matrix[ index(row, col, size) ]; 
-        resultCol[ty] = result[ index(row, col, size) ]; 
-//        __syncthreads();
-		__threadfence();
-
 		// substraction in GF
 		// make the pivotCol become reduced echelon form
         if ( row != pivotIndex )
         {
-//			matrix[ index(row, col, size) ] ^= gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
-//			result[ index(row, col, size) ] ^= gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
-//			matrix[ index(row, col, size) ] = matrixCol ^ gf_mul(pivotCol, matrixPivotValue);
-//			result[ index(row, col, size) ] = resultCol ^ gf_mul(pivotCol, resultPivotValue);
-//			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
-//			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
-
-
-			uint8_t newMatrixCol = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
+			uint8_t newMatrixCol = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
 			__threadfence();
-			uint8_t newResultCol = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
-//        	__syncthreads();
+			uint8_t newResultCol = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
 			__threadfence();
 			matrix[ index(row, col, size) ] = newMatrixCol;
+			__threadfence();
 			result[ index(row, col, size) ] = newResultCol;
 			__threadfence();
         }
