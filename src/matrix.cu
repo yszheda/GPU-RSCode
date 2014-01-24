@@ -342,7 +342,6 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
-
 	int row = blockDim.y * blockIdx.y + threadIdx.y;
 	int col = blockIdx.x;
 
@@ -355,13 +354,13 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 		// make the pivotCol become reduced echelon form
         if ( row != pivotIndex )
         {
-			uint8_t newMatrixCol = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
+			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
 			__threadfence();
-			uint8_t newResultCol = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
+			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
 			__threadfence();
-			matrix[ index(row, col, size) ] = newMatrixCol;
+			matrix[ index(row, col, size) ] = newMatrixValue;
 			__threadfence();
-			result[ index(row, col, size) ] = newResultCol;
+			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
         }
     }
@@ -371,39 +370,24 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
-
 	int row = blockIdx.x;
 	int col = blockDim.y * blockIdx.y + threadIdx.y;
-
-    __shared__ uint8_t pivotRow[ SINGLE_BLOCK_SIZE ];
-
-    __shared__ uint8_t matrixPivotValue;
-    __shared__ uint8_t resultPivotValue;
-    __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
-    __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
 	setup_tables();
 	__syncthreads();
 
-    if ( row < size )
+    if ( col < size )
     {
-        if ( ty == 0 )
-        {
-            matrixPivotValue = matrix[ index(row, pivotIndex, size) ];
-            resultPivotValue = result[ index(row, pivotIndex, size) ];
-        }
-        pivotRow[ty] = matrix[ index(pivotIndex, col, size) ];
-        
-        matrixCol[ty] = matrix[ index(row, col, size) ]; 
-        resultCol[ty] = result[ index(row, col, size) ]; 
-        __syncthreads();
-
-		// substraction in GF
-		// make the pivotRow become reduced echelon form
         if ( col != pivotIndex )
         {
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], matrix[ index(row, pivotIndex, size) ]);
+			__threadfence();
+			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], result[ index(row, pivotIndex, size) ]);
+			__threadfence();
+			matrix[ index(row, col, size) ] = newMatrixValue;
+			__threadfence();
+			result[ index(row, col, size) ] = newResultValue;
+			__threadfence();
         }
     }
 }
