@@ -23,7 +23,7 @@
 #include <cuda_runtime.h>
 #include "matrix.h"
 
-// #define DEBUG
+#define DEBUG
 
 void show_squre_matrix(uint8_t *matrix, int size)
 {
@@ -125,19 +125,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	free(decodingMatrix);
 #endif
 
-//	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
-	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), gridDimXSize);
-	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
-	dim3 grid(gridDimX, gridDimY);
-	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
-	// record event
-	cudaEventRecord(stepStart);
-	decode_chunk<<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, gridDimXSize);
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
