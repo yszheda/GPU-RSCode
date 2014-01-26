@@ -339,11 +339,11 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 }
 
 // eliminate by row to make the pivot column become reduced echelon form
-__global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
+__global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *result, int pivotIndex, int size)
 {
-    int ty = threadIdx.y;
-	int row = blockDim.y * blockIdx.y + threadIdx.y;
-	int col = blockIdx.x;
+    const int ty = threadIdx.y;
+	const int row = blockDim.y * blockIdx.y + threadIdx.y;
+	const int col = blockIdx.x;
 
 	setup_tables();
 	__syncthreads();
@@ -356,12 +356,29 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
         {
 			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
 			__threadfence();
+			__syncthreads();
 			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
 			__threadfence();
+			__syncthreads();
 			matrix[ index(row, col, size) ] = newMatrixValue;
 			__threadfence();
+			__syncthreads();
 			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
+			__syncthreads();
+
+//			uint8_t newMatrixValue = gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
+//			__syncthreads();
+//			__threadfence();
+//			uint8_t newResultValue = gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
+//			__threadfence();
+//			__syncthreads();
+//			matrix[ index(row, col, size) ] ^= newMatrixValue;
+//			__syncthreads();
+//			__threadfence();
+//			result[ index(row, col, size) ] ^= newResultValue;
+//			__syncthreads();
+//			__threadfence();
         }
     }
 }
@@ -421,7 +438,7 @@ int get_pivot_index(uint8_t *vector, int index, int size)
     return pivotIndex;
 }
 
-#define DEBUG
+// #define DEBUG
 #ifdef DEBUG
 void show_squre_matrix_debug(uint8_t *matrix, int size)
 {
