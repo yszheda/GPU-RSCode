@@ -366,19 +366,6 @@ __global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *res
 			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
 			__syncthreads();
-
-//			uint8_t newMatrixValue = gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
-//			__syncthreads();
-//			__threadfence();
-//			uint8_t newResultValue = gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
-//			__threadfence();
-//			__syncthreads();
-//			matrix[ index(row, col, size) ] ^= newMatrixValue;
-//			__syncthreads();
-//			__threadfence();
-//			result[ index(row, col, size) ] ^= newResultValue;
-//			__syncthreads();
-//			__threadfence();
         }
     }
 }
@@ -399,12 +386,16 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
         {
 			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], matrix[ index(row, pivotIndex, size) ]);
 			__threadfence();
+			__syncthreads();
 			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], result[ index(row, pivotIndex, size) ]);
 			__threadfence();
+			__syncthreads();
 			matrix[ index(row, col, size) ] = newMatrixValue;
 			__threadfence();
+			__syncthreads();
 			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
+			__syncthreads();
         }
     }
 }
