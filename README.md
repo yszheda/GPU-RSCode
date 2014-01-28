@@ -26,6 +26,24 @@ make install
 
 Usage
 ==========
+### New Version ###
+```shell
+[-h]: show usage information
+```
+Encode: 
+```shell
+[-k|-K nativeBlockNum] [-n|-N totalBlockNum] [-e|-E fileName]
+```
+Decode: 
+```shell
+[-d|-D] [-k|-K nativeBlockNum] [-n|-N totalBlockNum] 
+        [-i|-I originalFileName] [-c|-C config] [-o|-O output]
+```
+For encoding, the -k, -n, and -e options are all necessary.
+For decoding, the -d, -i, and -c options are all necessary.
+If the -o option is not set, the original file name will be chosen as the output file name by default.
+
+### Old Version (tag 2.0) ###
 For encode:
 ```shell
 RS <fragment num> <replica num> -c <original file>
@@ -34,4 +52,3 @@ For decode:
 ```shell
 RS <fragment num> <replica num> -d [<configuration file>]
 ```
-
