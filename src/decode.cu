@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include "matrix.h"
 
-#define DEBUG
+// #define DEBUG
 
 void show_squre_matrix(uint8_t *matrix, int size)
 {
