@@ -187,11 +187,12 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 // A: nxp
 // B: pxm
 // C: nxm
-__device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m)
+__global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
-	__shared__ int rowVector[TILE_WIDTH_ROW][TILE_DEPTH];
-	__shared__ int colVector[TILE_DEPTH][TILE_WIDTH_COL];
-	__shared__ int product[TILE_WIDTH_ROW][TILE_WIDTH_COL];
+	extern __shared__ uint8_t sMem[];
+	int rowVectorSize = tileWidthRow * tileDepth;
+	int colVectorSize = tileDepth * tileWidthCol;
+	int product;
 
 	int bx = blockIdx.x;
    	int by = blockIdx.y;
@@ -199,54 +200,49 @@ __device__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	int ty = threadIdx.y;
 	int row;
 	int col;
-	int px;
-	int py;	
 
 	setup_tables();
 	__syncthreads();
 
 	bx = blockIdx.x;
 	do {
-// Since we have used (TILE_WIDTH_COL, TILE_WIDTH_ROW) as blockDim, these for loops can be optimized out.
-//		for(py = ty; py < TILE_WIDTH_ROW; py += blockDim.y)
-//		{
-//			for(px = tx; px < TILE_WIDTH_COL; px += blockDim.x)
+		row = by*tileWidthRow + ty;
+		col = bx*tileWidthCol + tx;
+		product = 0;
+		__syncthreads();
+		
+		if(row < n && col < m)
+		{
+			for(int j = tx; j < tileDepth; j += blockDim.x)
+			{
+				sMem[ index(ty, j, tileDepth) ] = A[row*p + j];
+			}
+			for(int j = ty; j < tileDepth; j += blockDim.y)
+			{
+				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j*m];
+			}
+//			// Since blockDim.x > tileDepth for our applications,
+//			// we can fully parallelize loading matrix A into sMem.
+//			if (tx < tileDepth)
 //			{
-				py = ty;
-				px = tx;
-				row = by*TILE_WIDTH_ROW + py;
-				col = bx*TILE_WIDTH_COL + px;
-				product[py][px] = 0;
-				__syncthreads();
-			
-				if(row < n && col < m)
-				{
-					for(int i = 0; i < (int)(ceil((float)p / TILE_DEPTH)); i++)
-					{
-						int bound = min(p, TILE_DEPTH);
-						for(int j = tx; j < bound; j += blockDim.x)
-						{
-							rowVector[py][j] = A[row*p + i*bound + j];
-						}
-						for(int j = ty; j < bound; j += blockDim.y)
-						{		
-							colVector[j][px] = B[col + (i*bound + j)*m];
-						}
-						__syncthreads();
-					
-						for(int j = 0; j < bound; j++)
-						{
-							product[py][px] ^= gf_mul(rowVector[py][j], colVector[j][px]);
-				//			dist[py][px] = gf_add(dist[py][px], gf_mul(rowVector[py][j], colVector[j][px]));
-						}
-						__syncthreads();
-					}
-					C[row*m+col] = product[py][px];
-				}
+//				sMem[ index(ty, tx, tileDepth) ] = A[row*p + tx];
 //			}
-//		}
+//			TODO: Assume removing the loop
+//			if (ty < tileDepth)
+//			{
+//				sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty*m];
+//			}
+			__syncthreads();
+			
+			for(int j = 0; j < tileDepth; j++)
+			{
+				product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
+			}
+			__syncthreads();
+			C[row*m+col] = product;
+		}
 		bx += gridDim.x;
-		col = bx*TILE_WIDTH_COL + px;
+		col = bx*tileWidthCol + tx;
 		__syncthreads();
 	} while (col < m);
 }
@@ -334,7 +330,7 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
             pivotValue = matrix[ index(col, col, size) ];
 		}
         __syncthreads();
-		// Normalize the pivot row!
+		// Normalize the pivot row!1024
 		// Every thread divides the element of its position with the pivotValue
         matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
         result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
@@ -342,42 +338,33 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 }
 
 // eliminate by row to make the pivot column become reduced echelon form
-__global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
+__global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *result, int pivotIndex, int size)
 {
-    int ty = threadIdx.y;
-
-	int row = blockDim.y * blockIdx.y + threadIdx.y;
-	int col = blockIdx.x;
-
-    __shared__ uint8_t pivotCol[ SINGLE_BLOCK_SIZE ];
-
-    __shared__ uint8_t matrixPivotValue;
-    __shared__ uint8_t resultPivotValue;
-    __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
-    __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
+    const int ty = threadIdx.y;
+	const int row = blockDim.y * blockIdx.y + threadIdx.y;
+	const int col = blockIdx.x;
 
 	setup_tables();
 	__syncthreads();
 
     if ( row < size )
     {
-        if ( ty == 0 )
-        {
-            matrixPivotValue = matrix[ index(pivotIndex, col, size) ];
-            resultPivotValue = result[ index(pivotIndex, col, size) ];
-        }
-        pivotCol[ty] = matrix[ index(row, pivotIndex, size) ];
-        
-        matrixCol[ty] = matrix[ index(row, col, size) ]; 
-        resultCol[ty] = result[ index(row, col, size) ]; 
-        __syncthreads();
-
 		// substraction in GF
 		// make the pivotCol become reduced echelon form
         if ( row != pivotIndex )
         {
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
+			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
+			__threadfence();
+			__syncthreads();
+			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
+			__threadfence();
+			__syncthreads();
+			matrix[ index(row, col, size) ] = newMatrixValue;
+			__threadfence();
+			__syncthreads();
+			result[ index(row, col, size) ] = newResultValue;
+			__threadfence();
+			__syncthreads();
         }
     }
 }
@@ -386,39 +373,28 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
 __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int ty = threadIdx.y;
-
 	int row = blockIdx.x;
 	int col = blockDim.y * blockIdx.y + threadIdx.y;
-
-    __shared__ uint8_t pivotRow[ SINGLE_BLOCK_SIZE ];
-
-    __shared__ uint8_t matrixPivotValue;
-    __shared__ uint8_t resultPivotValue;
-    __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
-    __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
 	setup_tables();
 	__syncthreads();
 
-    if ( row < size )
+    if ( col < size )
     {
-        if ( ty == 0 )
-        {
-            matrixPivotValue = matrix[ index(row, pivotIndex, size) ];
-            resultPivotValue = result[ index(row, pivotIndex, size) ];
-        }
-        pivotRow[ty] = matrix[ index(pivotIndex, col, size) ];
-        
-        matrixCol[ty] = matrix[ index(row, col, size) ]; 
-        resultCol[ty] = result[ index(row, col, size) ]; 
-        __syncthreads();
-
-		// substraction in GF
-		// make the pivotRow become reduced echelon form
         if ( col != pivotIndex )
         {
-			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
-			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
+			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], matrix[ index(row, pivotIndex, size) ]);
+			__threadfence();
+			__syncthreads();
+			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], result[ index(row, pivotIndex, size) ]);
+			__threadfence();
+			__syncthreads();
+			matrix[ index(row, col, size) ] = newMatrixValue;
+			__threadfence();
+			__syncthreads();
+			result[ index(row, col, size) ] = newResultValue;
+			__threadfence();
+			__syncthreads();
         }
     }
 }
@@ -452,6 +428,7 @@ int get_pivot_index(uint8_t *vector, int index, int size)
     return pivotIndex;
 }
 
+// #define DEBUG
 #ifdef DEBUG
 void show_squre_matrix_debug(uint8_t *matrix, int size)
 {
@@ -497,6 +474,18 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
             switch_columns<<< scGrid, scBlock >>>(matrix_dev, result_dev, index, pivotIndex, size);
 		}
 		cudaDeviceSynchronize();
+#ifdef DEBUG
+uint8_t matrix_host[size*size];
+cudaMemcpy(matrix_host, matrix_dev, size*size, cudaMemcpyDeviceToHost);
+printf("Current row: %d\n", row);
+printf("Step: switch columns\n");
+printf("matrix:\n");
+show_squre_matrix_debug(matrix_host, size);
+uint8_t result_host[size*size];
+cudaMemcpy(result_host, result_dev, size*size, cudaMemcpyDeviceToHost);
+printf("result:\n");
+show_squre_matrix_debug(result_host, size);
+#endif
 
 		dim3 nprGrid(1, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 nprBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
@@ -505,6 +494,17 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 //    	// Normalize the pivot column
 //        normalize_pivot_col<<< nprGrid, linearBlock >>>(matrix_dev, result_dev, index, size);
 		cudaDeviceSynchronize();
+#ifdef DEBUG
+//uint8_t matrix_host[size*size];
+cudaMemcpy(matrix_host, matrix_dev, size*size, cudaMemcpyDeviceToHost);
+printf("Step: normalize pivot row\n");
+printf("matrix:\n");
+show_squre_matrix_debug(matrix_host, size);
+//uint8_t result_host[size*size];
+cudaMemcpy(result_host, result_dev, size*size, cudaMemcpyDeviceToHost);
+printf("result:\n");
+show_squre_matrix_debug(result_host, size);
+#endif
 
 		dim3 ebrGrid(size, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 ebrBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
@@ -512,11 +512,12 @@ void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 		cudaDeviceSynchronize();
 
 #ifdef DEBUG
-uint8_t matrix_host[size*size];
+//uint8_t matrix_host[size*size];
 cudaMemcpy(matrix_host, matrix_dev, size*size, cudaMemcpyDeviceToHost);
+printf("Step: eliminate by row\n");
 printf("matrix:\n");
 show_squre_matrix_debug(matrix_host, size);
-uint8_t result_host[size*size];
+//uint8_t result_host[size*size];
 cudaMemcpy(result_host, result_dev, size*size, cudaMemcpyDeviceToHost);
 printf("result:\n");
 show_squre_matrix_debug(result_host, size);
@@ -531,16 +532,90 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	int j = threadIdx.y;
 	setup_tables();
 	__syncthreads();
-	encodingMatrix[i*col + j] = gf_pow(j+1, i);
+	encodingMatrix[i*col + j] = gf_pow((j+1) % field_size, i);
 }
 
-__global__ void encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
 {
-	matrix_mul(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
+	int threadsPerBlock = 128;
+	int tileWidthRow = parityBlockNum;
+	int tileWidthCol = threadsPerBlock / tileWidthRow;
+	int tileDepth = nativeBlockNum;
+	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
+	int gridDimY = (int)( ceil((float)parityBlockNum / tileWidthRow) );
+	dim3 grid(gridDimX, gridDimY);
+	dim3 block(tileWidthCol, tileWidthRow);
+	cudaDeviceProp deviceProp;
+	cudaGetDeviceProperties(&deviceProp, 0);
+	int sMemMaxSize = deviceProp.sharedMemPerBlock;
+	int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
+	int tunedSMemSize = 2048;
+	/* 
+	size_t sMemSize = tunedSMemSize;
+	if (sMemMinSize > tunedSMemSize)
+	{
+		sMemSize = sMemMinSize;
+	}
+	*/
+	size_t sMemSize = sMemMinSize;
+	float stepTime = 0;
+	cudaEvent_t stepStart, stepStop;
+	// create event
+	cudaEventCreate(&stepStart);
+	cudaEventCreate(&stepStop);
+	// record event
+	cudaEventRecord(stepStart);
+	matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	// record event and synchronize
+	cudaEventRecord(stepStop);
+	cudaEventSynchronize(stepStop);
+	// get event elapsed time
+	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	return stepTime;
 }
 
-__global__ void decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
 {
-	matrix_mul(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize);
+	int threadsPerBlock = 128;
+	int tileWidthRow = nativeBlockNum;
+	if (tileWidthRow > 8)
+	{
+		tileWidthRow = 8;
+	}
+	int tileWidthCol = threadsPerBlock / tileWidthRow;
+	int tileDepth = nativeBlockNum;
+	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
+	int gridDimY = (int)( ceil((float)nativeBlockNum / tileWidthRow) );
+	dim3 grid(gridDimX, gridDimY);
+	dim3 block(tileWidthCol, tileWidthRow);
+	cudaDeviceProp deviceProp;
+	cudaGetDeviceProperties(&deviceProp, 0);
+	int sMemMaxSize = deviceProp.sharedMemPerBlock;
+	int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
+	int tunedSMemSize = 2048;
+	/* 
+	size_t sMemSize = tunedSMemSize;
+	if (sMemMinSize > tunedSMemSize)
+	{
+		sMemSize = sMemMinSize;
+	}
+	*/
+	size_t sMemSize = sMemMinSize;
+	float stepTime = 0;
+	cudaEvent_t stepStart, stepStop;
+	// create event
+	cudaEventCreate(&stepStart);
+	cudaEventCreate(&stepStop);
+	// record event
+	cudaEventRecord(stepStart);
+	matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	// record event and synchronize
+	cudaEventRecord(stepStop);
+	cudaEventSynchronize(stepStop);
+	// get event elapsed time
+	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	return stepTime;
 }
 

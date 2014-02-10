@@ -14,8 +14,6 @@
 
 @SET_MAKE@
 
-# AUTOMAKE_OPTIONS = subdir-objects
-
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -92,8 +90,9 @@ CONFIG_CLEAN_FILES =
 CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
-__top_builddir__RS_SOURCES = $(top_builddir)/RS.c
-__top_builddir__RS_OBJECTS = RS.$(OBJEXT)
+am___top_builddir__RS_OBJECTS = matrix.$(OBJEXT) encode.$(OBJEXT) \
+	decode.$(OBJEXT) main.$(OBJEXT)
+__top_builddir__RS_OBJECTS = $(am___top_builddir__RS_OBJECTS)
 __top_builddir__RS_LDADD = $(LDADD)
 am__dirstamp = $(am__leading_dot)dirstamp
 AM_V_P = $(am__v_P_@AM_V@)
@@ -112,10 +111,6 @@ DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
 am__mv = mv -f
-AM_V_lt = $(am__v_lt_@AM_V@)
-am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
-am__v_lt_0 = --silent
-am__v_lt_1 = 
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
 	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 AM_V_CC = $(am__v_CC_@AM_V@)
@@ -127,8 +122,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(top_builddir)/RS.c
-DIST_SOURCES = $(top_builddir)/RS.c
+SOURCES = $(__top_builddir__RS_SOURCES)
+DIST_SOURCES = $(__top_builddir__RS_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -192,7 +187,8 @@ NVCC = @NVCC@
 # NVCCFLAGS = -G
 # NVCCFLAGS = -G -arch=sm_35
 # NVCCFLAGS = -G -gencode=arch=compute_30,code=sm_30
-NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35
+# NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35
+NVCCFLAGS = -G --ptxas-options=-v
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
 PACKAGE_BUGREPORT = @PACKAGE_BUGREPORT@
@@ -248,8 +244,10 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+AUTOMAKE_OPTIONS = subdir-objects
 CCFLAGS = -g
-TARGET = RS
+TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
+COMMON_OBJECTS = encode.o decode.o main.o
 OBJECTS = matrix.o encode.o decode.o main.o
 
 # clean:
@@ -257,11 +255,7 @@ OBJECTS = matrix.o encode.o decode.o main.o
 
 # include .depend
 CCLD = $(CC)
-# bin_PROGRAMS = RS
-cuAutotools_SOURCES = matrix.cu encode.cu decode.cu main.c 
-cuAutotools_CFLAGS = $(CUDA_CFLAGS)
-cuAutotools_LDADD = $(CUDA_LIBS)
-cuAutotools_LDFLAGS = 
+__top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
 all: all-am
 
 .SUFFIXES:
@@ -348,28 +342,15 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/RS.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 
 .c.obj:
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(COMPILE) -MT $@ -MD -MP -MF $(DEPDIR)/$*.Tpo -c -o $@ `$(CYGPATH_W) '$<'`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/$*.Tpo $(DEPDIR)/$*.Po
+@am__fastdepCC_TRUE@	$(AM_V_CC)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
+@am__fastdepCC_TRUE@	$(COMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
+@am__fastdepCC_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(COMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-RS.o: $(top_builddir)/RS.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT RS.o -MD -MP -MF $(DEPDIR)/RS.Tpo -c -o RS.o `test -f '$(top_builddir)/RS.c' || echo '$(srcdir)/'`$(top_builddir)/RS.c
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/RS.Tpo $(DEPDIR)/RS.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_builddir)/RS.c' object='RS.o' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o RS.o `test -f '$(top_builddir)/RS.c' || echo '$(srcdir)/'`$(top_builddir)/RS.c
-
-RS.obj: $(top_builddir)/RS.c
-@am__fastdepCC_TRUE@	$(AM_V_CC)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT RS.obj -MD -MP -MF $(DEPDIR)/RS.Tpo -c -o RS.obj `if test -f '$(top_builddir)/RS.c'; then $(CYGPATH_W) '$(top_builddir)/RS.c'; else $(CYGPATH_W) '$(srcdir)/$(top_builddir)/RS.c'; fi`
-@am__fastdepCC_TRUE@	$(AM_V_at)$(am__mv) $(DEPDIR)/RS.Tpo $(DEPDIR)/RS.Po
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	$(AM_V_CC)source='$(top_builddir)/RS.c' object='RS.obj' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCC_FALSE@	$(AM_V_CC@am__nodep@)$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o RS.obj `if test -f '$(top_builddir)/RS.c'; then $(CYGPATH_W) '$(top_builddir)/RS.c'; else $(CYGPATH_W) '$(srcdir)/$(top_builddir)/RS.c'; fi`
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -579,8 +560,10 @@ uninstall-am: uninstall-binPROGRAMS
 
 # OBJPROG = $(addprefix $(top_builddir)/, $(TARGET))
 
-$(top_builddir)/RS: matrix.o encode.o decode.o main.o
-	$(NVCC) $^ -o $@ 
+$(top_builddir)/RS$(EXEEXT): matrix.o encode.o decode.o main.o
+# $(top_builddir)/RS: matrix.o encode.o decode.o main.o
+	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+
 # $(OBJPROG): $(OBJECTS)
 # 	$(NVCC) $^ -o $@ 
 .cu.o:
@@ -597,6 +580,10 @@ $(top_builddir)/RS: matrix.o encode.o decode.o main.o
 
 CPU:
 	$(CC) -o $(top_builddir)/CPU-RS -lm -lrt $(CCFLAGS) cpu-rs.c
+
+# cuAutotools_CFLAGS  = $(CUDA_CFLAGS)
+# cuAutotools_LDADD  = $(CUDA_LIBS)
+# cuAutotools_LDFLAGS = 
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

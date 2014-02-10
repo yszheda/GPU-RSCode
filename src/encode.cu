@@ -166,23 +166,11 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
         cudaEventElapsedTime(&stepTime, stepStart, stepStop);
         printf("Copy data from CPU to GPU in stream: %fms\n", stepTime);
         totalCommunicationTime += stepTime;
-		
-//		int gridDimX = min( (int)( ceil((float)streamChunkSize/ TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
-		int gridDimX = min( (int)( ceil((float)streamChunkSize / TILE_WIDTH_COL) ), gridDimXSize);
-        int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
-        dim3 grid(gridDimX, gridDimY);
-        dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
-        // record event
-        cudaEventRecord(stepStart);
-        encode_chunk<<<grid, block, 0, stream[i]>>>(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, streamChunkSize);
-        // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
-        // get event elapsed time
-        cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+
+		stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, streamChunkSize, stream[i]);
         printf("Encoding file in stream completed: %fms\n", stepTime);
         totalComputationTime += stepTime;
-        
+		
         // record event
         cudaEventRecord(stepStart);
         for(int j = 0; j < parityBlockNum; j++)
@@ -202,44 +190,13 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
         cudaFree(dataBuf_d);
         cudaFree(codeBuf_d);
     }
-
+/*
     for(int i = 0; i < streamNum; i++)
     {
 		cudaStreamDestroy(stream[i]);
     }
-
-/*
-	// TO-DO: better tiling
-//	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
-	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), gridDimXSize);
-	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
-	dim3 grid(gridDimX, gridDimY);
-	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
-	// record event
-	cudaEventRecord(stepStart);
-	encode_chunk<<<grid, block>>>(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-	printf("Encoding file completed: %fms\n", stepTime);
-	totalComputationTime += stepTime;
-
-	// record event
-	cudaEventRecord(stepStart);
-	cudaMemcpy(codeBuf, codeBuf_d, parityBlockNum*chunkSize*sizeof(uint8_t), cudaMemcpyDeviceToHost);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-	printf("copy code from GPU to CPU: %fms\n", stepTime);
-	totalCommunicationTime += stepTime;
 */
 	cudaFree(encodingMatrix_d);
-//	cudaFree(dataBuf_d);
-//	cudaFree(codeBuf_d);
 
 	// record event and synchronize
 	cudaEventRecord(totalStop);
@@ -249,6 +206,11 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	printf("Total computation time: %fms\n", totalComputationTime);
 	printf("Total communication time: %fms\n", totalCommunicationTime);
 	printf("Total GPU encoding time: %fms\n", totalTime);
+
+    for(int i = 0; i < streamNum; i++)
+    {
+		cudaStreamDestroy(stream[i]);
+    }
 
 	char metadata_file_name[strlen(fileName) + 15];
 	sprintf(metadata_file_name, "%s.METADATA", fileName);
