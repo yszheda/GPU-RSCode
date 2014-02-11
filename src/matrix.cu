@@ -356,12 +356,16 @@ __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotInde
         {
 			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
 			__threadfence();
+			__syncthreads();
 			uint8_t newResultValue = result[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], result[ index(pivotIndex, col, size) ]);
 			__threadfence();
+			__syncthreads();
 			matrix[ index(row, col, size) ] = newMatrixValue;
 			__threadfence();
+			__syncthreads();
 			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
+			__syncthreads();
         }
     }
 }
