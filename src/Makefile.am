@@ -1,6 +1,6 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
-CCFLAGS = -g
+CCFLAGS = -g -lpthread
 NVCCFLAGS = -G --ptxas-options=-v
 
 TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
