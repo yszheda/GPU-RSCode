@@ -37,6 +37,8 @@ struct ThreadDataType {
 
 typedef struct ThreadDataType ThreadDataType;
 
+pthread_barrier_t barrier;
+
 void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t* encodingMatrix)
 {
 	FILE *fp;
@@ -185,7 +187,6 @@ void* GPU_thread_func(void * args)
 {
 	ThreadDataType* thread_data = (ThreadDataType *) args;
 	struct timespec start, end;
-	pthread_barrier_t barrier;
 	pthread_barrier_wait(&barrier);
 	clock_gettime(CLOCK_REALTIME, &start);
 	pthread_barrier_wait(&barrier);
@@ -201,8 +202,8 @@ void* GPU_thread_func(void * args)
 	clock_gettime(CLOCK_REALTIME, &end);
 	if (thread_data->id == 0)
 	{
-		double totalTime = (double) (end.tv_sec - start.tv_sec)
-				+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000000L;
+		double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+				+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
 		printf("Total GPU encoding time using mutiple devices: %fms\n", totalTime);
 	}
 	return NULL;
@@ -260,7 +261,10 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	ThreadDataType* thread_data = (ThreadDataType *) malloc(GPU_num * sizeof(ThreadDataType));
 	uint8_t *dataBufPerDevice[GPU_num];
 	uint8_t *codeBufPerDevice[GPU_num];
+	pthread_barrier_init(&barrier, NULL, GPU_num);
 	int maxChunkSizePerDevice = (chunkSize / GPU_num) + (chunkSize % GPU_num != 0);
+//	struct timespec start, end;
+//	clock_gettime(CLOCK_REALTIME, &start);
 	for (int i = 0; i < GPU_num; ++i)
 	{
 		thread_data[i].id = i;
@@ -287,6 +291,13 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	for (int i = 0; i < GPU_num; ++i)
 	{
 		pthread_join(((pthread_t*) threads)[i], NULL);
+	}
+//	clock_gettime(CLOCK_REALTIME, &end);
+//	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+//			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+//	printf("Total GPU encoding time using mutiple devices: %fms\n", totalTime);
+	for (int i = 0; i < GPU_num; ++i)
+	{
 		int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
 		for (int j = 0; j < parityBlockNum; ++j)
 		{
@@ -295,8 +306,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 							deviceChunkSize);
 		}
 	}
-//	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
-
+	pthread_barrier_destroy(&barrier);
 	cudaDeviceReset();
 
 	char output_file_name[strlen(fileName) + 5];
