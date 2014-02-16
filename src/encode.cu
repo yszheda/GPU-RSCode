@@ -121,7 +121,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
 	// record event
 	cudaEventRecord(stepStart);
-	cudaMemcpy(encodingMatrix, encodingMatrix_d, encodingMatrixSize, cudaMemcpyDeviceToHost);
+	cudaMemcpy(encodingMatrix, encodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
