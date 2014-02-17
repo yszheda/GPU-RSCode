@@ -563,15 +563,15 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	// create event
 	cudaEventCreate(&stepStart);
 	cudaEventCreate(&stepStop);
-	// record event
-	cudaEventRecord(stepStart);
+//	// record event
+//	cudaEventRecord(stepStart);
 	matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 //	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+//	// record event and synchronize
+//	cudaEventRecord(stepStop);
+//	cudaEventSynchronize(stepStop);
+//	// get event elapsed time
+//	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
 	return stepTime;
 }
 
