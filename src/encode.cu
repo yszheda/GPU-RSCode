@@ -150,43 +150,53 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
         cudaMalloc( (void **)&dataBuf_d[i], dataSize );
         cudaMalloc( (void **)&codeBuf_d[i], codeSize );
+	}
 
-        // record event
-        cudaEventRecord(stepStart);
+    for(int i = 0; i < streamNum; i++)
+    {
+        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+        int dataSize = nativeBlockNum*streamChunkSize*sizeof(uint8_t);
+        int codeSize = parityBlockNum*streamChunkSize*sizeof(uint8_t);
+//        // record event
+//        cudaEventRecord(stepStart);
         for(int j = 0; j < nativeBlockNum; j++)
         {
 			cudaMemcpyAsync(dataBuf_d[i]+j*streamChunkSize, dataBuf+j*chunkSize+i*streamChunkSize, 
                                                 streamChunkSize*sizeof(uint8_t), 
                                                 cudaMemcpyHostToDevice, stream[i]);
         }
-        // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
-        // get event elapsed time
-        cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-        printf("Copy data from CPU to GPU in stream: %fms\n", stepTime);
-        totalCommunicationTime += stepTime;
+//        // record event and synchronize
+//        cudaEventRecord(stepStop);
+//        cudaEventSynchronize(stepStop);
+//        // get event elapsed time
+//        cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+//        printf("Copy data from CPU to GPU in stream: %fms\n", stepTime);
+//        totalCommunicationTime += stepTime;
 
 		stepTime = encode_chunk(dataBuf_d[i], encodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, stream[i]);
-        printf("Encoding file in stream completed: %fms\n", stepTime);
-        totalComputationTime += stepTime;
+//        printf("Encoding file in stream completed: %fms\n", stepTime);
+//        totalComputationTime += stepTime;
 		
-        // record event
-        cudaEventRecord(stepStart);
+//        // record event
+//        cudaEventRecord(stepStart);
         for(int j = 0; j < parityBlockNum; j++)
         {
                 cudaMemcpyAsync(codeBuf+j*chunkSize+i*streamChunkSize, codeBuf_d[i]+j*streamChunkSize, 
                                                 streamChunkSize*sizeof(uint8_t),
                                                 cudaMemcpyDeviceToHost, stream[i]);
         }
-        // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
-        // get event elapsed time
-        cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-        printf("copy code from GPU to CPU in stream: %fms\n", stepTime);
-        totalCommunicationTime += stepTime;
+//        // record event and synchronize
+//        cudaEventRecord(stepStop);
+//        cudaEventSynchronize(stepStop);
+//        // get event elapsed time
+//        cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+//        printf("copy code from GPU to CPU in stream: %fms\n", stepTime);
+//        totalCommunicationTime += stepTime;
 
+	}
+
+    for(int i = 0; i < streamNum; i++)
+	{
         cudaFree(dataBuf_d[i]);
         cudaFree(codeBuf_d[i]);
     }
@@ -203,8 +213,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	cudaEventSynchronize(totalStop);
 	// get event elapsed time
 	cudaEventElapsedTime(&totalTime, totalStart, totalStop);
-	printf("Total computation time: %fms\n", totalComputationTime);
-	printf("Total communication time: %fms\n", totalCommunicationTime);
+//	printf("Total computation time: %fms\n", totalComputationTime);
+//	printf("Total communication time: %fms\n", totalCommunicationTime);
 	printf("Total GPU encoding time: %fms\n", totalTime);
 
     for(int i = 0; i < streamNum; i++)
@@ -284,6 +294,9 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
 	{
 		gridDimXSize = maxGridDimXSize;
 	}
+	
+	cudaSetDevice(1);
+
 	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize, gridDimXSize, streamNum);
 
 	char output_file_name[strlen(fileName) + 5];
