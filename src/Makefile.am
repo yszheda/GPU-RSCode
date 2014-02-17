@@ -4,8 +4,8 @@ CCFLAGS = -g
 # NVCCFLAGS = -G
 # NVCCFLAGS = -G -arch=sm_35
 # NVCCFLAGS = -G -gencode=arch=compute_30,code=sm_30
-# NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35
-NVCCFLAGS = -G --ptxas-options=-v
+NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35 --ptxas-options=-v
+# NVCCFLAGS = -G --ptxas-options=-v
 
 TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
 COMMON_OBJECTS = encode.o decode.o main.o
