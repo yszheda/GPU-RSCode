@@ -37,7 +37,7 @@ struct ThreadDataType {
 
 typedef struct ThreadDataType ThreadDataType;
 
-pthread_barrier_t barrier;
+static pthread_barrier_t barrier;
 
 void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t* encodingMatrix)
 {
@@ -78,6 +78,8 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 extern "C"
 void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
 {
+//	cudaSetDevice(id);
+
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
@@ -183,9 +185,10 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 	free(encodingMatrix);
 }
 
-void* GPU_thread_func(void * args)
+static void* GPU_thread_func(void * args)
 {
 	ThreadDataType* thread_data = (ThreadDataType *) args;
+	cudaSetDevice(thread_data->id);
 	struct timespec start, end;
 	pthread_barrier_wait(&barrier);
 	clock_gettime(CLOCK_REALTIME, &start);
@@ -204,7 +207,7 @@ void* GPU_thread_func(void * args)
 	{
 		double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
 				+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
-		printf("Total GPU encoding time using mutiple devices: %fms\n", totalTime);
+		printf("Total GPU encoding time using multiple devices: %fms\n", totalTime);
 	}
 	return NULL;
 }
@@ -295,7 +298,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 //	clock_gettime(CLOCK_REALTIME, &end);
 //	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
 //			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
-//	printf("Total GPU encoding time using mutiple devices: %fms\n", totalTime);
+//	printf("Total GPU encoding time using multiple devices: %fms\n", totalTime);
 	for (int i = 0; i < GPU_num; ++i)
 	{
 		int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
@@ -305,6 +308,8 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 							codeBufPerDevice[i] + j * deviceChunkSize,
 							deviceChunkSize);
 		}
+		free(dataBufPerDevice[i]);
+		free(codeBufPerDevice[i]);
 	}
 	pthread_barrier_destroy(&barrier);
 	cudaDeviceReset();
