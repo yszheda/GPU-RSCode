@@ -129,7 +129,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 //    int streamNum = ( chunkSize / STREAM_MAX_CHUNK_SIZE ) + ( chunkSize%STREAM_MAX_CHUNK_SIZE != 0 ); 
 //    int streamChunkSize = min(chunkSize, STREAM_MAX_CHUNK_SIZE);
 
-	int streamMaxChunkSize = (chunkSize / streamNum) + (chunkSize % streamNum != 0);
+//	int streamMaxChunkSize = (chunkSize / streamNum) + (chunkSize % streamNum != 0);
+	int streamMinChunkSize = chunkSize / streamNum;
     cudaStream_t stream[streamNum];
     //NOTE: need cudaMallocHost
     for(int i = 0; i < streamNum; i++)
@@ -141,7 +142,12 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	uint8_t *codeBuf_d[streamNum];		//device
     for(int i = 0; i < streamNum; i++)
     {
-        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+//        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+		int streamChunkSize = streamMinChunkSize;
+		if (i == streamNum - 1) 
+		{
+			streamChunkSize = chunkSize - i * streamMinChunkSize;
+		} 
 
 //        uint8_t *dataBuf_d;                //device
 //        uint8_t *codeBuf_d;                //device
@@ -154,16 +160,24 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
     for(int i = 0; i < streamNum; i++)
     {
-        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+//        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+		int streamChunkSize = streamMinChunkSize;
+		if (i == streamNum - 1) 
+		{
+			streamChunkSize = chunkSize - i * streamMinChunkSize;
+		} 
+
         int dataSize = nativeBlockNum*streamChunkSize*sizeof(uint8_t);
         int codeSize = parityBlockNum*streamChunkSize*sizeof(uint8_t);
 //        // record event
 //        cudaEventRecord(stepStart);
         for(int j = 0; j < nativeBlockNum; j++)
         {
-			cudaMemcpyAsync(dataBuf_d[i]+j*streamChunkSize, dataBuf+j*chunkSize+i*streamChunkSize, 
-                                                streamChunkSize*sizeof(uint8_t), 
-                                                cudaMemcpyHostToDevice, stream[i]);
+			cudaMemcpyAsync(dataBuf_d[i]+j*streamChunkSize, 
+							dataBuf+j*chunkSize+i*streamMinChunkSize, 
+                            streamChunkSize*sizeof(uint8_t), 
+                            cudaMemcpyHostToDevice, 
+							stream[i]);
         }
 //        // record event and synchronize
 //        cudaEventRecord(stepStop);
@@ -176,7 +190,13 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
     for(int i = 0; i < streamNum; i++)
     {
-        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+//        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+		int streamChunkSize = streamMinChunkSize;
+		if (i == streamNum - 1) 
+		{
+			streamChunkSize = chunkSize - i * streamMinChunkSize;
+		} 
+
         int dataSize = nativeBlockNum*streamChunkSize*sizeof(uint8_t);
         int codeSize = parityBlockNum*streamChunkSize*sizeof(uint8_t);
 		stepTime = encode_chunk(dataBuf_d[i], encodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, stream[i]);
@@ -187,16 +207,24 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
     for(int i = 0; i < streamNum; i++)
     {
-        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+//        int streamChunkSize = min(chunkSize-i*streamMaxChunkSize, streamMaxChunkSize);
+		int streamChunkSize = streamMinChunkSize;
+		if (i == streamNum - 1) 
+		{
+			streamChunkSize = chunkSize - i * streamMinChunkSize;
+		} 
+
         int dataSize = nativeBlockNum*streamChunkSize*sizeof(uint8_t);
         int codeSize = parityBlockNum*streamChunkSize*sizeof(uint8_t);
 //        // record event
 //        cudaEventRecord(stepStart);
         for(int j = 0; j < parityBlockNum; j++)
         {
-                cudaMemcpyAsync(codeBuf+j*chunkSize+i*streamChunkSize, codeBuf_d[i]+j*streamChunkSize, 
-                                                streamChunkSize*sizeof(uint8_t),
-                                                cudaMemcpyDeviceToHost, stream[i]);
+                cudaMemcpyAsync(codeBuf+j*chunkSize+i*streamMinChunkSize, 
+								codeBuf_d[i]+j*streamChunkSize, 
+                                streamChunkSize*sizeof(uint8_t),
+								cudaMemcpyDeviceToHost, 
+								stream[i]);
         }
 //        // record event and synchronize
 //        cudaEventRecord(stepStop);
