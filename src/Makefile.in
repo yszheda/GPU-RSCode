@@ -76,7 +76,9 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = $(top_builddir)/RS$(EXEEXT)
+bin_PROGRAMS = $(top_builddir)/RS$(EXEEXT) \
+	$(top_builddir)/RS-DFS-stream$(EXEEXT) \
+	$(top_builddir)/RS-BFS-stream$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/depcomp
@@ -95,6 +97,16 @@ am___top_builddir__RS_OBJECTS = matrix.$(OBJEXT) encode.$(OBJEXT) \
 __top_builddir__RS_OBJECTS = $(am___top_builddir__RS_OBJECTS)
 __top_builddir__RS_LDADD = $(LDADD)
 am__dirstamp = $(am__leading_dot)dirstamp
+am___top_builddir__RS_BFS_stream_OBJECTS = matrix.$(OBJEXT) \
+	encode-BFS-stream.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
+__top_builddir__RS_BFS_stream_OBJECTS =  \
+	$(am___top_builddir__RS_BFS_stream_OBJECTS)
+__top_builddir__RS_BFS_stream_LDADD = $(LDADD)
+am___top_builddir__RS_DFS_stream_OBJECTS = matrix.$(OBJEXT) \
+	encode-DFS-stream.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
+__top_builddir__RS_DFS_stream_OBJECTS =  \
+	$(am___top_builddir__RS_DFS_stream_OBJECTS)
+__top_builddir__RS_DFS_stream_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -122,8 +134,12 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(__top_builddir__RS_SOURCES)
-DIST_SOURCES = $(__top_builddir__RS_SOURCES)
+SOURCES = $(__top_builddir__RS_SOURCES) \
+	$(__top_builddir__RS_BFS_stream_SOURCES) \
+	$(__top_builddir__RS_DFS_stream_SOURCES)
+DIST_SOURCES = $(__top_builddir__RS_SOURCES) \
+	$(__top_builddir__RS_BFS_stream_SOURCES) \
+	$(__top_builddir__RS_DFS_stream_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -246,9 +262,9 @@ top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 CCFLAGS = -g
 # NVCCFLAGS = -G --ptxas-options=-v
-TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
-COMMON_OBJECTS = encode.o decode.o main.o
-OBJECTS = matrix.o encode.o decode.o main.o
+TARGET = RS RS-DFS-stream RS-BFS-stream
+COMMON_OBJECTS = matrix.o decode.o main.o
+OBJECTS = matrix.o encode.o encode-BFS-stream.o encode-DFS-stream.o decode.o main.o
 
 # clean:
 # 	rm *.o $(OBJPROG)
@@ -256,6 +272,8 @@ OBJECTS = matrix.o encode.o decode.o main.o
 # include .depend
 CCLD = $(CC)
 __top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
+__top_builddir__RS_BFS_stream_SOURCES = matrix.cu encode-BFS-stream.cu decode.cu main.c 
+__top_builddir__RS_DFS_stream_SOURCES = matrix.cu encode-DFS-stream.cu decode.cu main.c 
 all: all-am
 
 .SUFFIXES:
@@ -562,6 +580,14 @@ uninstall-am: uninstall-binPROGRAMS
 
 $(top_builddir)/RS$(EXEEXT): matrix.o encode.o decode.o main.o
 # $(top_builddir)/RS: matrix.o encode.o decode.o main.o
+	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+
+$(top_builddir)/RS-DFS-stream$(EXEEXT): $(COMMON_OBJECTS) encode-DFS-stream.o
+# $(top_builddir)/RS-tiling-S1: $(COMMON_OBJECTS) matrix-S1.o
+	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+
+$(top_builddir)/RS-BFS-stream$(EXEEXT): $(COMMON_OBJECTS) encode-BFS-stream.o
+# $(top_builddir)/RS-tiling-S1: $(COMMON_OBJECTS) matrix-S1.o
 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
 
 # $(OBJPROG): $(OBJECTS)
