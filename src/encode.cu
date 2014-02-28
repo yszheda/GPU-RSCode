@@ -295,7 +295,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
 		gridDimXSize = maxGridDimXSize;
 	}
 	
-	cudaSetDevice(1);
+//	cudaSetDevice(1);
 
 	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize, gridDimXSize, streamNum);
 
@@ -330,6 +330,8 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
 		}
 		fclose(fp_out);
 	}
+
+	cudaDeviceReset();
 
 	cudaFreeHost(dataBuf);
 	cudaFreeHost(codeBuf);
