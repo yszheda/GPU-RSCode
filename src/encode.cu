@@ -210,7 +210,13 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
+	struct timespec start, end;
+	clock_gettime(CLOCK_REALTIME, &start);
 	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
+	clock_gettime(CLOCK_REALTIME, &end);
+	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+	printf("Total GPU encoding time used by the total function: %fms\n", totalTime);
 
 	char output_file_name[strlen(fileName) + 5];
 	for(int i = 0; i < nativeBlockNum; i++)
