@@ -163,7 +163,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	sprintf(metadata_file_name, "%s.METADATA", fileName);
 	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
 //	free(encodingMatrix);
-	cudaFreehost(encodingMatrix);
+	cudaFreeHost(encodingMatrix);
 }
 
 extern "C"
