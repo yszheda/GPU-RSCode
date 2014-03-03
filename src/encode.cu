@@ -103,7 +103,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	uint8_t *encodingMatrix;	//host
 	uint8_t *encodingMatrix_d;	//device
 	int matrixSize = parityBlockNum * nativeBlockNum * sizeof(uint8_t);
-	encodingMatrix = (uint8_t*) malloc(matrixSize);
+//	encodingMatrix = (uint8_t*) malloc(matrixSize);
+	cudaMallocHost((void **)&encodingMatrix, matrixSize);
 	cudaMalloc((void **) &encodingMatrix_d, matrixSize);
 
 	// record event
@@ -161,7 +162,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	char metadata_file_name[strlen(fileName) + 15];
 	sprintf(metadata_file_name, "%s.METADATA", fileName);
 	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
-	free(encodingMatrix);
+//	free(encodingMatrix);
+	cudaFreehost(encodingMatrix);
 }
 
 extern "C"
@@ -189,9 +191,11 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	uint8_t *codeBuf;		//host
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	int codeSize = parityBlockNum * chunkSize * sizeof(uint8_t);
-	dataBuf = (uint8_t*) malloc(dataSize);
+//	dataBuf = (uint8_t*) malloc(dataSize);
+	cudaMallocHost((void **)&dataBuf, dataSize);
 	memset(dataBuf, 0, dataSize);
-	codeBuf = (uint8_t*) malloc(codeSize);
+//	codeBuf = (uint8_t*) malloc(codeSize);
+	cudaMallocHost((void **)&codeBuf, codeSize);
 	memset(codeBuf, 0, codeSize);
 	
 	for(int i = 0; i < nativeBlockNum; i++)
@@ -250,6 +254,8 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 		fclose(fp_out);
 	}
 
-	free(dataBuf);
-	free(codeBuf);
+//	free(dataBuf);
+//	free(codeBuf);
+	cudaFreeHost(dataBuf);
+	cudaFreeHost(codeBuf);
 }
