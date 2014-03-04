@@ -3,14 +3,14 @@ AUTOMAKE_OPTIONS = subdir-objects
 CCFLAGS = -g
 NVCCFLAGS = -G --ptxas-options=-v
 
-TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
-COMMON_OBJECTS = encode.o decode.o main.o
-OBJECTS = matrix.o encode.o decode.o main.o
+TARGET = RS 
+COMMON_OBJECTS = encode.o cpu-decode.o decode.o main.o
+OBJECTS = matrix.o encode.o cpu-decode.o decode.o main.o
 
 # OBJPROG = $(addprefix $(top_builddir)/, $(TARGET))
 
-$(top_builddir)/RS$(EXEEXT): matrix.o encode.o decode.o main.o
-# $(top_builddir)/RS: matrix.o encode.o decode.o main.o
+$(top_builddir)/RS$(EXEEXT): matrix.o encode.o cpu-decode.o decode.o main.o
+# $(top_builddir)/RS: matrix.o encode.o cpu-decode.o decode.o main.o
 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
 
 # $(OBJPROG): $(OBJECTS)
@@ -39,7 +39,7 @@ CPU:
 CCLD = $(CC)
 bin_PROGRAMS = $(top_builddir)/RS
 
-__top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
+__top_builddir__RS_SOURCES = matrix.cu encode.cu cpu-decode.c decode.cu main.c 
 
 # cuAutotools_CFLAGS  = $(CUDA_CFLAGS)
 # cuAutotools_LDADD  = $(CUDA_LIBS)
