@@ -21,6 +21,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include "matrix.h"
+#include "cpu-decode.h"
+extern "C"		
+void CPU_invert_matrix(uint8_t *matrix, uint8_t *result, int size);
+
 
 // #define DEBUG
 
@@ -45,7 +49,7 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
 }
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize)
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	int codeSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
@@ -86,41 +90,41 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	totalCommunicationTime += stepTime;
 
 	int matrixSize = nativeBlockNum * nativeBlockNum * sizeof(uint8_t);
-	uint8_t *encodingMatrix_d;	//device
+//	uint8_t *encodingMatrix_d;	//device
 	uint8_t *decodingMatrix_d;	//device
-	cudaMalloc((void **) &encodingMatrix_d, matrixSize);
+//	cudaMalloc((void **) &encodingMatrix_d, matrixSize);
 	cudaMalloc((void **) &decodingMatrix_d, matrixSize);
 
 	// record event
 	cudaEventRecord(stepStart);
-	cudaMemcpy(encodingMatrix_d, encodingMatrix, matrixSize, cudaMemcpyHostToDevice);
+	cudaMemcpy(decodingMatrix_d, decodingMatrix, matrixSize, cudaMemcpyHostToDevice);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
 	// get event elapsed time
 	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-	printf("Copy encoding matrix from CPU to GPU: %fms\n", stepTime);
+	printf("Copy decoding matrix from CPU to GPU: %fms\n", stepTime);
 	totalCommunicationTime += stepTime;
 
-	// record event
-	cudaEventRecord(stepStart);
-	invert_matrix(encodingMatrix_d, decodingMatrix_d, nativeBlockNum);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-	printf("Generating decoding matrix completed: %fms\n", stepTime);
-	totalComputationTime += stepTime;
-
-#ifdef DEBUG
-	uint8_t *decodingMatrix;	//host
-	decodingMatrix = (uint8_t*) malloc(matrixSize);
-	cudaMemcpy(decodingMatrix, decodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
-	show_squre_matrix(decodingMatrix, nativeBlockNum);
-	free(decodingMatrix);
-#endif
-
+//	// record event
+//	cudaEventRecord(stepStart);
+//	invert_matrix(encodingMatrix_d, decodingMatrix_d, nativeBlockNum);
+//	// record event and synchronize
+//	cudaEventRecord(stepStop);
+//	cudaEventSynchronize(stepStop);
+//	// get event elapsed time
+//	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+//	printf("Generating decoding matrix completed: %fms\n", stepTime);
+//	totalComputationTime += stepTime;
+//
+//#ifdef DEBUG
+//	uint8_t *decodingMatrix;	//host
+//	decodingMatrix = (uint8_t*) malloc(matrixSize);
+//	cudaMemcpy(decodingMatrix, decodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
+//	show_squre_matrix(decodingMatrix, nativeBlockNum);
+//	free(decodingMatrix);
+//#endif
+//
 	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
@@ -236,7 +240,11 @@ printf("chunk size: %d\n", chunkSize);
 	}
 	fclose(fp_conf);
 	
-	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize);
+	uint8_t *decodingMatrix;
+	decodingMatrix = (uint8_t*) malloc(matrixSize);
+    CPU_invert_matrix(encodingMatrix, decodingMatrix, nativeBlockNum);
+
+	decode(dataBuf, codeBuf, decodingMatrix, nativeBlockNum, parityBlockNum, chunkSize);
 
 	if(outFile == NULL)
 	{

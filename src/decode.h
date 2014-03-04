@@ -22,7 +22,7 @@ extern "C"
 void decode_file(char *file, int nativeBlockNum, int parityBlockNum);
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize);
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize);
 
 
 #endif
