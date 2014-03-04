@@ -447,7 +447,7 @@ void show_squre_matrix_debug(uint8_t *matrix, int size)
 // compute the inverse of a given matrix
 // Gaussian elimination
 extern "C"
-void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
+void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 {
 	int pivotIndex;
     uint8_t currentRow[size];

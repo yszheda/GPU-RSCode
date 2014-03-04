@@ -56,5 +56,5 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col);
 __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
 __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize);
 extern "C"
-void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size);
+void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size);
 #endif
