@@ -20,6 +20,7 @@
 #include <cuda.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <pthread.h>
 #include "matrix.h"
 #include "cpu-decode.h"
 extern "C"		
@@ -27,6 +28,21 @@ void CPU_invert_matrix(uint8_t *matrix, uint8_t *result, int size);
 
 
 // #define DEBUG
+
+struct ThreadDataType {
+	int id;
+	int nativeBlockNum;
+	int parityBlockNum;
+	int chunkSize;
+	int totalSize;
+	uint8_t* dataBuf;
+	uint8_t* codeBuf;
+	uint8_t* decodingMatrix;
+};	/* ----------  end of struct ThreadDataType  ---------- */
+
+typedef struct ThreadDataType ThreadDataType;
+
+static pthread_barrier_t barrier;
 
 void show_squre_matrix(uint8_t *matrix, int size)
 {
@@ -49,8 +65,10 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
 }
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize)
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
+//	cudaSetDevice(id);
+
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	int codeSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	uint8_t *dataBuf_d;		//device
@@ -154,6 +172,32 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int nat
 	printf("Total GPU decoding time: %fms\n", totalTime);
 }
 
+static void* GPU_thread_func(void * args)
+{
+	ThreadDataType* thread_data = (ThreadDataType *) args;
+	cudaSetDevice(thread_data->id);
+	struct timespec start, end;
+	pthread_barrier_wait(&barrier);
+	clock_gettime(CLOCK_REALTIME, &start);
+	pthread_barrier_wait(&barrier);
+	decode(thread_data->dataBuf, 
+			thread_data->codeBuf, 
+			thread_data->decodingMatrix, 
+			thread_data->id, 
+			thread_data->nativeBlockNum, 
+			thread_data->parityBlockNum, 
+			thread_data->chunkSize);
+	pthread_barrier_wait(&barrier);
+	clock_gettime(CLOCK_REALTIME, &end);
+	if (thread_data->id == 0)
+	{
+		double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+				+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+		printf("Total GPU decoding time using multiple devices: %fms\n", totalTime);
+	}
+	return NULL;
+}
+
 extern "C"
 void decode_file(char *inFile, char *confFile, char *outFile)
 {
@@ -244,7 +288,72 @@ printf("chunk size: %d\n", chunkSize);
 	decodingMatrix = (uint8_t*) malloc(matrixSize);
     CPU_invert_matrix(encodingMatrix, decodingMatrix, nativeBlockNum);
 
-	decode(dataBuf, codeBuf, decodingMatrix, nativeBlockNum, parityBlockNum, chunkSize);
+	int GPU_num;
+	cudaGetDeviceCount(&GPU_num);
+	void* threads = malloc(GPU_num * sizeof(pthread_t));
+	ThreadDataType* thread_data = (ThreadDataType *) malloc(GPU_num * sizeof(ThreadDataType));
+	uint8_t *dataBufPerDevice[GPU_num];
+	uint8_t *codeBufPerDevice[GPU_num];
+	pthread_barrier_init(&barrier, NULL, GPU_num);
+	int maxChunkSizePerDevice = (chunkSize / GPU_num) + (chunkSize % GPU_num != 0);
+//	struct timespec start, end;
+//	clock_gettime(CLOCK_REALTIME, &start);
+	for (int i = 0; i < GPU_num; ++i)
+	{
+		thread_data[i].id = i;
+		thread_data[i].nativeBlockNum = nativeBlockNum;
+		thread_data[i].parityBlockNum = parityBlockNum;
+		int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
+		thread_data[i].chunkSize = deviceChunkSize;
+		int deviceDataSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
+		int deviceCodeSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
+//		dataBufPerDevice[i] = (uint8_t*) malloc(deviceDataSize);
+		cudaMallocHost((void **)&dataBufPerDevice[i], deviceDataSize);
+//		codeBufPerDevice[i] = (uint8_t*) malloc(deviceCodeSize);
+		cudaMallocHost((void **)&codeBufPerDevice[i], deviceCodeSize);
+		for (int j = 0; j < nativeBlockNum; ++j)
+		{
+//			memcpy(codeBufPerDevice[i] + j * deviceChunkSize, 
+//							codeBuf + j * chunkSize + i * deviceChunkSize,
+//							deviceChunkSize);
+			cudaMemcpy(codeBufPerDevice[i] + j * deviceChunkSize, 
+							codeBuf + j * chunkSize + i * deviceChunkSize,
+							deviceChunkSize,
+							cudaMemcpyHostToHost);
+		}
+		thread_data[i].dataBuf = dataBufPerDevice[i];
+		thread_data[i].codeBuf = codeBufPerDevice[i];
+		thread_data[i].decodingMatrix = decodingMatrix;
+		pthread_create(&((pthread_t*) threads)[i], NULL, GPU_thread_func, (void *) &thread_data[i]);
+	}
+	for (int i = 0; i < GPU_num; ++i)
+	{
+		pthread_join(((pthread_t*) threads)[i], NULL);
+	}
+//	clock_gettime(CLOCK_REALTIME, &end);
+//	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+//			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+//	printf("Total GPU decoding time using multiple devices: %fms\n", totalTime);
+	for (int i = 0; i < GPU_num; ++i)
+	{
+		int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
+		for (int j = 0; j < nativeBlockNum; ++j)
+		{
+//			memcpy(dataBuf + j * chunkSize + i * deviceChunkSize,
+//							dataBufPerDevice[i] + j * deviceChunkSize,
+//							deviceChunkSize);
+			cudaMemcpy(dataBuf + j * chunkSize + i * deviceChunkSize,
+							dataBufPerDevice[i] + j * deviceChunkSize,
+							deviceChunkSize,
+							cudaMemcpyHostToHost);
+		}
+//		free(dataBufPerDevice[i]);
+		cudaFreeHost(dataBufPerDevice[i]);
+//		free(codeBufPerDevice[i]);
+		cudaFreeHost(codeBufPerDevice[i]);
+	}
+	pthread_barrier_destroy(&barrier);
+	cudaDeviceReset();
 
 	if(outFile == NULL)
 	{

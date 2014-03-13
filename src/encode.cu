@@ -21,7 +21,23 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <math.h>
+#include <pthread.h>
 #include "matrix.h"
+
+struct ThreadDataType {
+	int id;
+	int nativeBlockNum;
+	int parityBlockNum;
+	int chunkSize;
+	int totalSize;
+	char* fileName;
+	uint8_t* dataBuf;
+	uint8_t* codeBuf;
+};	/* ----------  end of struct ThreadDataType  ---------- */
+
+typedef struct ThreadDataType ThreadDataType;
+
+static pthread_barrier_t barrier;
 
 void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t* encodingMatrix)
 {
@@ -60,8 +76,10 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 }
 
 extern "C"
-void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
+void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
 {
+//	cudaSetDevice(id);
+
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
@@ -159,11 +177,41 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	printf("Total communication time: %fms\n", totalCommunicationTime);
 	printf("Total GPU encoding time: %fms\n", totalTime);
 
-	char metadata_file_name[strlen(fileName) + 15];
-	sprintf(metadata_file_name, "%s.METADATA", fileName);
-	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
+	if (id == 0)
+	{
+		char metadata_file_name[strlen(fileName) + 15];
+		sprintf(metadata_file_name, "%s.METADATA", fileName);
+		write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
+	}
 //	free(encodingMatrix);
 	cudaFreeHost(encodingMatrix);
+}
+
+static void* GPU_thread_func(void * args)
+{
+	ThreadDataType* thread_data = (ThreadDataType *) args;
+	cudaSetDevice(thread_data->id);
+	struct timespec start, end;
+	pthread_barrier_wait(&barrier);
+	clock_gettime(CLOCK_REALTIME, &start);
+	pthread_barrier_wait(&barrier);
+	encode(thread_data->fileName, 
+			thread_data->dataBuf, 
+			thread_data->codeBuf, 
+			thread_data->id, 
+			thread_data->nativeBlockNum, 
+			thread_data->parityBlockNum, 
+			thread_data->chunkSize, 
+			thread_data->totalSize);
+	pthread_barrier_wait(&barrier);
+	clock_gettime(CLOCK_REALTIME, &end);
+	if (thread_data->id == 0)
+	{
+		double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+				+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+		printf("Total GPU encoding time using multiple devices: %fms\n", totalTime);
+	}
+	return NULL;
 }
 
 extern "C"
@@ -174,7 +222,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 
 	FILE *fp_in;
 	FILE *fp_out;
-	if((fp_in = fopen(fileName,"rb")) == NULL)
+	if((fp_in = fopen(fileName, "rb")) == NULL)
 	{
 		printf("Cannot open source file!\n");
 		exit(0);
@@ -183,7 +231,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	fseek(fp_in, 0L, SEEK_END);
 	// ftell() get the total size of the file
 	totalSize = ftell(fp_in);
-	chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
+	chunkSize = (totalSize / nativeBlockNum) + (totalSize%nativeBlockNum != 0); 
 //	chunkSize = (ftell(fp_in) / nativeBlockNum) + ( ftell(fp_in)%nativeBlockNum != 0 ); 
 //	chunkSize = (int) (ceil( (long double) (ftell(fp_in) / nativeBlockNum)) ); 
 
@@ -191,12 +239,12 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	uint8_t *codeBuf;		//host
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	int codeSize = parityBlockNum * chunkSize * sizeof(uint8_t);
-//	dataBuf = (uint8_t*) malloc(dataSize);
-	cudaMallocHost((void **)&dataBuf, dataSize);
-	memset(dataBuf, 0, dataSize);
-//	codeBuf = (uint8_t*) malloc(codeSize);
-	cudaMallocHost((void **)&codeBuf, codeSize);
-	memset(codeBuf, 0, codeSize);
+	dataBuf = (uint8_t*) malloc(dataSize);
+//	cudaMallocHost((void **)&dataBuf, dataSize);
+//	memset(dataBuf, 0, dataSize);
+	codeBuf = (uint8_t*) malloc(codeSize);
+//	cudaMallocHost((void **)&codeBuf, codeSize);
+//	memset(codeBuf, 0, codeSize);
 	
 	for(int i = 0; i < nativeBlockNum; i++)
 	{
@@ -214,13 +262,73 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
-	struct timespec start, end;
-	clock_gettime(CLOCK_REALTIME, &start);
-	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
-	clock_gettime(CLOCK_REALTIME, &end);
-	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
-			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
-	printf("Total GPU encoding time used by the total function: %fms\n", totalTime);
+	int GPU_num;
+	cudaGetDeviceCount(&GPU_num);
+	void* threads = malloc(GPU_num * sizeof(pthread_t));
+	ThreadDataType* thread_data = (ThreadDataType *) malloc(GPU_num * sizeof(ThreadDataType));
+	uint8_t *dataBufPerDevice[GPU_num];
+	uint8_t *codeBufPerDevice[GPU_num];
+	pthread_barrier_init(&barrier, NULL, GPU_num);
+	int maxChunkSizePerDevice = (chunkSize / GPU_num) + (chunkSize % GPU_num != 0);
+//	struct timespec start, end;
+//	clock_gettime(CLOCK_REALTIME, &start);
+	for (int i = 0; i < GPU_num; ++i)
+	{
+		thread_data[i].id = i;
+		thread_data[i].nativeBlockNum = nativeBlockNum;
+		thread_data[i].parityBlockNum = parityBlockNum;
+		int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
+		thread_data[i].chunkSize = deviceChunkSize;
+		thread_data[i].totalSize = totalSize;
+		thread_data[i].fileName = fileName;
+		int deviceDataSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
+		int deviceCodeSize = parityBlockNum * deviceChunkSize * sizeof(uint8_t);
+//		dataBufPerDevice[i] = (uint8_t*) malloc(deviceDataSize);
+		cudaMallocHost((void **)&dataBufPerDevice[i], deviceDataSize);
+//		codeBufPerDevice[i] = (uint8_t*) malloc(deviceCodeSize);
+		cudaMallocHost((void **)&codeBufPerDevice[i], deviceCodeSize);
+		for (int j = 0; j < nativeBlockNum; ++j)
+		{
+//			memcpy(dataBufPerDevice[i] + j * deviceChunkSize, 
+//							dataBuf + j * chunkSize + i * deviceChunkSize,
+//							deviceChunkSize);
+			cudaMemcpy(dataBufPerDevice[i] + j * deviceChunkSize, 
+							dataBuf + j * chunkSize + i * deviceChunkSize,
+							deviceChunkSize,
+							cudaMemcpyHostToHost);
+		}
+		thread_data[i].dataBuf = dataBufPerDevice[i];
+		thread_data[i].codeBuf = codeBufPerDevice[i];
+		pthread_create(&((pthread_t*) threads)[i], NULL, GPU_thread_func, (void *) &thread_data[i]);
+	}
+	for (int i = 0; i < GPU_num; ++i)
+	{
+		pthread_join(((pthread_t*) threads)[i], NULL);
+	}
+//	clock_gettime(CLOCK_REALTIME, &end);
+//	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+//			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+//	printf("Total GPU encoding time using multiple devices: %fms\n", totalTime);
+	for (int i = 0; i < GPU_num; ++i)
+	{
+		int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
+		for (int j = 0; j < parityBlockNum; ++j)
+		{
+//			memcpy(codeBuf + j * chunkSize + i * deviceChunkSize,
+//							codeBufPerDevice[i] + j * deviceChunkSize,
+//							deviceChunkSize);
+			cudaMemcpy(codeBuf + j * chunkSize + i * deviceChunkSize,
+							codeBufPerDevice[i] + j * deviceChunkSize,
+							deviceChunkSize,
+							cudaMemcpyHostToHost);
+		}
+//		free(dataBufPerDevice[i]);
+		cudaFreeHost(dataBufPerDevice[i]);
+//		free(codeBufPerDevice[i]);
+		cudaFreeHost(codeBufPerDevice[i]);
+	}
+	pthread_barrier_destroy(&barrier);
+	cudaDeviceReset();
 
 	char output_file_name[strlen(fileName) + 5];
 	for(int i = 0; i < nativeBlockNum; i++)
@@ -254,8 +362,8 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 		fclose(fp_out);
 	}
 
-//	free(dataBuf);
-//	free(codeBuf);
-	cudaFreeHost(dataBuf);
-	cudaFreeHost(codeBuf);
+	free(dataBuf);
+	free(codeBuf);
+//	cudaFreeHost(dataBuf);
+//	cudaFreeHost(codeBuf);
 }
