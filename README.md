@@ -46,9 +46,9 @@ If the -o option is not set, the original file name will be chosen as the output
 ### Old Version (tag 2.0) ###
 For encode:
 ```shell
-RS <fragment num> <replica num> -c <original file>
+RS <fragment num> <replica num> -e <original file>
 ```
 For decode:
 ```shell
-RS <fragment num> <replica num> -d [<configuration file>]
+RS <fragment num> <replica num> -d [<configuration file>] [-o <output file>]
 ```
