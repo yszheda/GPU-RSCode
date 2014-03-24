@@ -74,8 +74,6 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 
 	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	int codeSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
-	uint8_t *dataBuf_d;		//device
-	uint8_t *codeBuf_d;		//device
 
 	float totalComputationTime = 0;
 	float totalCommunicationTime = 0;
@@ -86,11 +84,6 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 	cudaEventCreate(&totalStart);
 	cudaEventCreate(&totalStop);
 	cudaEventRecord(totalStart);
-
-	cudaMalloc((void **) &dataBuf_d, dataSize);
-//	cudaMemset(dataBuf_d, 0, dataSize);
-	cudaMalloc((void **) &codeBuf_d, codeSize);
-//	cudaMemset(codeBuf_d, 0, codeSize);
 
 	// compute step execution time
 	float stepTime;
