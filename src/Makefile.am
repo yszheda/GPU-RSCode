@@ -1,6 +1,8 @@
 AUTOMAKE_OPTIONS = subdir-objects
 
 CCFLAGS = -g -lpthread
+# NVCCFLAGS = -G -arch=sm_35
+# NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35 --ptxas-options=-v
 NVCCFLAGS = -G --ptxas-options=-v
 
 TARGET = RS 

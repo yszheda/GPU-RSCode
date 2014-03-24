@@ -184,6 +184,8 @@ LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 NVCC = @NVCC@
+# NVCCFLAGS = -G -arch=sm_35
+# NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35 --ptxas-options=-v
 NVCCFLAGS = -G --ptxas-options=-v
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@

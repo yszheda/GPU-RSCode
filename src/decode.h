@@ -18,11 +18,10 @@
 #ifdef _DECODE_H_
 #define _DECODE_H_
 
-extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize);
+// extern "C"
+// void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, int streamNum);
 
 extern "C"
-void decode_file(char *inFile, char *confFile, char *outFile);
-
+void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize, int streamNum);
 
 #endif

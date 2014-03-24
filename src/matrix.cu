@@ -96,9 +96,9 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
 {
 	uint8_t sum_log;
-	while(b)
+	while (b)
 	{
-		if(b & 1)
+		if (b & 1)
 		{
 			sum_log ^= a;
 		}
@@ -111,9 +111,9 @@ __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
 __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
 {
 	uint8_t sum_log;
-	while(b)
+	while (b)
 	{
-		if(b & 1)
+		if (b & 1)
 		{
 			sum_log ^= a;
 		}
@@ -211,13 +211,13 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 		product = 0;
 		__syncthreads();
 		
-		if(row < n && col < m)
+		if (row < n && col < m)
 		{
-			for(int j = tx; j < tileDepth; j += blockDim.x)
+			for (int j = tx; j < tileDepth; j += blockDim.x)
 			{
 				sMem[ index(ty, j, tileDepth) ] = A[row * p + j];
 			}
-			for(int j = ty; j < tileDepth; j += blockDim.y)
+			for (int j = ty; j < tileDepth; j += blockDim.y)
 			{
 				sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j * m];
 			}
@@ -234,7 +234,7 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //			}
 			__syncthreads();
 			
-			for(int j = 0; j < tileDepth; j++)
+			for (int j = 0; j < tileDepth; j++)
 			{
 				product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
 			}
@@ -254,7 +254,7 @@ __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int ro
     uint8_t oldMatrixItem;
     uint8_t oldResultItem;
 
-    if(col < size)
+    if (col < size)
     {
         oldMatrixItem = matrix[ index(rowSrc, col, size) ];
         matrix[ index(rowSrc, col, size) ] = matrix[ index(rowDes, col, size) ];
@@ -273,7 +273,7 @@ __global__ void switch_columns(uint8_t *matrix, uint8_t *result, int colSrc, int
     uint8_t oldMatrixItem;
     uint8_t oldResultItem;
 
-    if(row < size)
+    if (row < size)
     {
         oldMatrixItem = matrix[ index(row, colSrc, size) ];
         matrix[ index(row, colSrc, size) ] = matrix[ index(row, colDes, size) ];
@@ -296,7 +296,7 @@ __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, i
 	setup_tables();
 	__syncthreads();
 
-    if(col < size)
+    if (col < size)
     {
     	// let the first thread of loads the pivotValue
         if (ty == 0)
@@ -322,7 +322,7 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
 	setup_tables();
 	__syncthreads();
 
-    if(col < size)
+    if (col < size)
     {
     	// let the first thread of loads the pivotValue
         if (ty == 0)
@@ -420,7 +420,7 @@ int get_pivot_index(uint8_t *vector, int index, int size)
 {
     int pivotIndex = -1;
     int i = index;
-    while(pivotIndex == -1 && i < size)
+    while (pivotIndex == -1 && i < size)
     {
         pivotIndex = (vector[i] > 0)? i: -1;        
         i++;
@@ -432,9 +432,9 @@ int get_pivot_index(uint8_t *vector, int index, int size)
 #ifdef DEBUG
 void show_squre_matrix_debug(uint8_t *matrix, int size)
 {
-	for(int i = 0; i < size; i++)
+	for (int i = 0; i < size; i++)
 	{
-		for(int j = 0; j < size; j++)
+		for (int j = 0; j < size; j++)
 		{
 			printf("%d ", matrix[i*size+j]);
 		}
@@ -458,13 +458,13 @@ void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
     get_identity_matrix<<<gimGrid, gimBlock>>>(result_dev, size);
 //	cudaDeviceSynchronize();
 	
-	for(int row = 0; row < size; row++)
+	for (int row = 0; row < size; row++)
     {
 		// check whether the leading coefficient of the current row is in the 'index'th column
 		int index = row;
         cudaMemcpy(currentRow, matrix_dev + row * size, currentRowSize, cudaMemcpyDeviceToHost);
         pivotIndex = get_pivot_index(currentRow, index, size);
-        if(pivotIndex != row)
+        if (pivotIndex != row)
 		{
 			dim3 scGrid(1, (int) (ceil((float) size / SINGLE_BLOCK_SIZE)));
 			dim3 scBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
@@ -534,7 +534,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	encodingMatrix[i * col + j] = gf_pow((j + 1) % field_size, i);
 }
 
-__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
 {
 	int threadsPerBlock = 128;
 	int tileWidthRow = parityBlockNum;
@@ -562,19 +562,19 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	// create event
 	cudaEventCreate(&stepStart);
 	cudaEventCreate(&stepStop);
-	// record event
-	cudaEventRecord(stepStart);
-	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	// record event
+//	cudaEventRecord(stepStart);
+	matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 //	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+//	// record event and synchronize
+//	cudaEventRecord(stepStop);
+//	cudaEventSynchronize(stepStop);
+//	// get event elapsed time
+//	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
 	return stepTime;
 }
 
-__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
 {
 	int threadsPerBlock = 128;
 	int tileWidthRow = nativeBlockNum;
@@ -608,12 +608,13 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	cudaEventCreate(&stepStop);
 	// record event
 	cudaEventRecord(stepStart);
-	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+//	// record event and synchronize
+//	cudaEventRecord(stepStop);
+//	cudaEventSynchronize(stepStop);
+//	// get event elapsed time
+//	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
 	return stepTime;
 }
 
