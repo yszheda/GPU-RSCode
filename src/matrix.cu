@@ -3,7 +3,7 @@
  *
  *       Filename:  matrix.cu
  *
- *    Description:  
+ *    Description:  implementation of Galois arithmetic and matrix operations  
  *
  *        Version:  1.0
  *        Created:  12/21/2012 07:38:17 PM
@@ -26,13 +26,23 @@ const int width = 8;
 const int field_size = 1 << 8;
 // const int field_size = 1 << width;
 
+/*-----------------------------------------------------------------------------
+ * Use log&exp-table method for Galois arithmetic 
+ * Store log and exp tables in the shared memory
+ * Initialize two tables every time when a kernel launches
+ * For GF(2^w), the size of log table is 2^w, and the size of exp table is 2^w
+ *-----------------------------------------------------------------------------*/
 __shared__ uint8_t gflog[256];
 __shared__ uint8_t gfexp[256];
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  setup_tables
+ *  Description:  set up log and exp tables in Galois Field GF(2^8)
+ * =====================================================================================
+ */
 __device__ int setup_tables()
 {
-//	const int width = 8;
-//	const int field_size = 1 << width;
 	const unsigned int prim_poly = 0435;
    	int log;
 	int exp = 1;
@@ -51,16 +61,34 @@ __device__ int setup_tables()
 	return 0;
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_add
+ *  Description:  addition in Galois Field GF(2^8)
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b)
 {
 	return a ^ b;
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_sub
+ *  Description:  subtraction in Galois Field GF(2^8)
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b)
 {
 	return gf_add(a, b);
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_mul
+ *  Description:  multiplication in Galois Field GF(2^8)
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 {
 	int sum_log;
@@ -77,6 +105,12 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b)
 	return gfexp[sum_log];
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_mul
+ *  Description:  multiplication in Galois Field GF(2^8) using given log&exp tables
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
 {
 	int sum_log;
@@ -93,7 +127,13 @@ __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 	return gfexp[sum_log];
 }
 
-__host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_mul_LB
+ *  Description:  loop-based multiplication in Galois Field GF(2^8)
+ * =====================================================================================
+ */
+__host__ __device__ uint8_t gf_mul_LB(uint8_t a, uint8_t b)
 {
 	uint8_t sum_log;
 	while (b)
@@ -108,21 +148,12 @@ __host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
 	return sum_log;
 }
 
-__host__ __device__ uint8_t gf_mul_bit(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
-{
-	uint8_t sum_log;
-	while (b)
-	{
-		if (b & 1)
-		{
-			sum_log ^= a;
-		}
-		a = (a << 1) ^ (a & 0x80? 0x1d: 0);
-		b >>= 1;
-	}
-	return sum_log;
-}
-
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_div
+ *  Description:  division in Galois Field GF(2^8)
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 {
 	int diff_log;
@@ -147,6 +178,12 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 	return gfexp[diff_log];
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_div
+ *  Description:  division in Galois Field GF(2^8) using given log&exp tables
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t *gfexp)
 {
 	int diff_log;
@@ -171,22 +208,40 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 	return gfexp[diff_log];
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_pow
+ *  Description:  exponentiation in Galois Field GF(2^8)
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power)
 {
 	int pow_log = (gflog[a] * power) % (field_size - 1);
 	return gfexp[pow_log];
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gf_pow
+ *  Description:  exponentiation in Galois Field GF(2^8) using given log&exp tables
+ * =====================================================================================
+ */
 __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uint8_t *gfexp)
 {
 	int pow_log = (gflog[a] * power) % (field_size - 1);
 	return gfexp[pow_log];
 }
 
-// input matrix A and B, compute the product matrix C=AB
-// A: nxp
-// B: pxm
-// C: nxm
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  matrix_mul
+ *  Description:  given matrix A and B, compute the product matrix C over GF(2^8): C=AB
+ *  A is a nxp matrix,
+ *  B is a pxm matrix,
+ *  C is a nxm matrix.
+ *  tileWidthRow, tileWidthCol, and tileDepth are used to control the sMem tile size.
+ * =====================================================================================
+ */
 __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	extern __shared__ uint8_t sMem[];
@@ -247,112 +302,140 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 	} while (col < m);
 }
 
-// switch rows if the current row is not the pivot row
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  switch_rows
+ *  Description:  switch rows if the current row is not the pivot row
+ * =====================================================================================
+ */
 __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int rowDes, int size)
 {
-    int col = threadIdx.y + blockDim.y * blockIdx.y;
-    uint8_t oldMatrixItem;
-    uint8_t oldResultItem;
-
-    if (col < size)
-    {
-        oldMatrixItem = matrix[ index(rowSrc, col, size) ];
-        matrix[ index(rowSrc, col, size) ] = matrix[ index(rowDes, col, size) ];
-        matrix[ index(rowDes, col, size) ] = oldMatrixItem; 
-
-        oldResultItem = result[ index(rowSrc, col, size) ];
-        result[ index(rowSrc, col, size) ] = result[ index(rowDes, col, size) ];
-        result[ index(rowDes, col, size) ] = oldResultItem; 
-    }
+	int col = threadIdx.y + blockDim.y * blockIdx.y;
+	uint8_t oldMatrixItem;
+	uint8_t oldResultItem;
+	
+	if (col < size)
+	{
+		oldMatrixItem = matrix[ index(rowSrc, col, size) ];
+		matrix[ index(rowSrc, col, size) ] = matrix[ index(rowDes, col, size) ];
+		matrix[ index(rowDes, col, size) ] = oldMatrixItem; 
+		
+		oldResultItem = result[ index(rowSrc, col, size) ];
+		result[ index(rowSrc, col, size) ] = result[ index(rowDes, col, size) ];
+		result[ index(rowDes, col, size) ] = oldResultItem; 
+	}
 } 
 
-// switch columns if the current row is not the pivot row
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  switch_columns
+ *  Description:  switch columns if the current row is not the pivot row
+ * =====================================================================================
+ */
 __global__ void switch_columns(uint8_t *matrix, uint8_t *result, int colSrc, int colDes, int size)
 {
-    int row = threadIdx.y + blockDim.y * blockIdx.y;
-    uint8_t oldMatrixItem;
-    uint8_t oldResultItem;
-
-    if (row < size)
-    {
-        oldMatrixItem = matrix[ index(row, colSrc, size) ];
-        matrix[ index(row, colSrc, size) ] = matrix[ index(row, colDes, size) ];
-        matrix[ index(row, colDes, size) ] = oldMatrixItem; 
-
-        oldResultItem = result[ index(row, colSrc, size) ];
-        result[ index(row, colSrc, size) ] = result[ index(row, colDes, size) ];
-        result[ index(row, colSrc, size) ] = oldResultItem; 
-    }
+	int row = threadIdx.y + blockDim.y * blockIdx.y;
+	uint8_t oldMatrixItem;
+	uint8_t oldResultItem;
+	
+	if (row < size)
+	{
+		oldMatrixItem = matrix[ index(row, colSrc, size) ];
+		matrix[ index(row, colSrc, size) ] = matrix[ index(row, colDes, size) ];
+		matrix[ index(row, colDes, size) ] = oldMatrixItem; 
+		
+		oldResultItem = result[ index(row, colSrc, size) ];
+		result[ index(row, colSrc, size) ] = result[ index(row, colDes, size) ];
+		result[ index(row, colSrc, size) ] = oldResultItem; 
+	}
 } 
 
-// normalize the row by the pivot value
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  normalize_pivot_row
+ *  Description:  normalize the row by the pivot value
+ * =====================================================================================
+ */
 __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, int size)
 {
-    int ty = threadIdx.y;
-	int col = blockDim.y*blockIdx.y + ty;
-
-    __shared__ uint8_t pivotValue;
-
+	int ty = threadIdx.y;
+	int col = blockDim.y * blockIdx.y + ty;
+	
+	__shared__ uint8_t pivotValue;
+	
 	setup_tables();
 	__syncthreads();
-
-    if (col < size)
-    {
-    	// let the first thread of loads the pivotValue
-        if (ty == 0)
+	
+	if (col < size)
+	{
+		// let the first thread of loads the pivotValue
+		if (ty == 0)
 		{
-            pivotValue = matrix[ index(row, row, size) ];
+			pivotValue = matrix[ index(row, row, size) ];
 		}
-        __syncthreads();
+		__syncthreads();
 		// Normalize the pivot row!
 		// Every thread divides the element of its position with the pivotValue
-        matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
-        result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
-    }
+		matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
+		result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
+	}
 }
 
-// normalize the column by the pivot value
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  normalize_pivot_col
+ *  Description:  normalize the column by the pivot value
+ * =====================================================================================
+ */
 __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, int size)
 {
-    int ty = threadIdx.y;
-	int row = blockDim.y*blockIdx.y + ty;
-
-    __shared__ uint8_t pivotValue;
-
+	int ty = threadIdx.y;
+	int row = blockDim.y * blockIdx.y + ty;
+	
+	__shared__ uint8_t pivotValue;
+	
 	setup_tables();
 	__syncthreads();
-
-    if (col < size)
-    {
-    	// let the first thread of loads the pivotValue
-        if (ty == 0)
+	
+	if (col < size)
+	{
+		// let the first thread of loads the pivotValue
+		if (ty == 0)
 		{
-            pivotValue = matrix[ index(col, col, size) ];
+			pivotValue = matrix[ index(col, col, size) ];
 		}
-        __syncthreads();
-		// Normalize the pivot row!1024
+		__syncthreads();
+		// Normalize the pivot column!
 		// Every thread divides the element of its position with the pivotValue
-        matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
-        result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
-    }
+		matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
+		result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
+	}
 }
 
-// eliminate by row to make the pivot column become reduced echelon form
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  eliminate_by_row
+ *  Description:  eliminate by row to make the pivot column become reduced echelon form
+ * =====================================================================================
+ */
 __global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *result, int pivotIndex, int size)
 {
-    const int ty = threadIdx.y;
+	const int ty = threadIdx.y;
 	const int row = blockDim.y * blockIdx.y + threadIdx.y;
 	const int col = blockIdx.x;
-
+	
 	setup_tables();
 	__syncthreads();
-
-    if (row < size)
-    {
-		// substraction in GF
-		// make the pivotCol become reduced echelon form
-        if (row != pivotIndex)
-        {
+	
+	if (row < size)
+	{
+		/*-----------------------------------------------------------------------------
+		 * apply substraction in Galois Field
+		 * make the pivotCol become reduced echelon form
+		 *-----------------------------------------------------------------------------*/
+		// NOTE: __threadfence() must be used to remove memory reordering
+		if (row != pivotIndex)
+		{
 			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(row, pivotIndex, size) ], matrix[ index(pivotIndex, col, size) ]);
 			__threadfence();
 			__syncthreads();
@@ -365,24 +448,34 @@ __global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *res
 			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
 			__syncthreads();
-        }
-    }
+		}
+	}
 }
 
-// eliminate by column to make the pivot row become reduced echelon form
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  eliminate_by_col
+ *  Description:  eliminate by column to make the pivot row become reduced echelon form
+ * =====================================================================================
+ */
 __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
-    int ty = threadIdx.y;
-	int row = blockIdx.x;
-	int col = blockDim.y * blockIdx.y + threadIdx.y;
-
+	const int ty = threadIdx.y;
+	const int row = blockIdx.x;
+	const int col = blockDim.y * blockIdx.y + threadIdx.y;
+	
 	setup_tables();
 	__syncthreads();
-
-    if (col < size)
-    {
-        if (col != pivotIndex)
-        {
+	
+	if (col < size)
+	{
+		/*-----------------------------------------------------------------------------
+		 * apply substraction in Galois Field 
+		 * make the pivotRow become reduced echelon form
+		 *-----------------------------------------------------------------------------*/
+		// NOTE: __threadfence() must be used to remove memory reordering
+		if (col != pivotIndex)
+		{
 			uint8_t newMatrixValue = matrix[ index(row, col, size) ] ^ gf_mul(matrix[ index(pivotIndex, col, size) ], matrix[ index(row, pivotIndex, size) ]);
 			__threadfence();
 			__syncthreads();
@@ -395,42 +488,59 @@ __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotInde
 			result[ index(row, col, size) ] = newResultValue;
 			__threadfence();
 			__syncthreads();
-        }
-    }
+		}
+	}
 }
 
-// generate an identity matrix
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  get_identity_matrix
+ *  Description:  generate an identity matrix
+ * =====================================================================================
+ */
 __global__ void get_identity_matrix(uint8_t *result, int size)
 {
 	int row = blockIdx.x * blockDim.x + threadIdx.x;
 	int col = blockIdx.y * blockDim.y + threadIdx.y;
-
-    if (row == col)
+	
+	if (row == col)
 	{
-        result[ index(row, col, size) ] = 1;
+		result[ index(row, col, size) ] = 1;
 	}
-    else
+	else
 	{
-        result[ index(row, col, size) ] = 0;
+		result[ index(row, col, size) ] = 0;
 	}
 }
 
-// find the pivot index in the given row/column
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  get_pivot_index
+ *  Description:  find the pivot index in the given row or column
+ * =====================================================================================
+ */
 int get_pivot_index(uint8_t *vector, int index, int size)
 {
-    int pivotIndex = -1;
-    int i = index;
-    while (pivotIndex == -1 && i < size)
-    {
-        pivotIndex = (vector[i] > 0)? i: -1;        
-        i++;
-    }
-    return pivotIndex;
+	int pivotIndex = -1;
+	int i = index;
+	while (pivotIndex == -1 && i < size)
+	{
+		pivotIndex = (vector[i] > 0)? i: -1;
+		i++;
+	}
+	return pivotIndex;
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  show_square_matrix_debug
+ *  Description:  show the content of a square matrix
+ *  Used only for debugging
+ * =====================================================================================
+ */
 // #define DEBUG
 #ifdef DEBUG
-void show_squre_matrix_debug(uint8_t *matrix, int size)
+void show_square_matrix_debug(uint8_t *matrix, int size)
 {
 	for (int i = 0; i < size; i++)
 	{
@@ -440,12 +550,17 @@ void show_squre_matrix_debug(uint8_t *matrix, int size)
 		}
 		printf("\n");
 	}
-		printf("\n");
+	printf("\n");
 }
 #endif
 
-// compute the inverse of a given matrix
-// Gaussian elimination
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  GPU_invert_matrix
+ *  Description:  compute the inverse of a given matrix in GPU
+ *  Use Gaussian Elimination
+ * =====================================================================================
+ */
 extern "C"
 void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 {
@@ -460,7 +575,9 @@ void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 	
 	for (int row = 0; row < size; row++)
     {
-		// check whether the leading coefficient of the current row is in the 'index'th column
+		/*-----------------------------------------------------------------------------
+		 * check whether the leading coefficient of the current row is in the 'index'th column
+		 *-----------------------------------------------------------------------------*/
 		int index = row;
         cudaMemcpy(currentRow, matrix_dev + row * size, currentRowSize, cudaMemcpyDeviceToHost);
         pivotIndex = get_pivot_index(currentRow, index, size);
@@ -478,11 +595,11 @@ cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost);
 printf("Current row: %d\n", row);
 printf("Step: switch columns\n");
 printf("matrix:\n");
-show_squre_matrix_debug(matrix_host, size);
+show_square_matrix_debug(matrix_host, size);
 uint8_t result_host[size * size];
 cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost);
 printf("result:\n");
-show_squre_matrix_debug(result_host, size);
+show_square_matrix_debug(result_host, size);
 #endif
 
 		dim3 nprGrid(1, (int) (ceil((float) size / SINGLE_BLOCK_SIZE)));
@@ -498,11 +615,11 @@ show_squre_matrix_debug(result_host, size);
 cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost);
 printf("Step: normalize pivot row\n");
 printf("matrix:\n");
-show_squre_matrix_debug(matrix_host, size);
+show_square_matrix_debug(matrix_host, size);
 //uint8_t result_host[size * size];
 cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost);
 printf("result:\n");
-show_squre_matrix_debug(result_host, size);
+show_square_matrix_debug(result_host, size);
 #endif
 
 		dim3 ebrGrid(size, (int) (ceil((float) size / SINGLE_BLOCK_SIZE)));
@@ -515,16 +632,22 @@ show_squre_matrix_debug(result_host, size);
 cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost);
 printf("Step: eliminate by row\n");
 printf("matrix:\n");
-show_squre_matrix_debug(matrix_host, size);
+show_square_matrix_debug(matrix_host, size);
 //uint8_t result_host[size * size];
 cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost);
 printf("result:\n");
-show_squre_matrix_debug(result_host, size);
+show_square_matrix_debug(result_host, size);
 #endif
     }
 
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  gen_encoding_matrix
+ *  Description:  generate encoding matrix
+ * =====================================================================================
+ */
 __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 {
 	int i = threadIdx.x;
@@ -534,6 +657,12 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	encodingMatrix[i * col + j] = gf_pow((j + 1) % field_size, i);
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  encode_chunk
+ *  Description:  encode the given buffer of data chunks
+ * =====================================================================================
+ */
 __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
 {
 	int threadsPerBlock = 128;
@@ -574,6 +703,12 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	return stepTime;
 }
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  decode_chunk
+ *  Description:  decode the given buffer of code chunks
+ * =====================================================================================
+ */
 __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
 {
 	int threadsPerBlock = 128;
