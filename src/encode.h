@@ -21,6 +21,17 @@
 // extern "C"
 // void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int gridDimXSize, int streamNum);
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  encode_file
+ *  Description:  encode the input file <fileName> with the given settings
+ *  @param fileName: name of the input file
+ *  @param nativeBlockNum: number of native data chunks
+ *  @param parityBlockNum: number of parity code chunks
+ *  @param gridDimXSize: maximum grid size of X dimension
+ *  @param streamNum: number of CUDA streams
+ * =====================================================================================
+ */
 extern "C"
 void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gridDimXSize, int streamNum);
 #endif

@@ -32,9 +32,6 @@
 #define SINGLE_GRID_SIZE 16384 // MAX 
 // #define SINGLE_GRID_SIZE 2147483647 // Max GridDim.x in K20 
 
-// #define W 4
-// #define NW (1 << W) /* In other words, NW equals 2 to the w-th power */
-
 #define gf uint8_t
 
 // __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b);
