@@ -21,6 +21,19 @@
 // extern "C"
 // void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, int streamNum);
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  decode_file
+ *  Description:  decode the input file <inFile> with the given settings
+ *  @param inFile: name of the origin input file
+ *  @param confFile: name of the configuration file
+ *  @param outFile: name of the output file
+ *  @param gridDimXSize: maximum grid size of X dimension
+ *  @param streamNum: number of CUDA streams
+ *
+ *  The configuration file contains which files are used for decoding.
+ * =====================================================================================
+ */
 extern "C"
 void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize, int streamNum);
 
