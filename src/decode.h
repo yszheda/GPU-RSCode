@@ -24,7 +24,7 @@
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  decode_file
- *  Description:  decode the input file <inFile> with the given settings
+ *  Description:  decode the original input file <inFile> with the given settings
  *  @param inFile: name of the origin input file
  *  @param confFile: name of the configuration file
  *  @param outFile: name of the output file

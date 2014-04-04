@@ -166,7 +166,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 	totalCommunicationTime += stepTime;
 
 	// Use cuda stream to encode the file
-	// to obtain computation and comunication overhead
+	// to achieve computation and comunication overlapping
 	// Use DFS way
 //	int streamMaxChunkSize = (chunkSize / streamNum) + (chunkSize % streamNum != 0);
 	int streamMinChunkSize = chunkSize / streamNum;
@@ -247,7 +247,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 	for (int i = 0; i < streamNum; i++)
 	{
 		cudaFree(dataBuf_d[i]);
-	   	cudaFree(codeBuf_d[i]);
+		cudaFree(codeBuf_d[i]);
 	}
 	cudaFree(encodingMatrix_d);
 
