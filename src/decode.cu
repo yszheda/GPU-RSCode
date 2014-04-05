@@ -66,7 +66,7 @@ void show_squre_matrix_debug(uint8_t *matrix, int size)
 		printf("\n");
 	}
 }
-
+#endif
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  copy_matrix
@@ -88,7 +88,6 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
  *  Description:  decode the given buffer of code chunks in the GPU with <id>
  * =====================================================================================
  */
-extern "C"
 extern "C"
 void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, int streamNum)
 {
@@ -216,7 +215,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 //		printf("Copy code from CPU to GPU in stream: %fms\n", stepTime);
 //		totalCommunicationTime += stepTime;
 
-		stepTime = decode_chunk(dataBuf_d[i], decodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, stream[i]);
+		stepTime = decode_chunk(dataBuf_d[i], decodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, gridDimXSize, stream[i]);
 //		printf("Decoding file in stream completed: %fms\n", stepTime);
 //		totalComputationTime += stepTime;
 		

@@ -663,13 +663,14 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
  *  Description:  encode the given buffer of data chunks
  * =====================================================================================
  */
-__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
+__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, cudaStream_t streamID)
 {
 	int threadsPerBlock = 128;
 	int tileWidthRow = parityBlockNum;
 	int tileWidthCol = threadsPerBlock / tileWidthRow;
 	int tileDepth = nativeBlockNum;
-	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), SINGLE_GRID_SIZE);
+//	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), SINGLE_GRID_SIZE);
+	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), gridDimXSize);
 	int gridDimY = (int)( ceil((float) parityBlockNum / tileWidthRow));
 	dim3 grid(gridDimX, gridDimY);
 	dim3 block(tileWidthCol, tileWidthRow);
@@ -709,7 +710,7 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
  *  Description:  decode the given buffer of code chunks
  * =====================================================================================
  */
-__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID)
+__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, cudaStream_t streamID)
 {
 	int threadsPerBlock = 128;
 	int tileWidthRow = nativeBlockNum;
@@ -719,7 +720,8 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	}
 	int tileWidthCol = threadsPerBlock / tileWidthRow;
 	int tileDepth = nativeBlockNum;
-	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), SINGLE_GRID_SIZE);
+//	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), SINGLE_GRID_SIZE);
+	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), gridDimXSize);
 	int gridDimY = (int) (ceil((float) nativeBlockNum / tileWidthRow));
 	dim3 grid(gridDimX, gridDimY);
 	dim3 block(tileWidthCol, tileWidthRow);

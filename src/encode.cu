@@ -220,7 +220,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 //		printf("Copy data from CPU to GPU in stream: %fms\n", stepTime);
 //		totalCommunicationTime += stepTime;
 
-		stepTime = encode_chunk(dataBuf_d[i], encodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, stream[i]);
+		stepTime = encode_chunk(dataBuf_d[i], encodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, gridDimXSize, stream[i]);
 //		printf("Encoding file in stream completed: %fms\n", stepTime);
 //		totalComputationTime += stepTime;
 		
