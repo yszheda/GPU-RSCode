@@ -32,6 +32,9 @@ void show_help_info()
 	printf("For encoding, the -k, -n, and -e options are all necessary.\n");
 	printf("For decoding, the -d, -i, and -c options are all necessary.\n");
 	printf("If the -o option is not set, the original file name will be chosen as the output file name by default.\n");
+	printf("Performance-tuning Options:\n");
+	printf("[-p]: set maxmimum blockDimX\n");
+	printf("[-s]: set stream number\n");
 	exit(0);
 }
 

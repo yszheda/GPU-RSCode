@@ -43,6 +43,11 @@ For encoding, the -k, -n, and -e options are all necessary.
 For decoding, the -d, -i, and -c options are all necessary.
 If the -o option is not set, the original file name will be chosen as the output file name by default.
 
+Performance-tuning Options:
+```shell
+[-p]: set maxmimum blockDimX
+[-s]: set stream number
+```
 ### Old Version (tag 2.0) ###
 For encode:
 ```shell

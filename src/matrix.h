@@ -65,6 +65,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int parityBlockNum,
  *  @param nativeBlockNum: number of native data chunks
  *  @param parityBlockNum: number of parity code chunks
  *  @param chunkSize: size of each chunk
+ *  @param gridDimXSize: maximum grid size of X dimension
  *  @param streamID: ID of the current CUDA stream
  *  @return the kernel execution time
  * =====================================================================================
@@ -82,6 +83,7 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
  *  @param nativeBlockNum: number of native data chunks
  *  @param parityBlockNum: number of parity code chunks
  *  @param chunkSize: size of each chunk
+ *  @param gridDimXSize: maximum grid size of X dimension
  *  @param streamID: ID of the current CUDA stream
  *  @return the kernel execution time
  * =====================================================================================
