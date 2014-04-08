@@ -23,6 +23,12 @@
 #include "encode.h"
 #include "decode.h"
 
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  show_help_info
+ *  Description:  show the help information of the application
+ * =====================================================================================
+ */
 void show_help_info()
 {
 	printf("Usage:\n");
@@ -159,5 +165,4 @@ int main(int argc, char *argv[])
 	}		/* -----  end switch  ----- */
 
 	return 0;
-
 }
