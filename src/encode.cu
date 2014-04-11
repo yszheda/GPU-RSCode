@@ -137,8 +137,9 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 	uint8_t *encodingMatrix;	//host
 	uint8_t *encodingMatrix_d;	//device
 	int matrixSize = parityBlockNum * nativeBlockNum * sizeof(uint8_t);
-//	encodingMatrix = (uint8_t*) malloc(matrixSize);
-	cudaMallocHost((void **)&encodingMatrix, matrixSize);
+	// Pageable Host Memory is preferred here since the encodingMatrix is small
+	encodingMatrix = (uint8_t*) malloc(matrixSize);
+//	cudaMallocHost((void **)&encodingMatrix, matrixSize);
 	cudaMalloc((void **)&encodingMatrix_d, matrixSize);
 
 	// record event
@@ -271,8 +272,9 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 		sprintf(metadata_file_name, "%s.METADATA", fileName);
 		write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
 	}
-//	free(encodingMatrix);
-	cudaFreeHost(encodingMatrix);
+	// Pageable Host Memory is preferred here since the encodingMatrix is small
+	free(encodingMatrix);
+//	cudaFreeHost(encodingMatrix);
 }
 
 static void* GPU_thread_func(void * args)
