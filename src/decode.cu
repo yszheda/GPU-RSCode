@@ -398,6 +398,7 @@ printf("chunk size: %d\n", chunkSize);
 	}
 
 	uint8_t *decodingMatrix;
+	// Pageable Host Memory is preferred here since the decodingMatrix is small
 	decodingMatrix = (uint8_t*) malloc(matrixSize);
 	CPU_invert_matrix(encodingMatrix, decodingMatrix, nativeBlockNum);
 
@@ -497,6 +498,7 @@ printf("chunk size: %d\n", chunkSize);
 
 	// Pinned host memory is expensive for deallocation,
 	// so pageable host memory is used here.
+	free(decodingMatrix);
 	free(dataBuf);
 	free(codeBuf);
 }
