@@ -26,11 +26,9 @@
 
 void show_squre_matrix(uint8_t *matrix, int size)
 {
-	int i;
-	int j;
-	for(i=0; i<size; i++)
+	for(int i = 0; i < size; i++)
 	{
-		for(j=0; j<size; j++)
+		for(int j = 0; j < size; j++)
 		{
 			printf("%d ", matrix[i*size+j]);
 		}
@@ -40,18 +38,17 @@ void show_squre_matrix(uint8_t *matrix, int size)
 
 void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, int rowSize)
 {
-	int i;
-	for(i=0; i<rowSize; i++)
+	for(int i = 0; i < rowSize; i++)
 	{
-		des[desRowIndex*rowSize+i] = src[srcRowIndex*rowSize+i];
+		des[desRowIndex * rowSize + i] = src[srcRowIndex * rowSize + i];
 	}
 }
 
 extern "C"
 void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
-	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	int codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
+	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
+	int codeSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
 
@@ -65,9 +62,9 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	cudaEventCreate(&totalStop);
 	cudaEventRecord(totalStart);
 
-	cudaMalloc( (void **)&dataBuf_d, dataSize );
+	cudaMalloc((void **) &dataBuf_d, dataSize);
 //	cudaMemset(dataBuf_d, 0, dataSize);
-	cudaMalloc( (void **)&codeBuf_d, codeSize );
+	cudaMalloc((void **) &codeBuf_d, codeSize);
 //	cudaMemset(codeBuf_d, 0, codeSize);
 
 	// compute step execution time
@@ -88,11 +85,11 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	printf("Copy code from CPU to GPU: %fms\n", stepTime);
 	totalCommunicationTime += stepTime;
 
-	int matrixSize = nativeBlockNum * nativeBlockNum;
+	int matrixSize = nativeBlockNum * nativeBlockNum * sizeof(uint8_t);
 	uint8_t *encodingMatrix_d;	//device
 	uint8_t *decodingMatrix_d;	//device
-	cudaMalloc( (void **)&encodingMatrix_d, matrixSize );
-	cudaMalloc( (void **)&decodingMatrix_d, matrixSize );
+	cudaMalloc((void **) &encodingMatrix_d, matrixSize);
+	cudaMalloc((void **) &decodingMatrix_d, matrixSize);
 
 	// record event
 	cudaEventRecord(stepStart);
@@ -118,31 +115,13 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 
 #ifdef DEBUG
 	uint8_t *decodingMatrix;	//host
-	decodingMatrix = (uint8_t*) malloc( matrixSize );
+	decodingMatrix = (uint8_t*) malloc(matrixSize);
 	cudaMemcpy(decodingMatrix, decodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
 	show_squre_matrix(decodingMatrix, nativeBlockNum);
 	free(decodingMatrix);
 #endif
 
-//	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-//	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
-//	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH, TILE_WIDTH);
-
-//	int gridDimX = (int)( ceil((float)chunkSize / TILE_WIDTH_COL) );
-	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
-	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
-	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH_ROW, TILE_WIDTH_COL);
-	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
-	// record event
-	cudaEventRecord(stepStart);
-	decode_chunk<<<grid, block>>>(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
@@ -197,22 +176,22 @@ void decode_file(char *inFile, char *confFile, char *outFile)
 	sprintf(metadata_file_name, "%s.METADATA", inFile);
 	if((fp_meta = fopen(metadata_file_name, "rb")) == NULL)
 	{
-		printf("Can not open metadata file!\n");
+		printf("Cannot open metadata file!\n");
 		exit(0);
 	}
 	fscanf(fp_meta, "%d", &totalSize);
 	fscanf(fp_meta, "%d %d", &parityBlockNum, &nativeBlockNum);
 
-	chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
-//	chunkSize = (int) (ceil( (double)totalSize / nativeBlockNum )); 
+	chunkSize = (totalSize / nativeBlockNum) + (totalSize%nativeBlockNum != 0); 
+//	chunkSize = (int) (ceil((double) totalSize / nativeBlockNum)); 
 #ifdef DEBUG
 printf("chunk size: %d\n", chunkSize);
 #endif
 
-	totalMatrixSize = nativeBlockNum * ( nativeBlockNum + parityBlockNum );
-	totalEncodingMatrix = (uint8_t*) malloc( totalMatrixSize );
+	totalMatrixSize = nativeBlockNum * (nativeBlockNum + parityBlockNum);
+	totalEncodingMatrix = (uint8_t*) malloc(totalMatrixSize);
 	matrixSize = nativeBlockNum * nativeBlockNum;
-	encodingMatrix = (uint8_t*) malloc( matrixSize );
+	encodingMatrix = (uint8_t*) malloc(matrixSize);
 	for (int i = 0; i < totalMatrixSize; ++i)
 	{
 //		fscanf(fp_meta, "%d", &totalEncodingMatrix[i]);
@@ -222,29 +201,37 @@ printf("chunk size: %d\n", chunkSize);
 	}
 	fclose(fp_meta);
 
-	dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	dataBuf = (uint8_t*) malloc( dataSize );
+	dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
+	codeSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
+	dataBuf = (uint8_t*) malloc(dataSize);
 	memset(dataBuf, 0, dataSize);
-	codeBuf = (uint8_t*) malloc( codeSize);
+	codeBuf = (uint8_t*) malloc(codeSize);
 	memset(codeBuf, 0, codeSize);
 
 	FILE *fp_conf;
 	char input_file_name[strlen(inFile) + 20];
 	int index;
-	fp_conf = fopen(confFile, "r");
+	if((fp_conf = fopen(confFile, "r")) == NULL)
+	{
+		printf("Cannot open configuration file!\n");
+		exit(0);
+	}
 
 	for(int i = 0; i < nativeBlockNum; i++)
 	{
 		fscanf(fp_conf, "%s", input_file_name);
-		index = atoi(input_file_name+1);
+		index = atoi(input_file_name + 1);
 
 		copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
 
-		fp_in = fopen(input_file_name, "rb");
+		if((fp_in = fopen(input_file_name, "rb")) == NULL)
+		{
+			printf("Cannot open input file %s!\n", input_file_name);
+			exit(0);
+		}
 		fseek(fp_in, 0L, SEEK_SET);
 		// this part can be process in parallel with computing inversed matrix
-		fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
+		fread(codeBuf + i * chunkSize, sizeof(uint8_t), chunkSize, fp_in);
 		fclose(fp_in);
 	}
 	fclose(fp_conf);
@@ -253,16 +240,23 @@ printf("chunk size: %d\n", chunkSize);
 
 	if(outFile == NULL)
 	{
-		fp_out = fopen(inFile, "wb");
+		if((fp_out = fopen(inFile, "wb")) == NULL)
+		{
+			printf("Cannot open output file %s!\n", inFile);
+			exit(0);
+		}
 	}
 	else
 	{
-		fp_out = fopen(outFile, "wb");
+		if((fp_out = fopen(outFile, "wb")) == NULL)
+		{
+			printf("Cannot open output file %s!\n", outFile);
+			exit(0);
+		}
 	}
 	fwrite(dataBuf, sizeof(uint8_t), totalSize, fp_out);
 	fclose(fp_out);
 
 	free(dataBuf);
 	free(codeBuf);
-
 }

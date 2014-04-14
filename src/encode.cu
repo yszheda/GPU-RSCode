@@ -26,9 +26,9 @@
 void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t* encodingMatrix)
 {
 	FILE *fp;
-	if( ( fp = fopen(fileName, "wb") ) == NULL )
+	if((fp = fopen(fileName, "wb")) == NULL)
 	{
-		printf("Can not open META file!\n");
+		printf("Cannot open META file!\n");
 		exit(0);
 	}
 	fprintf(fp, "%d\n", totalSize);
@@ -52,7 +52,7 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 	{
 		for (int j = 0; j < nativeBlockNum; ++j)
 		{
-			fprintf(fp, "%d ", encodingMatrix[i*nativeBlockNum + j]);
+			fprintf(fp, "%d ", encodingMatrix[i * nativeBlockNum + j]);
 		}
 		fprintf(fp, "\n");
 	}
@@ -64,8 +64,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 {
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
-	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	int codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
+	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
+	int codeSize = parityBlockNum * chunkSize * sizeof(uint8_t);
 
 	float totalComputationTime = 0;
 	float totalCommunicationTime = 0;
@@ -77,9 +77,9 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	cudaEventCreate(&totalStop);
 	cudaEventRecord(totalStart);
 
-	cudaMalloc( (void **)&dataBuf_d, nativeBlockNum*chunkSize*sizeof(uint8_t) );
+	cudaMalloc((void **) &dataBuf_d, dataSize);
 //	cudaMemset(dataBuf_d, 0, dataSize);
-	cudaMalloc( (void **)&codeBuf_d, parityBlockNum*chunkSize*sizeof(uint8_t) );
+	cudaMalloc((void **) &codeBuf_d, codeSize);
 //	cudaMemset(codeBuf_d, 0, codeSize);
 
 	// compute step execution time
@@ -91,7 +91,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
 	// record event
 	cudaEventRecord(stepStart);
-	cudaMemcpy(dataBuf_d, dataBuf, nativeBlockNum*chunkSize*sizeof(uint8_t), cudaMemcpyHostToDevice);
+	cudaMemcpy(dataBuf_d, dataBuf, dataSize, cudaMemcpyHostToDevice);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -102,8 +102,10 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
 	uint8_t *encodingMatrix;	//host
 	uint8_t *encodingMatrix_d;	//device
-	encodingMatrix = (uint8_t*) malloc( parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
-	cudaMalloc( (void **)&encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
+	int matrixSize = parityBlockNum * nativeBlockNum * sizeof(uint8_t);
+//	encodingMatrix = (uint8_t*) malloc(matrixSize);
+	cudaMallocHost((void **)&encodingMatrix, matrixSize);
+	cudaMalloc((void **) &encodingMatrix_d, matrixSize);
 
 	// record event
 	cudaEventRecord(stepStart);
@@ -120,7 +122,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
 	// record event
 	cudaEventRecord(stepStart);
-	cudaMemcpy(encodingMatrix, encodingMatrix_d, parityBlockNum*nativeBlockNum*sizeof(uint8_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(encodingMatrix, encodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -129,30 +131,13 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	printf("Copy encoding matrix from GPU to CPU: %fms\n", stepTime);
 	totalCommunicationTime += stepTime;
 
-	// TO-DO: better tiling
-//	int gridDimX = (int)(ceil((float)chunkSize/TILE_WIDTH));
-//	int gridDimY = (int)(ceil((float)parityBlockNum/TILE_WIDTH));
-//	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH, TILE_WIDTH);
-	int gridDimX = min( (int)( ceil((float)chunkSize / TILE_WIDTH_COL) ), SINGLE_GRID_SIZE );
-	int gridDimY = (int)( ceil((float)nativeBlockNum / TILE_WIDTH_ROW) );
-	dim3 grid(gridDimX, gridDimY);
-//	dim3 block(TILE_WIDTH_ROW, TILE_WIDTH_COL);
-	dim3 block(TILE_WIDTH_COL, TILE_WIDTH_ROW);
-	// record event
-	cudaEventRecord(stepStart);
-	encode_chunk<<<grid, block>>>(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+	stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
 	printf("Encoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
 	// record event
 	cudaEventRecord(stepStart);
-	cudaMemcpy(codeBuf, codeBuf_d, parityBlockNum*chunkSize*sizeof(uint8_t), cudaMemcpyDeviceToHost);
+	cudaMemcpy(codeBuf, codeBuf_d, codeSize, cudaMemcpyDeviceToHost);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -177,7 +162,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	char metadata_file_name[strlen(fileName) + 15];
 	sprintf(metadata_file_name, "%s.METADATA", fileName);
 	write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
-	free(encodingMatrix);
+//	free(encodingMatrix);
+	cudaFreeHost(encodingMatrix);
 }
 
 extern "C"
@@ -188,9 +174,9 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 
 	FILE *fp_in;
 	FILE *fp_out;
-	if( ( fp_in = fopen(fileName,"rb") ) == NULL )
+	if((fp_in = fopen(fileName,"rb")) == NULL)
 	{
-		printf("Can not open source file!\n");
+		printf("Cannot open source file!\n");
 		exit(0);
 	}
 
@@ -201,25 +187,27 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 //	chunkSize = (ftell(fp_in) / nativeBlockNum) + ( ftell(fp_in)%nativeBlockNum != 0 ); 
 //	chunkSize = (int) (ceil( (long double) (ftell(fp_in) / nativeBlockNum)) ); 
 
+	cudaSetDevice(1);
 	uint8_t *dataBuf;		//host
 	uint8_t *codeBuf;		//host
-	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	int codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
-	dataBuf = (uint8_t*) malloc( nativeBlockNum*chunkSize*sizeof(uint8_t) );
+	int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
+	int codeSize = parityBlockNum * chunkSize * sizeof(uint8_t);
+//	dataBuf = (uint8_t*) malloc(dataSize);
+	cudaMallocHost((void **)&dataBuf, dataSize);
 	memset(dataBuf, 0, dataSize);
-	codeBuf = (uint8_t*) malloc( parityBlockNum*chunkSize*sizeof(uint8_t) );
+//	codeBuf = (uint8_t*) malloc(codeSize);
+	cudaMallocHost((void **)&codeBuf, codeSize);
 	memset(codeBuf, 0, codeSize);
 	
-	int i;
-	for(i=0; i<nativeBlockNum; i++)
+	for(int i = 0; i < nativeBlockNum; i++)
 	{
-		if( fseek( fp_in, i*chunkSize, SEEK_SET ) == -1 )
+		if(fseek(fp_in, i * chunkSize, SEEK_SET) == -1)
 		{
 			printf("fseek error!\n");
 			exit(0);
 		}
 
-		if( fread( dataBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in ) == EOF )
+		if(fread(dataBuf + i * chunkSize, sizeof(uint8_t), chunkSize, fp_in) == EOF)
 		{
 			printf("fread error!\n");
 			exit(0);
@@ -227,33 +215,39 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
+	struct timespec start, end;
+	clock_gettime(CLOCK_REALTIME, &start);
 	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
+	clock_gettime(CLOCK_REALTIME, &end);
+	double totalTime = (double) (end.tv_sec - start.tv_sec) * 1000
+			+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
+	printf("Total GPU encoding time used by the total function: %fms\n", totalTime);
 
 	char output_file_name[strlen(fileName) + 5];
-	for(i=0; i<nativeBlockNum; i++)
+	for(int i = 0; i < nativeBlockNum; i++)
 	{
 		sprintf(output_file_name, "_%d_%s", i, fileName);
-		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
+		if((fp_out = fopen(output_file_name, "wb")) == NULL)
 		{
-			printf("Can not open output file!\n");
+			printf("Cannot open output file!\n");
 			exit(0);
 		}
-		if( fwrite(dataBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
+		if(fwrite(dataBuf + i * chunkSize, sizeof(uint8_t), chunkSize, fp_out) != sizeof(uint8_t) * chunkSize)
 		{
 			printf("fwrite error!\n");
 			exit(0);
 		}
 		fclose(fp_out);
 	}
-	for(i=0; i<parityBlockNum; i++)
+	for(int i = 0; i < parityBlockNum; i++)
 	{
 		sprintf(output_file_name, "_%d_%s", i + nativeBlockNum, fileName);
-		if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
+		if((fp_out = fopen(output_file_name, "wb")) == NULL)
 		{
-			printf("Can not open output file!\n");
+			printf("Cannot open output file!\n");
 			exit(0);
 		}
-		if( fwrite(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
+		if(fwrite(codeBuf + i * chunkSize, sizeof(uint8_t), chunkSize, fp_out) != sizeof(uint8_t)*chunkSize)
 		{
 			printf("fwrite error!\n");
 			exit(0);
@@ -261,6 +255,8 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 		fclose(fp_out);
 	}
 
-	free(dataBuf);
-	free(codeBuf);
+//	free(dataBuf);
+//	free(codeBuf);
+	cudaFreeHost(dataBuf);
+	cudaFreeHost(codeBuf);
 }
