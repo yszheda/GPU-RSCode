@@ -29,7 +29,8 @@
 #define TILE_WIDTH_COL 64
 #define TILE_DEPTH 2
 
-#define SINGLE_GRID_SIZE 16384 // MAX 
+#define SINGLE_GRID_SIZE 1344
+// #define SINGLE_GRID_SIZE 16384 // MAX 
 // #define SINGLE_GRID_SIZE 2147483647 // Max GridDim.x in K20 
 
 // #define W 4
