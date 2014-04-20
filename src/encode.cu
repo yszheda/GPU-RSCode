@@ -36,6 +36,7 @@ struct ThreadDataType {
 	char* fileName;
 	uint8_t* dataBuf;
 	uint8_t* codeBuf;
+	uint8_t* encodingMatrix;
 };	/* ----------  end of struct ThreadDataType  ---------- */
 
 typedef struct ThreadDataType ThreadDataType;
@@ -99,7 +100,7 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
  * =====================================================================================
  */
 extern "C"
-void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int gridDimXSize, int streamNum)
+void encode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int gridDimXSize, int streamNum)
 {
 //	cudaSetDevice(id);
 
@@ -134,12 +135,8 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 //	printf("Copy data from CPU to GPU: %fms\n", stepTime);
 //	totalCommunicationTime += stepTime;
 
-	uint8_t *encodingMatrix;	//host
 	uint8_t *encodingMatrix_d;	//device
 	int matrixSize = parityBlockNum * nativeBlockNum * sizeof(uint8_t);
-	// Pageable Host Memory is preferred here since the encodingMatrix is small
-	encodingMatrix = (uint8_t*) malloc(matrixSize);
-//	cudaMallocHost((void **)&encodingMatrix, matrixSize);
 	cudaMalloc((void **)&encodingMatrix_d, matrixSize);
 
 	// record event
@@ -155,16 +152,19 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 	printf("Generating encoding matrix completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
-	// record event
-	cudaEventRecord(stepStart);
-	cudaMemcpy(encodingMatrix, encodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-	printf("Copy encoding matrix from GPU to CPU: %fms\n", stepTime);
-	totalCommunicationTime += stepTime;
+	if (id == 0)
+	{
+		// record event
+		cudaEventRecord(stepStart);
+		cudaMemcpy(encodingMatrix, encodingMatrix_d, matrixSize, cudaMemcpyDeviceToHost);
+		// record event and synchronize
+		cudaEventRecord(stepStop);
+		cudaEventSynchronize(stepStop);
+		// get event elapsed time
+		cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+		printf("Copy encoding matrix from GPU to CPU: %fms\n", stepTime);
+		totalCommunicationTime += stepTime;
+	}
 
 	// Use cuda stream to encode the file
 	// to achieve computation and comunication overlapping
@@ -266,28 +266,28 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int id, int nati
 		cudaStreamDestroy(stream[i]);
 	}
 
-	if (id == 0)
-	{
-		char metadata_file_name[strlen(fileName) + 15];
-		sprintf(metadata_file_name, "%s.METADATA", fileName);
-		write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
-	}
-	// Pageable Host Memory is preferred here since the encodingMatrix is small
-	free(encodingMatrix);
-//	cudaFreeHost(encodingMatrix);
 }
 
 static void* GPU_thread_func(void * args)
 {
 	ThreadDataType* thread_data = (ThreadDataType *) args;
 	cudaSetDevice(thread_data->id);
+
+	uint8_t *encodingMatrix;
+	int parityBlockNum = thread_data->parityBlockNum;
+	int nativeBlockNum = thread_data->nativeBlockNum;
+	int matrixSize = parityBlockNum * nativeBlockNum * sizeof(uint8_t);
+	// Pageable Host Memory is preferred here since the encodingMatrix is small
+	encodingMatrix = (uint8_t*) malloc(matrixSize);
+//	cudaMallocHost((void **)&encodingMatrix, matrixSize);
+
 	struct timespec start, end;
 	pthread_barrier_wait(&barrier);
 	clock_gettime(CLOCK_REALTIME, &start);
 	pthread_barrier_wait(&barrier);
-	encode(thread_data->fileName, 
-			thread_data->dataBuf, 
+	encode(thread_data->dataBuf, 
 			thread_data->codeBuf, 
+			thread_data->encodingMatrix,
 			thread_data->id, 
 			thread_data->nativeBlockNum, 
 			thread_data->parityBlockNum, 
@@ -303,6 +303,18 @@ static void* GPU_thread_func(void * args)
 				+ (double) (end.tv_nsec - start.tv_nsec) / (double) 1000000L;
 		printf("Total GPU encoding time using multiple devices: %fms\n", totalTime);
 	}
+
+	if (thread_data->id == 0)
+	{
+		char *fileName = thread_data->fileName;
+		int totalSize = thread_data->totalSize;
+		char metadata_file_name[strlen(fileName) + 15];
+		sprintf(metadata_file_name, "%s.METADATA", fileName);
+		write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
+	}
+	// Pageable Host Memory is preferred here since the encodingMatrix is small
+	free(encodingMatrix);
+//	cudaFreeHost(encodingMatrix);
 	return NULL;
 }
 
