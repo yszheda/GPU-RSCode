@@ -280,6 +280,8 @@ static void* GPU_thread_func(void * args)
 	// Pageable Host Memory is preferred here since the encodingMatrix is small
 	encodingMatrix = (uint8_t*) malloc(matrixSize);
 //	cudaMallocHost((void **)&encodingMatrix, matrixSize);
+	thread_data->encodingMatrix = encodingMatrix;
+	
 
 	struct timespec start, end;
 	pthread_barrier_wait(&barrier);
