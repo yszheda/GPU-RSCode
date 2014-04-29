@@ -153,23 +153,6 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 //	printf("Device%d: Copy decoding matrix from CPU to GPU: %fms\n", id, stepTime);
 //	totalCommunicationTime += stepTime;
 
-	pthread_mutex_lock(&mutex);
-	while(DM_ready == false) {
-		pthread_cond_wait(&cond_ready, &mutex);
-	}
-	pthread_mutex_unlock(&mutex);
-
-	// record event
-	cudaEventRecord(stepStart);
-	cudaMemcpy(decodingMatrix_d, decodingMatrix, matrixSize, cudaMemcpyHostToDevice);
-	// record event and synchronize
-	cudaEventRecord(stepStop);
-	cudaEventSynchronize(stepStop);
-	// get event elapsed time
-	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
-	printf("Device%d: Copy decoding matrix from CPU to GPU: %fms\n", id, stepTime);
-	totalCommunicationTime += stepTime;
-
 //	// record event
 //	cudaEventRecord(stepStart);
 //	invert_matrix(encodingMatrix_d, decodingMatrix_d, nativeBlockNum);
@@ -244,7 +227,6 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 //		printf("Device%d: Copy code from CPU to GPU in stream: %fms\n", id, stepTime);
 //		totalCommunicationTime += stepTime;
 
-/*
 		if (i == 0)
 		{
 			pthread_mutex_lock(&mutex);
@@ -265,7 +247,6 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 			printf("Device%d: Copy decoding matrix from CPU to GPU: %fms\n", id, stepTime);
 			totalCommunicationTime += stepTime;
 		}
-*/
 
 		stepTime = decode_chunk(dataBuf_d[i], decodingMatrix_d, codeBuf_d[i], nativeBlockNum, parityBlockNum, streamChunkSize, gridDimXSize, stream[i]);
 //		printf("Device%d: Decoding file in stream completed: %fms\n", id, stepTime);
@@ -516,10 +497,6 @@ printf("chunk size: %d\n", chunkSize);
 		pthread_create(&((pthread_t*) threads)[i], NULL, GPU_thread_func, (void *) &GPU_thread_data[i]);
 	}
 
-//	CPUThreadDataType* CPU_thread_data = (CPUThreadDataType *) malloc(sizeof(CPUThreadDataType));
-//	CPU_thread_data->nativeBlockNum = nativeBlockNum;
-//	CPU_thread_data->encodingMatrix = encodingMatrix;
-//	CPU_thread_data->decodingMatrix = decodingMatrix;
 	CPUThreadDataType CPU_thread_data;
 	CPU_thread_data.nativeBlockNum = nativeBlockNum;
 	CPU_thread_data.encodingMatrix = encodingMatrix;
