@@ -182,7 +182,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 		} 
 
 		int dataSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
-		int codeSize = parityBlockNum * streamChunkSize * sizeof(uint8_t);
+		int codeSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
 		
 		cudaMalloc((void **)&dataBuf_d[i], dataSize);
 		cudaMalloc((void **)&codeBuf_d[i], codeSize);
@@ -196,7 +196,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
 			streamChunkSize = chunkSize - i * streamMinChunkSize;
 		} 
 		int dataSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
-		int codeSize = parityBlockNum * streamChunkSize * sizeof(uint8_t);
+		int codeSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
 //		// record event
 //		cudaEventRecord(stepStart);
 		for (int j = 0; j < nativeBlockNum; j++)
