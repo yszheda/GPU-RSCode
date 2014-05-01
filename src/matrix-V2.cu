@@ -202,12 +202,14 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 //	__syncthreads();
 
 	#pragma unroll
-	for(int j = tx; j < gflog_table_size; j += blockDim.x)
+//	for(int j = tx; j < gflog_table_size; j += blockDim.x)
+	for(int j = tx * blockDim.y + ty; j < gflog_table_size; j += blockDim.x * blockDim.y)
 	{
 		gflog[j] = gflog_cMem[j];
 	}
 	#pragma unroll
-	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
+//	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
+	for(int j = tx * blockDim.y + ty; j < gfexp_table_size; j += blockDim.x * blockDim.y)
 	{
 		gfexp[j] = gfexp_cMem[j];
 	}
