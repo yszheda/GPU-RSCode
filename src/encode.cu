@@ -141,8 +141,14 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int id,
 
 	// record event
 	cudaEventRecord(stepStart);
-	dim3 blk(parityBlockNum, nativeBlockNum);
-	gen_encoding_matrix<<<1, blk>>>(encodingMatrix_d, parityBlockNum, nativeBlockNum);
+	const int maxBlockDimSize = 16;
+	int blockDimX = min(parityBlockNum, maxBlockDimSize);
+	int blockDimY = min(nativeBlockNum, maxBlockDimSize);
+	int gridDimX = (int) ceil((float) parityBlockNum / blockDimX);
+	int gridDimY = (int) ceil((float) nativeBlockNum / blockDimY);
+	dim3 grid(gridDimX, gridDimY);
+	dim3 block(blockDimX, blockDimY);
+	gen_encoding_matrix<<<grid, block>>>(encodingMatrix_d, parityBlockNum, nativeBlockNum);
 //	cudaDeviceSynchronize();
 	// record event and synchronize
 	cudaEventRecord(stepStop);

@@ -653,8 +653,8 @@ show_square_matrix_debug(result_host, size);
  */
 __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 {
-	int i = threadIdx.x;
-	int j = threadIdx.y;
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	int j = blockIdx.y * blockDim.y + threadIdx.y;
 	setup_tables();
 	__syncthreads();
 	encodingMatrix[i * col + j] = gf_pow((j + 1) % field_size, i);
