@@ -19,8 +19,8 @@
 #define _ENCODE_H_
 
 extern "C"
-void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize);
+void encode(uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int tileWidthRow, int tileDepth);
 
 extern "C"
-void encode_file(char *file, int nativeBlockNum, int parityBlockNum);
+void encode_file(char *file, int nativeBlockNum, int parityBlockNum, int tileWidthRow, int tileDepth);
 #endif

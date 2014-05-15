@@ -522,19 +522,20 @@ show_squre_matrix_debug(result_host, size);
 
 __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 {
-	int i = threadIdx.x;
-	int j = threadIdx.y;
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	int j = blockIdx.y * blockDim.y + threadIdx.y;
 	setup_tables();
 	__syncthreads();
 	encodingMatrix[i*col + j] = gf_pow((j+1) % field_size, i);
 }
 
-__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth)
 {
 	int threadsPerBlock = 128;
-	int tileWidthRow = parityBlockNum;
+//	int tileWidthRow;
 	int tileWidthCol = threadsPerBlock / tileWidthRow;
-	int tileDepth = nativeBlockNum;
+//	int tileDepth = nativeBlockNum;
+//	tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)parityBlockNum / tileWidthRow) );
 	dim3 grid(gridDimX, gridDimY);
@@ -569,12 +570,13 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	return stepTime;
 }
 
-__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
+__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth)
 {
 	int threadsPerBlock = 128;
-	int tileWidthRow = parityBlockNum;
+//	int tileWidthRow = parityBlockNum;
 	int tileWidthCol = threadsPerBlock / tileWidthRow;
-	int tileDepth = nativeBlockNum;
+//	int tileDepth = nativeBlockNum;
+//	tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)nativeBlockNum / tileWidthRow) );
 	dim3 grid(gridDimX, gridDimY);

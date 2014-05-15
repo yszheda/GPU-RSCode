@@ -60,12 +60,12 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 }
 
 extern "C"
-void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize)
+void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int tileWidthRow, int tileDepth)
 {
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
-	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	int codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
+	unsigned long dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
+	unsigned long codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
 
 	float totalComputationTime = 0;
 	float totalCommunicationTime = 0;
@@ -107,8 +107,14 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 
 	// record event
 	cudaEventRecord(stepStart);
-	dim3 blk(parityBlockNum, nativeBlockNum);
-	gen_encoding_matrix<<<1, blk>>>(encodingMatrix_d, parityBlockNum, nativeBlockNum);
+	int maxBlockDim = 16;
+	int blockDimX = min(parityBlockNum, maxBlockDim);
+	int blockDimY = min(nativeBlockNum, maxBlockDim);
+	int gridDimX = (int) ceil((float) parityBlockNum / blockDimX);
+	int gridDimY = (int) ceil((float) nativeBlockNum / blockDimY);
+	dim3 blk(blockDimX, blockDimY);
+	dim3 grid(gridDimX, gridDimY);
+	gen_encoding_matrix<<<grid, blk>>>(encodingMatrix_d, parityBlockNum, nativeBlockNum);
 //	cudaDeviceSynchronize();
 	// record event and synchronize
 	cudaEventRecord(stepStop);
@@ -152,7 +158,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	totalComputationTime += stepTime;
 */
 
-	stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
+	stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileDepth);
 	printf("Encoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
@@ -187,7 +193,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 }
 
 extern "C"
-void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
+void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int tileWidthRow, int tileDepth)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -209,12 +215,12 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 
 	uint8_t *dataBuf;		//host
 	uint8_t *codeBuf;		//host
-	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
-	int codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
+	unsigned long dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
+	unsigned long codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
 	dataBuf = (uint8_t*) malloc( nativeBlockNum*chunkSize*sizeof(uint8_t) );
-	memset(dataBuf, 0, dataSize);
+//	memset(dataBuf, 0, dataSize);
 	codeBuf = (uint8_t*) malloc( parityBlockNum*chunkSize*sizeof(uint8_t) );
-	memset(codeBuf, 0, codeSize);
+//	memset(codeBuf, 0, codeSize);
 	
 	int i;
 	for(i=0; i<nativeBlockNum; i++)
@@ -233,7 +239,8 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum)
 	}
 	fclose(fp_in);
 	
-	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize);
+	cudaSetDevice(1);
+	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize, tileWidthRow, tileDepth);
 
 	char output_file_name[strlen(fileName) + 5];
 	for(i=0; i<nativeBlockNum; i++)

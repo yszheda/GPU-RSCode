@@ -76,10 +76,7 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-bin_PROGRAMS = $(top_builddir)/RS$(EXEEXT) \
-	$(top_builddir)/RS-tiling-S1$(EXEEXT) \
-	$(top_builddir)/RS-tiling-S2$(EXEEXT) \
-	$(top_builddir)/RS-tiling-S3$(EXEEXT)
+bin_PROGRAMS = $(top_builddir)/RS$(EXEEXT)
 subdir = src
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/depcomp
@@ -98,21 +95,6 @@ am___top_builddir__RS_OBJECTS = matrix.$(OBJEXT) encode.$(OBJEXT) \
 __top_builddir__RS_OBJECTS = $(am___top_builddir__RS_OBJECTS)
 __top_builddir__RS_LDADD = $(LDADD)
 am__dirstamp = $(am__leading_dot)dirstamp
-am___top_builddir__RS_tiling_S1_OBJECTS = matrix-S1.$(OBJEXT) \
-	encode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
-__top_builddir__RS_tiling_S1_OBJECTS =  \
-	$(am___top_builddir__RS_tiling_S1_OBJECTS)
-__top_builddir__RS_tiling_S1_LDADD = $(LDADD)
-am___top_builddir__RS_tiling_S2_OBJECTS = matrix-S2.$(OBJEXT) \
-	encode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
-__top_builddir__RS_tiling_S2_OBJECTS =  \
-	$(am___top_builddir__RS_tiling_S2_OBJECTS)
-__top_builddir__RS_tiling_S2_LDADD = $(LDADD)
-am___top_builddir__RS_tiling_S3_OBJECTS = matrix-S3.$(OBJEXT) \
-	encode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
-__top_builddir__RS_tiling_S3_OBJECTS =  \
-	$(am___top_builddir__RS_tiling_S3_OBJECTS)
-__top_builddir__RS_tiling_S3_LDADD = $(LDADD)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
 am__v_P_0 = false
@@ -140,14 +122,8 @@ AM_V_CCLD = $(am__v_CCLD_@AM_V@)
 am__v_CCLD_ = $(am__v_CCLD_@AM_DEFAULT_V@)
 am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
-SOURCES = $(__top_builddir__RS_SOURCES) \
-	$(__top_builddir__RS_tiling_S1_SOURCES) \
-	$(__top_builddir__RS_tiling_S2_SOURCES) \
-	$(__top_builddir__RS_tiling_S3_SOURCES)
-DIST_SOURCES = $(__top_builddir__RS_SOURCES) \
-	$(__top_builddir__RS_tiling_S1_SOURCES) \
-	$(__top_builddir__RS_tiling_S2_SOURCES) \
-	$(__top_builddir__RS_tiling_S3_SOURCES)
+SOURCES = $(__top_builddir__RS_SOURCES)
+DIST_SOURCES = $(__top_builddir__RS_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -266,7 +242,9 @@ top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
 CCFLAGS = -g
-TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
+
+# TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3 RS-tiling-S4 RS-tiling-S5
+TARGET = RS 
 COMMON_OBJECTS = encode.o decode.o main.o
 OBJECTS = matrix.o encode.o decode.o main.o
 
@@ -275,12 +253,10 @@ OBJECTS = matrix.o encode.o decode.o main.o
 
 # include .depend
 CCLD = $(CC)
+# bin_PROGRAMS = $(top_builddir)/RS $(top_builddir)/RS-tiling-S1 $(top_builddir)/RS-tiling-S2 $(top_builddir)/RS-tiling-S3 $(top_builddir)/RS-tiling-S4 $(top_builddir)/RS-tiling-S5
 # bin_PROGRAMS = $(addprefix $(top_builddir)/, $(TARGET))
 # bin_PROGRAMS = RS
 __top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
-__top_builddir__RS_tiling_S1_SOURCES = matrix-S1.cu encode.cu decode.cu main.c 
-__top_builddir__RS_tiling_S2_SOURCES = matrix-S2.cu encode.cu decode.cu main.c 
-__top_builddir__RS_tiling_S3_SOURCES = matrix-S3.cu encode.cu decode.cu main.c 
 all: all-am
 
 .SUFFIXES:
@@ -589,17 +565,25 @@ $(top_builddir)/RS$(EXEEXT): matrix.o encode.o decode.o main.o
 # $(top_builddir)/RS: matrix.o encode.o decode.o main.o
 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
 
-$(top_builddir)/RS-tiling-S1$(EXEEXT): $(COMMON_OBJECTS) matrix-S1.o
-# $(top_builddir)/RS-tiling-S1: $(COMMON_OBJECTS) matrix-S1.o
-	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
-
-$(top_builddir)/RS-tiling-S2$(EXEEXT): $(COMMON_OBJECTS) matrix-S2.o
-# $(top_builddir)/RS-tiling-S2: $(COMMON_OBJECTS) matrix-S2.o
-	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
-
-$(top_builddir)/RS-tiling-S3$(EXEEXT): $(COMMON_OBJECTS) matrix-S3.o
-# $(top_builddir)/RS-tiling-S3: $(COMMON_OBJECTS) matrix-S3.o
-	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+# $(top_builddir)/RS-tiling-S1$(EXEEXT): $(COMMON_OBJECTS) matrix-S1.o
+# # $(top_builddir)/RS-tiling-S1: $(COMMON_OBJECTS) matrix-S1.o
+# 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+# 
+# $(top_builddir)/RS-tiling-S2$(EXEEXT): $(COMMON_OBJECTS) matrix-S2.o
+# # $(top_builddir)/RS-tiling-S2: $(COMMON_OBJECTS) matrix-S2.o
+# 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+# 
+# $(top_builddir)/RS-tiling-S3$(EXEEXT): $(COMMON_OBJECTS) matrix-S3.o
+# # $(top_builddir)/RS-tiling-S3: $(COMMON_OBJECTS) matrix-S3.o
+# 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+# 
+# $(top_builddir)/RS-tiling-S4$(EXEEXT): $(COMMON_OBJECTS) matrix-S4.o
+# # $(top_builddir)/RS-tiling-S4: $(COMMON_OBJECTS) matrix-S4.o
+# 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
+# 
+# $(top_builddir)/RS-tiling-S5$(EXEEXT): $(COMMON_OBJECTS) matrix-S5.o
+# # $(top_builddir)/RS-tiling-S5: $(COMMON_OBJECTS) matrix-S5.o
+# 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
 
 # $(OBJPROG): $(OBJECTS)
 # 	$(NVCC) $^ -o $@ 
@@ -617,6 +601,11 @@ $(top_builddir)/RS-tiling-S3$(EXEEXT): $(COMMON_OBJECTS) matrix-S3.o
 
 CPU:
 	$(CC) -o $(top_builddir)/CPU-RS -lm -lrt $(CCFLAGS) cpu-rs.c
+# __top_builddir__RS_tiling_S1_SOURCES = matrix-S1.cu encode.cu decode.cu main.c 
+# __top_builddir__RS_tiling_S2_SOURCES = matrix-S2.cu encode.cu decode.cu main.c 
+# __top_builddir__RS_tiling_S3_SOURCES = matrix-S3.cu encode.cu decode.cu main.c 
+# __top_builddir__RS_tiling_S4_SOURCES = matrix-S4.cu encode.cu decode.cu main.c 
+# __top_builddir__RS_tiling_S5_SOURCES = matrix-S5.cu encode.cu decode.cu main.c 
 
 # cuAutotools_CFLAGS  = $(CUDA_CFLAGS)
 # cuAutotools_LDADD  = $(CUDA_LIBS)

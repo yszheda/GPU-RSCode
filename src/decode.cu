@@ -22,7 +22,7 @@
 #include <stdint.h>
 #include "matrix.h"
 
-#define DEBUG
+// #define DEBUG
 
 void show_squre_matrix(uint8_t *matrix, int size)
 {
@@ -48,7 +48,7 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
 }
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize)
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth)
 {
 	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	int codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
@@ -147,7 +147,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 */
-	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize);
+	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileDepth);
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
@@ -177,7 +177,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 }
 
 extern "C"
-void decode_file(char *inFile, char *confFile, char *outFile)
+void decode_file(char *inFile, char *confFile, char *outFile, int tileWidthRow, int tileDepth)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -254,7 +254,8 @@ printf("chunk size: %d\n", chunkSize);
 	}
 	fclose(fp_conf);
 	
-	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize);
+	cudaSetDevice(1);
+	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileDepth);
 
 	if(outFile == NULL)
 	{
