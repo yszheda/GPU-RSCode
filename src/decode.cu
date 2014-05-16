@@ -48,7 +48,7 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
 }
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth)
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
 	int codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
@@ -147,7 +147,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 */
-	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileDepth);
+	stepTime = decode_chunk(dataBuf_d, decodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	printf("Decoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
@@ -177,7 +177,7 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nat
 }
 
 extern "C"
-void decode_file(char *inFile, char *confFile, char *outFile, int tileWidthRow, int tileDepth)
+void decode_file(char *inFile, char *confFile, char *outFile, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -255,7 +255,7 @@ printf("chunk size: %d\n", chunkSize);
 	fclose(fp_conf);
 	
 	cudaSetDevice(1);
-	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileDepth);
+	decode(dataBuf, codeBuf, encodingMatrix, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 
 	if(outFile == NULL)
 	{

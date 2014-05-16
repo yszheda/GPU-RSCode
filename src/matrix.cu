@@ -529,11 +529,14 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 	encodingMatrix[i*col + j] = gf_pow((j+1) % field_size, i);
 }
 
-__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth)
+__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int threadsPerBlock = 128;
 //	int tileWidthRow;
-	int tileWidthCol = threadsPerBlock / tileWidthRow;
+//	int tileWidthCol = threadsPerBlock / tileWidthRow;
+
+//	tileWidthCol = threadsPerBlock / tileWidthRow;
+
 //	int tileDepth = nativeBlockNum;
 //	tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
@@ -570,11 +573,14 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	return stepTime;
 }
 
-__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth)
+__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int threadsPerBlock = 128;
 //	int tileWidthRow = parityBlockNum;
-	int tileWidthCol = threadsPerBlock / tileWidthRow;
+//	int tileWidthCol = threadsPerBlock / tileWidthRow;
+
+//	tileWidthCol = threadsPerBlock / tileWidthRow;
+
 //	int tileDepth = nativeBlockNum;
 //	tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );

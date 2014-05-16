@@ -19,10 +19,10 @@
 #define _DECODE_H_
 
 extern "C"
-void decode_file(char *file, int nativeBlockNum, int parityBlockNum, int tileWidthRow, int tileDepth);
+void decode_file(char *file, int nativeBlockNum, int parityBlockNum, int tileWidthRow, int tileWidthCol, int tileDepth);
 
 extern "C"
-void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth);
+void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth);
 
 
 #endif

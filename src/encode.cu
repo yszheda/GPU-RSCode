@@ -60,7 +60,7 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
 }
 
 extern "C"
-void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int tileWidthRow, int tileDepth)
+void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	uint8_t *dataBuf_d;		//device
 	uint8_t *codeBuf_d;		//device
@@ -158,7 +158,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 	totalComputationTime += stepTime;
 */
 
-	stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileDepth);
+	stepTime = encode_chunk(dataBuf_d, encodingMatrix_d, codeBuf_d, nativeBlockNum, parityBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	printf("Encoding file completed: %fms\n", stepTime);
 	totalComputationTime += stepTime;
 
@@ -193,7 +193,7 @@ void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockN
 }
 
 extern "C"
-void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int tileWidthRow, int tileDepth)
+void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int chunkSize = 1;
 	int totalSize;
@@ -240,7 +240,7 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int til
 	fclose(fp_in);
 	
 	cudaSetDevice(1);
-	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize, tileWidthRow, tileDepth);
+	encode(fileName, dataBuf, codeBuf, nativeBlockNum, parityBlockNum, chunkSize, totalSize, tileWidthRow, tileWidthCol, tileDepth);
 
 	char output_file_name[strlen(fileName) + 5];
 	for(i=0; i<nativeBlockNum; i++)

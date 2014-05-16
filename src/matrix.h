@@ -53,9 +53,9 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
 */
 __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col);
 
-__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth);
+__host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth);
 
-__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileDepth);
+__host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth);
 
 extern "C"
 void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size);

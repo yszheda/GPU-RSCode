@@ -42,6 +42,9 @@ int main(int argc, char *argv[])
 	int totalBlockNum = 0;
 	int tileDepth = 1;
 	int tileWidthRow = 1;
+	int tileWidthCol = 1;
+	int flag_tileWidthRow = 0;
+	int flag_tileWidthCol = 0;
 	char *inFile = NULL;
 	char *confFile = NULL;
 	char *outFile = NULL;
@@ -55,10 +58,16 @@ int main(int argc, char *argv[])
 	int func_flag = 0;
 	
 	int option;
-	while((option = getopt(argc, argv, "x:z:Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
+	while((option = getopt(argc, argv, "x:y:z:Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
 		switch ( option ) {
 			case 'x':
 				tileWidthRow = (int) atoi(optarg);
+				flag_tileWidthRow = 1;
+				break;
+
+			case 'y':
+				tileWidthCol = (int) atoi(optarg);
+				flag_tileWidthCol = 1;
 				break;
 
 			case 'z':
@@ -133,20 +142,29 @@ int main(int argc, char *argv[])
 				break;
 		}	/* -----  end switch  ----- */
 	}
+	int threadsPerBlock = 128;
+	if (flag_tileWidthRow == 1 && flag_tileWidthCol == 0)
+	{
+		tileWidthCol = threadsPerBlock / tileWidthRow;
+	}
+	if (flag_tileWidthRow == 0 && flag_tileWidthCol == 1)
+	{
+		tileWidthRow = threadsPerBlock / tileWidthCol;
+	}
 	
 	switch ( op ) {
 		case encode:	
 			assert(nativeBlockNum != 0);
 			assert(totalBlockNum != 0);
 			parityBlockNum = totalBlockNum - nativeBlockNum;
-			encode_file(inFile, nativeBlockNum, parityBlockNum, tileWidthRow, tileDepth);
+			encode_file(inFile, nativeBlockNum, parityBlockNum, tileWidthRow, tileWidthCol, tileDepth);
 			break;
 
 		case decode:	
 			assert(inFile != NULL);
 			assert(confFile != NULL);
 			assert(outFile != NULL);
-			decode_file(inFile, confFile, outFile, tileWidthRow, tileDepth);
+			decode_file(inFile, confFile, outFile, tileWidthRow, tileWidthCol, tileDepth);
 			break;
 
 		default:	
