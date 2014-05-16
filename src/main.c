@@ -35,6 +35,11 @@ void show_help_info()
 	exit(0);
 }
 
+int isPowerOf2(int x)
+{
+	return x && !(x & (x - 1));
+}
+
 int main(int argc, char *argv[])
 {
 	int nativeBlockNum = 0;
@@ -151,6 +156,9 @@ int main(int argc, char *argv[])
 	{
 		tileWidthRow = threadsPerBlock / tileWidthCol;
 	}
+	assert(tileDepth > 0 && tileDepth <= nativeBlockNum);
+	assert(isPowerOf2(tileWidthRow) == 1 && tileWidthRow <= threadsPerBlock);
+	assert(isPowerOf2(tileWidthCol) == 1 && tileWidthCol <= threadsPerBlock);
 	
 	switch ( op ) {
 		case encode:	
