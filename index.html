@@ -336,7 +336,7 @@ $$
 					<section>
 						<h2>Introduction of Galois Field</h2>
 						<p class="frame">
-Galois field/Finite field $GF(p^w)$ is a set of $w$ elements closed under addition and multiplication, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
+Galois field/Finite field GF($p^w$) is a set of $w$ elements closed under addition and multiplication, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
 						</p>
 						<p class="frame" align="left">
 Suppose $n > 1$ is not a prime. Then the set $\{ 0; 1; ...; n \}$ where addition and
@@ -348,7 +348,7 @@ e.g. Let $n = 4$. Then the set $\{ 0; 1; 2; 3 \}$ is indeed closed under additio
 						<h2>Introduction of Galois Field</h2>
 						<p>
 From another aspect, Galois field is a set of all polynomials of degree at most $w-1$.
-$GF(2^w)$ field is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over $GF(2)$, and then enumerating the elements (which are polynomials) with the generator $x$.
+GF($2^w$) field is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over GF($2$), and then enumerating the elements (which are polynomials) with the generator $x$.
 						</p>
 					</section>
 					-->
@@ -420,7 +420,7 @@ Each polynomial elements of GF($2^w$) can be mapped into a binary word $b$ of si
 <!--Mapping from polynomial elements of Galois Field into binary elements: equivalent to letting the generator $x = 2$.-->
 						</p>
 						<p class="fragment">
-e.g. $GF(2^2)$
+e.g. GF($2^2$)
 						</p>
 						<table class="fragment">
 							<tr>
@@ -489,48 +489,55 @@ Therefore, how to accelerate the time-consuming <font color="#ff0000">multiplica
 					</section>
 
 					<section>
-						<h2>Loop-based Methods</h2>
+						<h2>GPU Implementation: Loop-based or Table-based?</h2>
+					</section>
+					<section>
+						<h2>Loop-based Method</h2>
+					</section>
+					<section>
+						<h2>Overview of the Loop-based Method</h2>
+						<p align="left">
+To perform the multiplication of two binary numbers in GF($2^w$), the numbers should be converted to their polynomial elements, multiplied by the polynomials modulo $q(x)$, and then converted back to binary.
+<!--Basically, multiplication over Galois Field is polynomial multiplication and taking the result modulo $q(x)$.-->
+						</p>
+						<p class="fragment">
+<font color="#ff0000">Russian peasant multiplication algorithm</font> can be used to turn it into bitwise operations.
+						</p>
+					</section>
+
+					<section>
+						<h2>Russian Peasant Multiplication Algorithm</h2>
 						<p>
-						Basically, multiplication over Galois Field is polynomial multiplication and taking the result modulo $q(x)$.
-						</p>
-						<p class="fragment">
-						Russian peasant multiplication algorithm can be used to turn it into bitwise operations.
-						</p>
-					</section>
-
-					<section>
-						<h2>Loop-based Methods</h2>
-						<p class="fragment">
-						e.g. Russian peasant multiplication in normal field:
-						\begin{align}
-						9 \times 12 &\leadsto (9/2) \times (12 \times 2) + 12 \\
-						&\leadsto (4/2) \times (24 \times 2) + 12 \\
-						&\leadsto (2/2) \times (48 \times 2) + 12 \\
-						&\leadsto (48 \times 2) + 12 \\
-						&\leadsto 108
-						\end{align}
+e.g. Russian peasant multiplication in normal field:
+\begin{align}
+9 \times 12 &\leadsto (9/2) \times (12 \times 2) + 12 \\
+&\leadsto (4/2) \times (24 \times 2) + 12 \\
+&\leadsto (2/2) \times (48 \times 2) + 12 \\
+&\leadsto (48 \times 2) + 12 \\
+&\leadsto 108
+\end{align}
 						</p>
 					</section>
 
 					<section>
-						<h2>Loop-based Methods</h2>
-						<p class="fragment">
-						e.g. Russian peasant multiplication in $GF(2^8)$:
-						\begin{align}
-						(x^3+1) \times (x^3+x^2) &\leadsto (x^2) \times (x(x^3+x^2)) + (x^3+x^2) \\
-						&\leadsto (x) \times (x(x^4+x^3)) + (x^3+x^2) \\
-						&\leadsto 1 \times (x(x^5+x^4)) + (x^3+x^2) \\
-						&\leadsto x^6+x^5+x^3+x^2 (\equiv 108) \\
-						\end{align}
+						<h2>Russian Peasant Multiplication Algorithm</h2>
+						<p>
+e.g. Russian peasant multiplication in GF($2^8$):
+\begin{align}
+(x^3+1) \times (x^3+x^2) &\leadsto (x^2) \times (x(x^3+x^2)) + (x^3+x^2) \\
+&\leadsto (x) \times (x(x^4+x^3)) + (x^3+x^2) \\
+&\leadsto 1 \times (x(x^5+x^4)) + (x^3+x^2) \\
+&\leadsto x^6+x^5+x^3+x^2 (\equiv 108) \\
+\end{align}
 						</p>
 						<p class="fragment roll-in">
-						Actually multiplication in $GF(2^w)$ is the same as that in normal field, except that we have to add necessary modulo operations so that the result is smaller than $2^w$.
+Actually multiplication in GF($2^w$) is the same as that in normal field, except that we have to add necessary modulo operations so that the result is smaller than $2^w$.
 						</p>
 					</section>
 
 					<section>
-						<h2>Loop-based Methods</h2>
-						<small>e.g. Implementation of Russian peasant multiplication algorithm in $GF(2^8)$:</small>
+						<h2>Example Implementation of Russian Peasant Multiplication Algorithm</h2>
+						<small>multiply two operands $a$ and $b$ in GF($2^8$):</small>
 						<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
@@ -546,22 +553,23 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
     // Primitive polynomial of GF(2^8):
     // x^8+x^4+x^3+x^2+1
     // which is mapped into 0x1d
-    unsigned int prim_poly = 0x1d;
+    uint8_t prim_poly = 0x1d;
     // Emulate polynomial modulo
-    // equivalent to:
-    // a <<= 1;
-    // // MSB bit of a is 1
-    // if (a & 0x80)
-    // {
-    //     // modulo by prim_poly
-    //     a ^= prim_poly;
-    // }
-    a = (a << 1) ^ (a & 0x80? prim_poly: 0);
+    a <<= 1;
+    // MSB bit of a is 1
+    if (a & 0x80)
+    {
+        // modulo by prim_poly
+        a ^= prim_poly;
+    }
     b >>= 1;
   }
   return result;
 }
 						</code></pre>
+						<p class="fragment">
+<small>costs at most eight iterations to complete → <font color="#ff0000" class="fragment">computation-bound</font></small>
+						</p>
 					</section>
 
 					<section>
