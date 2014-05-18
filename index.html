@@ -581,25 +581,25 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 						Pre-compute all the multiplication result in a table.
 						Multiplication becomes one table-lookup operation.
 						</p>
-						<small>e.g. Implementation of full multiplication table method in $GF(2^8)$:</small>
-						<pre><code class="cpp" data-trim contenteditable>
+						<p class="fragment">
+						<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the full multiplication table:</small>
+						</p>
+						<pre class="fragment"><code class="cpp" data-trim contenteditable>
 uint8_t gf256_mul_table[256][256];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
   return gf256_mul_table[a][b];
 }
 						</code></pre>
-						<p class="frame roll-in">
 						<ul>
-										<li>Pros: least computation operations: only one table-lookup.</li>
-										<li>Cons:
-										<ul>
-														<li>large memory consumption: $O(2^w \times 2^w)$ for $GF(2^w)$.</li>
-														<li>redundancies in the table: <br>e.g. gf256_mul_table[a][b] = gf256_mul_table[b][a]</li>
-										</ul>
-										</li>
+							<li class="fragment roll-in">Pros: least computation operations: only one table-lookup.</li>
+							<li class="fragment roll-in">Cons:
+							<ul>
+								<li class="fragment roll-in">large memory consumption: $O(2^w \times 2^w)$ for GF($2^w$).</li>
+								<li class="fragment roll-in">redundancies in the table: a waste of space<br>e.g. gf256_mul_table[a][b] = gf256_mul_table[b][a]</li>
+							</ul>
+							</li>
 						</ul>				
-						</p>
 					</section>
 					<section>
 						<h2>Double Table/Left-Right Table Method</h2>
