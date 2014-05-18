@@ -602,9 +602,10 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 						</ul>				
 					</section>
 					<section>
-						<h2>Double Table/Left-Right Table Method</h2>
+						<h2>"Double Table"/"Left-Right Table" Method</h2>
 						<p>
-						Split the full multiplication table of $2^w \times 2^w$ entries into two tables of $2^{w/2} \times 2^w$ entries each.
+Based on the following observation:
+						</p>
 						<small>
 						\begin{align}
 						a(x) \times b(x) &= (a_{0} + a_{1}x + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
@@ -613,26 +614,26 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 						\end{align}
 						</small>
 						<small>Note: add operations in Galois Field are equivalent to XOR.</small>
+						<p class="fragment">
+Split the full multiplication table into two smaller tables containing the product for the MSB part and the LSB one.
 						</p>
 					</section>
 					<section>
-						<h2>Double Table/Left-Right Table Method</h2>
-						<small>e.g. Implementation of left-right table method in $GF(2^8)$:</small>
+							<!-- <h2>Example Implementation of Multiplication Using the "Double Table"/"Left-Right Table" Method</h2> -->
+						<h2>"Double Table"/"Left-Right Table" Method</h2>
+						<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the double table method:</small>
 						<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_left_table[16][256];
 uint8_t gf256_right_table[16][256];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
-	return (gf256_left_table[(a >> 4) & 0x0f][b]) ^ (gf256_left_table[a & 0x0f][b]);
+  return gf256_left_table[(a >> 4) & 0x0f][b] ^ gf256_left_table[a & 0x0f][b];
 }
 						</code></pre>
-						</p>
-						<p class="frame roll-in">
 						<ul>
-										<li>Space complexity: $O(2^{3w/2+1})$ for $GF(2^w)$.</li>
-										<li>Computation complexity: 2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT operations.</li>
+							<li class="fragment roll-in">Space complexity: $O(2^{3w/2+1})$ for GF($2^w$).</li>
+							<li class="fragment roll-in">Computation complexity: 2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT operations.</li>
 						</ul>				
-						</p>
 					</section>
 					<section>
 						<h2>Log&Exp Table Method</h2>
