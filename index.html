@@ -354,48 +354,46 @@ GF($2^w$) field is constructed by finding a primitive polynomial $q(x)$ of degre
 					-->
 					<section>
 						<h2>Breif Introduction of Galois Field GF($p^w$)</h2>
-						<p class="frame">
+						<p>
 Galois field GF($p^w$), where $p$ is a prime and $w$ is a positive integer, is a set of $p^w$ polynomials of degree at most $w - 1$. 
 						</p>
-						<p class="frame roll-in">
 						<ul>
-							<li>
+							<li class="fragment">
 The field is <font color="#ff0000">closed under addition and multiplication</font>, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
 							</li>
-							<li>
+							<li class="fragment">
 there exists an element $\alpha$ in GF($p^w$),
 such that
 all the non-zero elements of GF($p^w$) can be written as $\alpha^i$ for some integer $i$.
-The element $\alpha$ is called the <font color="#ff0000">primitive element</font> or <font color="#ff0000">generator</font> of the GF($p^w$).
-The primitive element $\alpha$ has the property of $\alpha^{2^w - 1} = 1$.
+The element $\alpha$ is called a <font color="#ff0000">primitive element</font> or <font color="#ff0000">generator</font> of the GF($p^w$).
+							</li>
+							<li class="fragment">
+Any primitive element $\alpha$ has the property of $\alpha^{2^w - 1} = 1$.
 							</li>
 						</ul>
-						</p>
 					</section>
 					<section>
 						<h2>Breif Introduction of Galois Field GF($2^w$)</h2>
 						<p align="left">
 Among the Galois Fields, the binary extension fields GF($2^w$) are of particular interest in erasure codes due to the byte-based nature of memory in many computer architectures.
 						</p>
-						<p align="left" class="frame roll-in">
-GF($2^w$) is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over GF$(2)={0,1}$, and then enumerating the polynomial elements with a generator.
+						<p align="left" class="fragment">
+GF($2^w$) is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over GF$(2)=\{ 0, 1 \}$, and then enumerating the polynomial elements with a generator.
 						</p>
 					</section>
 					<section>
 						<h2>Generation of GF($2^w$)</h2>
-						<p align="left" class="frame roll-in">
+						<p align="left">
 In GF($2^w$), the polynomial $x$ can be considered a generator.
 						</p>
-						<p>
+						<p class="fragment">
 Generation of GF($2^w$): 
 						</p>
-						<p class="frame roll-in">
 						<ul> 
-							<li>start with the elements 0, 1, and $x$</li>
-							<li>continue to enumerate the elements by multiplying the last element by $x$ and taking the result modulo $q(x)$ if it has a degree no less than $w$.</li>
-							<li>This enumeration ends at $2^w$ elements – the last element multiplied by $x$ mod $q(x)$ equals 1.</li>
+							<li class="fragment">start with the elements 0, 1, and $x$</li>
+							<li class="fragment">continue to enumerate the elements by multiplying the last element by $x$ and taking the result modulo $q(x)$ if it has a degree no less than $w$.</li>
+							<li class="fragment">This enumeration ends at $2^w$ elements – the last element multiplied by $x$ mod $q(x)$ equals 1.</li>
 						</ul>
-						</p>
 					</section>
 					<section>
 						<h2>Generation of GF($2^w$)</h2>
@@ -403,13 +401,13 @@ Generation of GF($2^w$):
 e.g. Generation of GF($2^2$): 
 $w = 2$, and $q(x) = x^2 + x + 1$.
 						</p>
-						<p class="fragment" data-fragment-index="1">
-Initial set: $\{ 0; 1; x \}$
+						<p class="fragment">
+Initial set: $\{ 0, 1, x \}$
 						</p>
-						<p class="fragment" data-fragment-index="2">
-$x^2 \textrm{ mod } q(x) = x + 1$, insert into the set: $\{ 0; 1; x; 1+x \}$.
+						<p class="fragment">
+$x^2 \textrm{ mod } q(x) = x + 1$, insert into the set: $\{ 0, 1, x, 1+x \}$.
 						</p>
-						<p class="fragment" data-fragment-index="3">
+						<p class="fragment">
 $(x+1)x \textrm{ mod } q(x) = 1$, end of enumeration.
 						</p>
 					</section>
@@ -607,11 +605,11 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 Based on the following observation:
 						</p>
 						<small>
-						\begin{align}
-						a(x) \times b(x) &= (a_{0} + a_{1}x + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
-						&= (a_{0} + a_{1}x + ... + a_{w/2-1}x^{w/2-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
-						&+ (a_{w/2}x^{w/2}  + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1})
-						\end{align}
+\begin{align}
+a(x) \times b(x) &= (a_{0} + a_{1}x + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
+&= (a_{0} + a_{1}x + ... + a_{w/2-1}x^{w/2-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
+&+ (a_{w/2}x^{w/2}  + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1})
+\end{align}
 						</small>
 						<small>Note: add operations in Galois Field are equivalent to XOR.</small>
 						<p class="fragment">
@@ -637,44 +635,63 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 					</section>
 					<section>
 						<h2>Log&Exp Table Method</h2>
+						<p align="left">
+Basis: every non-zero element can be represented as a power to a primitive element $\alpha$.
+						</p>
+						<p class="fragment" align="left">
+Assume that $a = \alpha^i$ and $b = \alpha^j$ are two non-zero elements in GF($2^w$).
+Then their product $ab = \alpha^{i + j}$.
+						</p>
+						<p class="fragment" align="left">
+Since for any primitive element $\alpha$, the property $\alpha^{2^w - 1} = 1$ holds.
+<br>
+Thus, we have:
+\begin{align}
+ab &= \alpha^{(i + j) \% (2^w - 1)} \\
+&= \alpha^{(log_{\alpha}a + log_{\alpha}b) \% (2^w - 1)}
+\end{align}
+						</p>
+						<!--
 						<p>
 						Every element in a finite field can be represented uniquely by a power of a primitive element $\alpha$, except for 0.
 						<br>Observation: $a \times b = exp(log(a) + log(b))$
 						</p>
+						-->
 					</section>
 					<section>
 						<h2>Log&Exp Table Method</h2>
 						<p>
 						Construct two tables:
-						<ul>
-										<li>
-										exponential table: maps from a binary element $b$ to power $j$ such that $x^j$ is equivalent to $b$.
-										</li>
-										<li>
-										logarithm table: maps from a power $j$ to its binary element $b$ such that $x^j$ is equivalent to $b$.
-										</li>
-						</ul>
 						</p>
-						<p>
-						Multiplication in $GF(2^w)$ consists of 
 						<ul>
-										<li>
-										looking each binary number in the logarithm table for its logarithm (equivalent to finding the polynomial), 
-										</li>
-										<li>
-										adding the logarithms modulo $2^w-1$ (equivalent to multiplying the polynomial modulo $q(x)$) 
-										</li>
-										<li>
-										looking up exponential table to convert the result back to a binary number.
-										</li>
+							<li>
+							exponential table: maps from a binary element $b$ to power $j$ such that $\alpha^j$ is equivalent to $b$.
+							</li>
+							<li>
+							logarithm table: maps from a power $j$ to its binary element $b$ such that $\alpha^j$ is equivalent to $b$.
+							</li>
+						</ul>
+						<p class="fragment">
+						Multiplication in GF($2^w$) consists of: 
+						</p>
+						<ul>
+							<li class="fragment">
+							looking each binary number in the logarithm table for its logarithm 
+							</li>
+							<li class="fragment">
+							adding the logarithms modulo $2^w-1$ 
+							</li>
+							<li class="fragment">
+							looking up the exponential table to convert the result back to a binary number.
+							</li>
 						</ul>
 					</section>
 					<section>
 						<h2>Log&Exp Table Method</h2>
-						<small>e.g. Implementation of log-exp table method in $GF(2^8)$:</small>
+						<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the log&exp table method:</small>
 						<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_log_table[256];
-uint8_t gf256_exp_table[256];
+uint8_t gf256_exp_table[255];
 // width of GF(2^8)
 const int width = 8;
 // number of elements in GF(2^8)
@@ -686,17 +703,31 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   {
     return 0;
   }
-  result = (gf256_log_table[a] + gf256_log_table[b]) % (NW-1);
+  result = (gf256_log_table[a] 
+  + gf256_log_table[b]) % (NW-1);
   return gf256_exp_table[result];
 }
 						</code></pre>
-						</p>
-						<p class="frame roll-in">
 						<ul>
-										<li>Space complexity: $O(2^w \times 2)$ for $GF(2^w)$.</li>
-										<li>Computation complexity: 3 table-lookup, 1 MOD, 1 ADD, and 2 branch operations.</li>
+							<li class="fragment roll-in">Space complexity: $O( 2^{w+1} )$ for GF($2^w$).</li>
+							<li class="fragment roll-in">Computation complexity: 3 table-lookup, 1 MOD, 1 ADD, and 2 branch operations.</li>
 						</ul>				
+					</section>
+					<section>
+						<h2>Choice for GPU Implementation</h2>
+						<p>
+Criteria: to avoid high latency of off-chip memory access, the tables are expected to fit into the cache or on-chip memory (the so-called "shared memory" in GPU).
 						</p>
+						<p class="fragment">
+memory space of tables for multiplication over GF($2^8$):
+						</p>
+						<ul>
+							<li class="fragment roll-in">Full table: 64KB → exceed cache limit</li>
+							<li class="fragment roll-in">"double tables": 8KB → low GPU occupancy → performance degradation
+							<small>occupancy: the ratio of the number of active warps per multiprocessor to the maximum number of possible active warps</small>
+							</li>
+							<li class="fragment roll-in">log&exp tables: 512B <p class="fragment">→ used in our GPU implementation</p></li>
+						</ul>				
 					</section>
 					<section>
 						<h2>Log&Exp Table Method - Improvement I</h2>
