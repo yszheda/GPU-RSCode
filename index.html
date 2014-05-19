@@ -730,34 +730,46 @@ memory space of tables for multiplication over GF($2^8$):
 						</ul>				
 					</section>
 					<section>
+						<h2>Further Improvement of the Log&exp Table-based Method</h2>
+					</section>
+					<section>
 						<h2>Log&Exp Table Method - Improvement I</h2>
 						<p>
-						Replace expensive MOD operation with more efficient operations.
-						<br>Observation: $(log(a)+log(b)) \in [0, 2^{w+1}-2]$
+Replace slow MOD operation with more efficient operations.
 						</p>
-						<p>
-						Let $Q = 2^w$, then $log(a), log(b) \in [0,Q-1]$.
+						<p class="fragment">
+Observation: 
+Let $Q = 2^w$, then $log(a), log(b) \in [0,Q-1]$.
+Therefore: $(log(a)+log(b)) \in [0, 2Q -2]$
+<!--Therefore: $(log(a)+log(b)) \in [0, 2^{w+1}-2]$-->
+						</p>
+						<p class="fragment">
 						<small>
-						<br>
-						\begin{equation*}
-						(log(a) + log(b)) \% Q = \left\{
-						\begin{array}{ll}
-						0 & \textrm{if } (log(a) + log(b)) = Q \\
-						(log(a) + log(b)) \& Q + (log(a) + log(b)) >> w & \textrm{otherwises}
-						\end{array} \right.
-						\end{equation*}
-						</p>
+\begin{equation*}
+(log(a) + log(b)) \% Q = \left\{
+\begin{array}{ll}
+0 & \textrm{if } (log(a) + log(b)) = Q \\
+(log(a) + log(b)) \& Q + (log(a) + log(b)) >> w & \textrm{otherwises}
+\end{array} \right.
+\end{equation*}
 						</small>
-						<p>
-						We can extend the exponential table to make sure exp[Q] = 0.
+						</p>
+						<p class="fragment">
+We can extend the exponential table to make sure $exp[Q] = 0$.
+After augmenting the exponential table, the modular operation can be simply the following equation:
+						<small>
+\begin{equation*}
+(log(a) + log(b)) \% Q = (log(a) + log(b)) \& Q + (log(a) + log(b)) >> w
+\end{equation*}
+						</small>
 						</p>
 					</section>
 					<section>
 						<h2>Log&Exp Table Method - Improvement I</h2>
-						<small>e.g. Implementation of log-exp table method (improvement I) in $GF(2^8)$:</small>
+						<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement I approach:</small>
 						<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_log_table[256];
-uint8_t gf256_exp_table[257];
+uint8_t gf256_exp_table[256];
 // width of GF(2^8)
 const int width = 8;
 // number of elements in GF(2^8)
@@ -769,27 +781,32 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   {
     return 0;
   }
-  result = (gf256_log_table[a] + gf256_log_table[b]) & (NW-1) + (gf256_log_table[a] + gf256_log_table[b]) >> width;
+  result = (gf256_log_table[a] + gf256_log_table[b]) & (NW-1)
+  + (gf256_log_table[a] + gf256_log_table[b]) >> width;
   return gf256_exp_table[result];
 }
 						</code></pre>
 					</section>
 					<section>
 						<h2>Log&Exp Table Method - Improvement II</h2>
-						<p>
-						Remove expensive MOD operation by extending the exponential table.
+						<p align="left">
+Remove the slow modular operation by augmenting the exponential table (adopted by Jerasure as the LOGS policy).
 						</p>
-						<p>
-						Let $Q = 2^w$, then
-						$exp[i] = exp[i \% Q] (i \in [Q, 2Q-2])$
+						<p class="fragment" align="left">
+insert $Q - 2$ more elements in the exponential table apart from $exp[Q] = 0$:
+$exp[i] = exp[i \% Q] (i \in [Q, 2Q-2])$
 						</p>
+						<!--
 						<p>
 						This improved method is adopted by Jerasure as the LOGS multiplication policy.
 						</p>
-						<small>e.g. Implementation of log-exp table method (improvement II) in $GF(2^8)$:</small>
-						<pre><code class="cpp" data-trim contenteditable>
+						-->
+						<p class="fragment">
+						<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement II approach:</small>
+						</p>
+						<pre class="fragment"><code class="cpp" data-trim contenteditable>
 uint8_t gf256_log_table[256];
-uint8_t gf256_exp_table[510];
+uint8_t gf256_exp_table[509];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
   int result;
@@ -804,34 +821,37 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 					</section>
 					<section>
 						<h2>Log&Exp Table Method - Improvement III</h2>
-						Remove expensive MOD and branch operations by extending the exponential and logarithm tables.
 						<p>
-						Let $Q = 2^w$, $\alpha$ be the primitive element, then
+Further eliminates the conditional branch by augmenting both the exponential table and the logarithm tables.
+						</p>
+<!--Remove expensive MOD and branch operations by extending the exponential and logarithm tables.-->
+						<p class="fragment">
+Let $Q = 2^w$, $\alpha$ be a primitive element, then
 						<br>
-						\begin{equation*}
-						exp[i] = \left\{
-						\begin{array}{ll}
-						\alpha^{i} & \textrm{if } i \in [0, Q-1] \\
-						exp[i \% Q] & \textrm{if } i \in [Q, 2Q-1] \\
-						0 & \textrm{if } i \in [2Q, 4Q]
-						\end{array} \right.
-						\end{equation*}
+\begin{equation*}
+exp[i] = \left\{
+\begin{array}{ll}
+\alpha^{i} & \textrm{if } i \in [0, Q-1] \\
+exp[i \% Q] & \textrm{if } i \in [Q, 2Q-1] \\
+0 & \textrm{if } i \in [2Q, 4Q]
+\end{array} \right.
+\end{equation*}
 						<br>
-						\begin{equation*}
-						log[x] = \left\{
-						\begin{array}{ll}
-						2Q & \textrm{if } x = 0 \\
-						i & \textrm{if } x \in [1, Q], x = \alpha^{i}
-						\end{array} \right.
-						\end{equation*}
+\begin{equation*}
+log[x] = \left\{
+\begin{array}{ll}
+2Q & \textrm{if } x = 0 \\
+i & \textrm{if } x \in [1, Q], x = \alpha^{i}
+\end{array} \right.
+\end{equation*}
 						</p>
 					</section>
 					<section>
 						<h2>Log&Exp Table Method - Improvement III</h2>
-						<small>e.g. Implementation of log-exp table method (improvement II) in $GF(2^8)$:</small>
+						<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement III approach:</small>
 						<pre><code class="cpp" data-trim contenteditable>
-uint8_t gf256_log_table[257];
-uint8_t gf256_exp_table[1024];
+uint16_t gf256_log_table[256];
+uint8_t gf256_exp_table[1021];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
   int result;
@@ -839,6 +859,30 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   return gf256_exp_table[result];
 }
 						</code></pre>
+					</section>
+					<section>
+						<h2>Further Improvement of the Log&exp Table-based Method</h2>
+						<p>
+In GPU implementation, where to store the log and exp tables and how to initialize them will affect the performance.
+						</p>
+						<p class="fragment">
+Appropriate GPU memory:
+						</p>
+						<ul class="fragment">
+							<li>constant memory: off-chip memory whose accesses are usually cached in the constant cache</li>
+							<li>shared memory: on-chip memory which has the smallest access latency except the register file</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Further Improvement of the Log&exp Table-based Method</h2>
+						<p>
+What we have implemented:
+						</p>
+						<ul class="fragment">
+							<li>Store two tables in the constant memory and initialize them at compile time.</li>
+							<li>Store two tables in the shared memory and run-time initialize them serially at the beginning of each kernel function.</li>
+							<li>Store two tables in the off-chip memory and then load into the shared memory parallely at the beginning of each kernel function.</li>
+						</ul>
 					</section>
 				</section>
 
