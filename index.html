@@ -965,20 +965,64 @@ algorithm. CPU-GPU corporation may be an appropriate solution.
 				</section>
 				<section>
 					<section>
-						<h2>Reduce CPU-GPU Communication Overhead</h2>
+						<h2>Reduce Data Transfer Overhead</h2>
+					</section>
+					<section>
+						<h2>Reduce Data Transfer Overhead</h2>
+						<ul>
+							<li>Using Pinned Host Memory</li>
+							<li>Using CUDA Streams</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Using Pinned Host Memory</h2>
 						<p>
-						Use CUDA stream to overlap data transfers with kernel execution.
-						<br>
-						<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" src="CUDA-stream">
-						<br> Sequential vs. Concurrent copy and execute
+By default, the host data is allocated as <font color="#ff0000">pageable</font> 
+						</p>
+						<p class="fragment">
+→ can be swapped out to disk and change the mapping from virtual address to physical address 
+						</p>
+						<p class="fragment">
+→ unavailable for the device to access directly.
 						</p>
 					</section>
+					<section>
+						<h2>Pageable Host Memory</h2>
+						<small>simplified procedure of H2D data transfer using pageable memory</small>
+						<img src="./images/dot-graph/pageableDataTransfer.png">
+						<ul>
+							<li>extra works for the host: allocation and release of staging buffers and the memory copy from pageable memory to staging buffers.</li>
+							<li>the PCI-E bus connecting the host and the device is not fully utilized.</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Pinned Host Memory</h2>
+						<p>
+<font color="#ff0000">pinned</font> memory is page-locked: its physical address is marked as ineligible for eviction and cannot be changed by the operating system.
+						</p>
+						<small>simplified procedure of H2D data transfer using pageable memory</small>
+						<img src="./images/dot-graph/pinnedDataTransfer.png">
+						<ul>
+							<li class="fragment">Pros: The DMA can fetch pinned memory without the involvement of the CPU and achieve higher throughput than accessing pageable memory.</li>
+							<li class="fragment">Cons: Pinned memory is scarce and costs more time for allocation and deallocation.</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Using CUDA Streams</h2>
+						<p>
+CUDA streams are used for further overlapping data transfers with computation.
+						</p>
+						<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
+						<br> Sequential vs. Concurrent copy and execute
+					</section>
+					<!--
 					<section>
 						<h2>Reduce CPU-GPU Communication Overhead</h2>
 						<p>
 						Access host memory directly from within a kernel (Unified Virtual Address Space).
 						</p>
 					</section>
+					-->
 				</section>
 
 				<section>

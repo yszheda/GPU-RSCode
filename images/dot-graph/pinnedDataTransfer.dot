@@ -1,0 +1,29 @@
+digraph pinnedDataTransfer
+{
+// rankdir=LR;
+compound=true;
+node [fixedsize=true,width=3];
+subgraph clusterDevice
+{
+node [style=filled];
+shape=box;
+label="Device";
+"DRAM"
+[
+shape=box
+label="DRAM"
+]
+}
+subgraph clusterHost
+{
+node [style=filled];
+shape=box;
+label="Host";
+"pinnedMem"
+[
+shape=box
+label="Pinned Memory"
+]
+}
+pinnedMem -> DRAM;
+}

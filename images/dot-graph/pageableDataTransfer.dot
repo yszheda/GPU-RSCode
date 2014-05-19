@@ -1,0 +1,35 @@
+digraph pageableDataTransfer
+{
+	// rankdir = LR;
+	compound = true;
+	node [fixedsize=true,width=3];
+	subgraph clusterDevice
+	{
+		node [style=filled];
+		shape = box;
+		DRAM
+		[
+		shape=box
+		label="DRAM"
+		];
+		label = "Device";
+	}
+	subgraph clusterHost
+	{
+		node [style=filled];
+		shape=box;
+		pageableMem
+		[
+		shape=box
+		label="Pageable Memory"
+		]
+		pinnedMem
+		[
+		shape=box
+		label="Pinned Memory"
+		]
+		pageableMem -> pinnedMem;
+		label="Host";
+	}
+	pinnedMem -> DRAM;
+}
