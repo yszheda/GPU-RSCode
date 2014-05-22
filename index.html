@@ -1025,6 +1025,234 @@ CUDA streams are used for further overlapping data transfers with computation.
 					-->
 				</section>
 
+				<section>
+					<section>
+						<h2>Experiment</h2>
+					</section>
+					<section>
+						<h2>Experiment Setup</h2>
+					</section>
+					<section>
+						<h2>Experiment Setup</h2>
+						<ul>
+							<li>
+CentOS-6 with 2.6.32 Linux kernel.
+							</li>
+						<ul>
+							<li>Intel Xeon Processor E5-2670 v2 x 2</li>
+							<ul>
+								<li>10 cores</li>
+								<li>2.5 GHz</li>
+							</ul>
+							<li>NVIDIA Tesla K20X GPU x 2</li>
+							<ul>
+								<li>2688 CUDA cores</li>
+								<li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
+								<li>maximum size of GPU GDDR5 memory: 6 GB</li>
+								<li>theoretical memory bandwidth 243 GB/s</li>
+								<li>two copy engines → supports concurrent data copy and kernel execution</li>
+							</ul>
+							<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
+						</ul>
+							<li>Input files are randomly generated.</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Evaluation Metrics</h2>
+						<ul>
+							<li>Execution time for a single kernel or memory transaction</li>
+							<li>Effective bandwidth</li>
+							<li>Total GPU encoding time</li>
+							<li>Total GPU decoding time</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Evaluation Metrics</h2>
+						<h3>Execution time for a single kernel or memory transaction</h3>
+						<p>
+measured by recording two CUDA events at the beginning and the end of the kernel and calculating their elapsed time.
+						</p>
+					</section>
+					<section>
+						<h2>Evaluation Metrics</h2>
+						<h3>Effective bandwidth</h3>
+						<p>
+defined as the ratio of the number of bytes read or written by the kernel and the execution time of the kernel. 
+						</p>
+						<p>
+Assume that $CS$ is the chunk size, and $t$ is the kernel execution time, then:
+						</p>
+						<ul>
+							<li>the effective bandwidth of the encoding kernel is: $CS \cdot n / t$.</li>
+							<li>the effective bandwidth of the decoding kernel is: $CS \cdot 2k / t$.</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Evaluation Metrics</h2>
+						<h3>Total GPU encoding time</h3>
+including the execution time of the following processes:
+						<ul>
+							<li>
+Copy data chunks from CPU to GPU
+							</li>
+							<li>
+Generating encoding matrix
+							</li>
+							<li>
+Copy encoding matrix from GPU to CPU
+							</li>
+							<li>
+Encoding file
+							</li>
+							<li>
+Copy code chunks from GPU to CPU
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Evaluation Metrics</h2>
+						<h3>Total GPU decoding time</h3>
+						<ul>
+							<li>
+Copy code chunks from CPU to GPU
+							</li>
+							<li>
+Copy decoding matrix from CPU to GPU
+							</li>
+							<li>
+Decoding file
+							</li>
+							<li>
+Copy data chunks from GPU to CPU
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Overall Performance Evaluation</h2>
+						<p>
+We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
+						</p>
+					</section>
+					<section>
+						<h2>Overall Performance Evaluation</h2>
+						<h3>Step-by-step Improvement</h3>
+					</section>
+					<section>
+						<h2>Overall Performance Evaluation</h2>
+						<h3>GPU vs. CPU</h3>
+						<ul>
+							<li>optimized CPU implementation (Jerasure compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
+							<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Accelerating Operations in Galois Field</h2>
+					</section>
+					<section>
+						<h3>GPU Implementation: Loop-based or Table-based?</h3>
+						<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="80%" height="80%" />
+					</section>
+					<section>
+						<h3>Further Improvement of the Log&exp Table-based Method</h3>
+						<p>
+encoding a 1GB file with $k = 4$ and $n = 6$.
+						</p>
+						<img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="80%" height="80%" />
+					</section>
+					<section>
+						<h2>Accelerating Matrix Multiplication over Galois Field</h2>
+						<p>
+use the following ten testcases:
+						</p>
+						<ul>
+							<li>
+$k = 4$, $n = 6$, chunk size = 256 MB
+							</li>
+							<li>
+$k = 32$, $n = 64$, chunk size = 16 MB
+							</li>
+							<li>
+$k = 4$, $n = 132$, chunk size = 3968 Bytes
+							</li>
+							<li>
+$k = 8$, $n = 10$, chunk size = 64 MB
+							</li>
+							<li>
+$k = 16$, $n = 18$, chunk size = 16 MB
+							</li>
+							<li>
+$k = 128$, $n = 130$, chunk size = 2 KB
+							</li>
+							<li>
+$k = 32$, $n = 34$, chunk size = 8 MB
+							</li>
+							<li>
+$k = 2$, $n = 4$, chunk size = 4 MB
+							</li>
+							<li>
+$k = 2$, $n = 4$, chunk size = 1 KB
+							</li>
+							<li>
+$k = 16$, $n = 20$, chunk size = 16 MB
+							</li>
+						</ul>
+					</section>
+					<section>
+						<h2>Accelerating Matrix Multiplication over Galois Field</h2>
+						<img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="80%" height="80%" />
+					</section>
+					<section>
+						<h2>Reducing Communication Overhead</h2>
+					</section>
+					<section>
+						<h3>Using Pinned Host Memory</h3>
+						<ul>
+							<li><b>BandwidthTest</b> from the CUDA official SDK samples:</li>
+							<table class="fragment">
+								<tr>
+									<td></td>
+									<td>H2D bandwidth (MB/s)</td>
+									<td>D2H bandwidth (MB/s)</td>
+								</tr>
+								<tr>
+									<td>pageable host memory</td>
+									<td>1440.6</td>
+									<td>2339.7</td>
+								</tr>
+								<tr>
+									<td>pinned host memory</td>
+									<td>5888.6</td>
+									<td>6394.5</td>
+								</tr>
+							</table>
+						</ul>
+					</section>
+					<section>
+						<h3>Using Pinned Host Memory</h3>
+						<ul>
+							<li>Real case for Reed-Solomon Codes: encode a 1000 MB file with $k = 4, n = 6$.</li>
+							<img src="./images/exp/pageable vs. pinned/comm-comp.png" width="80%" height="80%" />
+						</ul>
+					</section>
+					<section>
+						<h3>Using CUDA Streams</h3>
+						<p>
+encoding under $k = 4, n = 6$ settings.
+						</p>
+						<p>
+The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
+						</p>
+						<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="80%" height="80%" />
+					</section>
+					<section>
+						<h3>Using CUDA Streams</h3>
+						<p>
+encoding a 2000 MB file under $k = 4, n = 6$ settings.
+						</p>
+						<img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="80%" height="80%" />
+					</section>
+				</section>
+
 				<!--
 				<section>
 				<h2>Future Work & Schedule</h2>
