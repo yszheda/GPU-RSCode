@@ -1,0 +1,23 @@
+plot(metrics(:,1), metrics(:,2), '+');
+xlabel('kernel execution time (ms)');
+title('cf executed');
+saveas(gcf,'cf_executed.pdf');
+close all;
+
+plot(metrics(:,1), metrics(:,3), '+');
+xlabel('kernel execution time (ms)');
+title('cf issued');
+saveas(gcf,'cf_issued.pdf');
+close all;
+
+plot(metrics(:,1), metrics(:,4), '+');
+xlabel('kernel execution time (ms)');
+title('dram read transactions');
+saveas(gcf,'dram_read_transactions.pdf');
+close all;
+
+plot(metrics(:,1), metrics(:,5), '+');
+xlabel('kernel execution time (ms)');
+title('dram read transactions');
+saveas(gcf,'dram_read_transactions.pdf');
+close all;
