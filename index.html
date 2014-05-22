@@ -28,11 +28,16 @@
 		<link rel="stylesheet" href="css/print/pdf.css">
 		-->
 
-<!-- If the query includes 'print-pdf', use the PDF print sheet -->
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
 <script>
-document.write( '<link rel="stylesheet" href="css/print/' + ( window.location.search.match( /print-pdf/gi ) ? 'pdf' : 'paper' ) + '.css" type="text/css" media="print">' );
+if( window.location.search.match( /print-pdf/gi ) ) {
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = 'css/print/pdf.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+}
 </script>
-
 <!--[if lt IE 9]>
 		<script src="lib/js/html5shiv.js"></script>
 		<![endif]-->
@@ -1046,11 +1051,14 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		  </li>
 		  <ul>
 			<li>Intel Xeon Processor E5-2670 v2 x 2</li>
+			<li>
 			<ul>
 			  <li>10 cores</li>
 			  <li>2.5 GHz</li>
 			</ul>
+			</li>
 			<li>NVIDIA Tesla K20X GPU x 2</li>
+			<li>
 			<ul>
 			  <li>2688 CUDA cores</li>
 			  <li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
@@ -1058,6 +1066,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 			  <li>theoretical memory bandwidth 243 GB/s</li>
 			  <li>two copy engines → supports concurrent data copy and kernel execution</li>
 			</ul>
+			</li>
 			<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
 		  </ul>
 		</section>
