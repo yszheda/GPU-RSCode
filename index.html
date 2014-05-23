@@ -68,6 +68,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<li>Accelerating Matrix Multiplication</li>
 		<li>Reducing Data Transfer Overhead</li>
 		<li>Experiment</li>
+		<li>Conclusion</li>
 	  </ul>
 	  <aside class="notes">
 		Oh hey, these are some notes. They'll be hidden in your presentation, but you can see them if you open the speaker notes window (hit 's' on your keyboard).
@@ -442,7 +443,7 @@ GF($2^w$) field is constructed by finding a primitive polynomial $q(x)$ of degre
 		  The element $\alpha$ is called a <font color="#ff0000">primitive element</font> or <font color="#ff0000">generator</font> of the GF($p^w$).
 		  </li>
 		  <li class="fragment">
-		  Any primitive element $\alpha$ has the property of $\alpha^{2^w - 1} = 1$.
+		  Any primitive element $\alpha$ has the property of $\alpha^{p^w - 1} = 1$.
 		  </li>
 		</ul>
 	  </section>
@@ -713,11 +714,10 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 		Basis: every non-zero element can be represented as a power to a primitive element $\alpha$.
 		</p>
 		<p class="fragment" align="left">
-		Assume that $a = \alpha^i$ and $b = \alpha^j$ are two non-zero elements in GF($2^w$).
-		Then their product $ab = \alpha^{i + j}$.
+		Assume that $a = \alpha^i$ and $b = \alpha^j$ are two non-zero elements in GF($2^w$), then their product $ab = \alpha^{i + j}$.
 		</p>
 		<p class="fragment" align="left">
-		Since for any primitive element $\alpha$, the property $\alpha^{2^w - 1} = 1$ holds.
+		For any primitive element $\alpha$: $\alpha^{2^w - 1} = 1$.
 		<br>
 		Thus, we have:
 		\begin{align}
@@ -1006,7 +1006,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile</li>
 		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
 		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
-		  </ul>
+		</ul>
 	  </section>
 	  <section>
 		<h3>How to Determine the Parameter of Tiles</h3>
@@ -1030,10 +1030,10 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		<ul>
 		  <li class="fragment">Assume that the most balanced tiling division of the matrix $A$ and $B$ is the best.</li>
 		  <li class="fragment">Set: 
-$$
-\dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
-$$
-</li>
+		  $$
+		  \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
+		  $$
+		  </li>
 		</ul>
 	  </section>
 	</section>
@@ -1256,12 +1256,13 @@ $$
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
+		  <img src="./images/exp/step-perf/stepBreakdown.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>GPU vs. CPU</h4>
 		  <ul>
-			<li>optimized CPU implementation (Jerasure compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
+			<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
 			<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
 		  </ul>
 		</section>
@@ -1327,32 +1328,32 @@ $$
 		<section>
 		  <h4>Using Pinned Host Memory</h4>
 		  <ul>
-			<li><b>BandwidthTest</b> from the CUDA official SDK samples:
-			<table class="fragment">
-			  <tr>
-				<td></td>
-				<td>H2D bandwidth (MB/s)</td>
-				<td>D2H bandwidth (MB/s)</td>
-			  </tr>
-			  <tr>
-				<td>pageable host memory</td>
-				<td>1440.6</td>
-				<td>2339.7</td>
-			  </tr>
-			  <tr>
-				<td>pinned host memory</td>
-				<td>5888.6</td>
-				<td>6394.5</td>
-			  </tr>
-			</table></li>
+			<li><b>BandwidthTest</b> from the CUDA official SDK samples:</li>
 		  </ul>
+		  <table class="fragment">
+			<tr>
+			  <td></td>
+			  <td>H2D bandwidth (MB/s)</td>
+			  <td>D2H bandwidth (MB/s)</td>
+			</tr>
+			<tr>
+			  <td>pageable host memory</td>
+			  <td>1440.6</td>
+			  <td>2339.7</td>
+			</tr>
+			<tr>
+			  <td>pinned host memory</td>
+			  <td>5888.6</td>
+			  <td>6394.5</td>
+			</tr>
+		  </table>
 		</section>
 		<section>
 		  <h4>Using Pinned Host Memory</h4>
 		  <ul>
 			<li>Real case for Reed-Solomon Codes: encode a 1000 MB file with $k = 4, n = 6$.</li>
-			<img src="./images/exp/pageable vs. pinned/comm-comp.png" width="80%" height="80%" alt="pageable vs. pinned">
 		  </ul>
+		  <img src="./images/exp/pageable vs. pinned/comm-comp.png" width="60%" height="60%" alt="pageable vs. pinned">
 		</section>
 		<section>
 		  <h4>Using CUDA Streams</h4>
@@ -1410,6 +1411,14 @@ Find the bound of file size under which CPU performance is better than that of G
 				</ul>
 				</section>
 				-->
+	  <section>
+		<h2>Conclusion</h2>
+		<ul>
+		  <li class="fragment">We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
+		  <li class="fragment">We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
+		  <li class="fragment">We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
+		</ul>
+	  </section>
 
 	  <section>
 		<h1>THE END</h1>
