@@ -77,29 +77,66 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	<!-- Example of nested vertical slides -->
 	<section>
 	  <section>
-		<h2>Background</h2>
+		<h2>Introduction</h2>
 	  </section>
 	  <section>
-		<h3>Why Fault-Tolerance?</h3>
-		<p align="left">
-		In a RAID-like system, storage is distributed among several devices, the probability of one of these devices failing becomes significant:
-		</p>
-		<p align="left">
-		If the MTTF (mean time to failure) of one device is $P$, then the MTTF of a system of $n$ devices is $\dfrac{P}{n}$.
-		</p>
-		<p>
-		Therefore in such systems, fault-tolerance must be taken into account.
+		<h3>Why Redundancy?</h3>
+		<ul>
+		  <li class="fragment">
+		  Nowadays, cloud storage vendors claim to provide highly available and stable services.
+		  </li>
+		  <li class="fragment">
+		  However, as the scale of storage system grows larger and larger, the probability of failure becomes significant:
+		  <br>
+		  If the MTTF (Mean Time To Failure) of one storage node is $P$, then the MTTF of a system of $n$ storage nodes is $\dfrac{P}{n}$.
+		  <br><p class="fragment">→ SLA (Service-Level Agreement) violation</p>
+		  </li>
+		</ul>
+		<p class="fragment">
+		Therefore, redundancy must be introduced into cloud system.
 		</p>
 	  </section>
 	  <section>
-		<h2>Why Reed-Solomon Codes?</h2>
+		<h3>Why Redundancy?</h3>
+		<ul>
+		  <li class="fragment">
+		  The simplest and straightforward redundancy solution is <font color="#ff0000">replication</font> of the data in multiple storage nodes.
+		  </li>
+		  <li class="fragment">
+		  Triple replication solution have been favored in distributed cloud systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
+		  </li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>Why Erasure Codes?</h3>
+		<ul>
+		  <li class="fragment">
+		  Problem of replication: <font color="#ff0000">large storage overhead</font>.
+		  </li>
+		  <li class="fragment">
+		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of reliability as replication.
+		  </li>
+		  <li class="fragment">
+		  $(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
+		  <ul>
+			<li class="fragment">File → $k$ equal-size native chunks.</li>
+			<li class="fragment">$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
+			<li class="fragment">The native and code chunks are distributed on $n$ different storage nodes.</li>
+			<li class="fragment">tolerates the failure of any $n - k$ storage nodes.</li>
+		  </ul>
+		  </li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>Why Erasure Codes?</h3>
+		<p>Example:</p>
 		<table>
 		  <tr align="center">
 			<td>
-			  <img src="./images/dot-graph/e-c.png" alt="erasure code" \>
+			  <img src="./images/dot-graph/e-c.png" alt="erasure code">
 			</td>
 			<td>
-			  <img src="./images/dot-graph/replica.png" alt="replication" \>
+			  <img src="./images/dot-graph/replica.png" alt="replication">
 			</td>
 		  </tr>
 		  <tr align="center">
@@ -111,19 +148,47 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 			</td>
 		  </tr>
 		</table>
-		<p>
+		<p class="fragment">
 		Save 50% space!
 		</p>
 	  </section>
 	  <section>
-		<h2>Reed-Solomon Code Overview</h2>
+		<h3>Why Reed-Solomon Codes?</h3>
+		<ul>
+		  <li class="fragment">
+		  Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
+		  </li>
+		  <li class="fragment">
+		  $RS(10, 4)$ is used in HDFS-RAID in Facebook and $RS(6, 3)$ is used in GFS II in Google.
+		  </li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>Shortcomings of Reed-Solomon Codes</h3>
+		<ul>
+		  <li class="fragment">
+		  use matrix multiplication over Galois Field for encoding and decoding → <font color="#ff0000">extra high computation cost</font> compared to replication
+		  </li>
+		  <li class="fragment">
+		  Our contributions: use GPU to accelerate the Reed-Solomon encoding and decoding.
+		  </li>
+		</ul>
+	  </section>
+	</section>
+
+	<section>
+	  <section>
+		<h2>Background</h2>
+	  </section>
+	  <section>
+		<h3>Reed-Solomon Code Overview</h3>
 		<table>
 		  <tr align="center">
 			<td>
-			  <img src="./images/dot-graph/encode.png" alt="RS encode" \>
+			  <img src="./images/dot-graph/encode.png" alt="RS encode">
 			</td>
 			<td>
-			  <img src="./images/dot-graph/decode.png" alt="RS decode" \>
+			  <img src="./images/dot-graph/decode.png" alt="RS decode">
 			</td>
 		  </tr>
 		  <tr align="center">
@@ -921,7 +986,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		<h3>Naive Implementation</h3>
 		<!--<h2>Accelerate Matrix Multiplication</h2>-->
 		<!--<h2>Accelerate Matrix Multiplication over Galois Field</h2>-->
-		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling"/>
+		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
 	  </section>
 	  <section>
 		<h3>Tiling Algorithm</h3>
@@ -933,7 +998,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		<h3>Further Improvement of Tiling Algorithm</h3>
 		<!-- <h2>Accelerate Matrix Multiplication</h2> -->
 		<!-- <h2>Accelerate Matrix Multiplication over Galois Field</h2> -->
-		<img src="./images/matrix-multiplication/tiling.png" width="60%" height="60%" alt="generalized tiling">
+		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
 	  </section>
 	</section>
 
@@ -1050,15 +1115,13 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		  CentOS-6 with 2.6.32 Linux kernel.
 		  </li>
 		  <ul>
-			<li>Intel Xeon Processor E5-2670 v2 x 2</li>
-			<li>
+			<li>Intel Xeon Processor E5-2670 v2 x 2
 			<ul>
 			  <li>10 cores</li>
 			  <li>2.5 GHz</li>
 			</ul>
 			</li>
-			<li>NVIDIA Tesla K20X GPU x 2</li>
-			<li>
+			<li>NVIDIA Tesla K20X GPU x 2
 			<ul>
 			  <li>2688 CUDA cores</li>
 			  <li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
@@ -1171,14 +1234,14 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		</section>
 		<section>
 		  <h4>GPU Implementation: Loop-based or Table-based?</h4>
-		  <img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="80%" height="80%" alt="Loop-Based vs Table-Based">
+		  <img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
 		</section>
 		<section>
 		  <h4>Further Improvement of the Log&exp Table-based Method</h4>
 		  <p>
 		  encoding a 1GB file with $k = 4$ and $n = 6$.
 		  </p>
-		  <img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="80%" height="80%" alt="Log&exp improvement techniques">
+		  <img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="60%" height="60%" alt="Log&exp improvement techniques">
 		</section>
 		<section>
 		  <h3>Accelerating Matrix Multiplication over Galois Field</h3>
@@ -1220,7 +1283,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		</section>
 		<section>
 		  <h3>Accelerating Matrix Multiplication over Galois Field</h3>
-		  <img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="80%" height="80%" alt="tiling strategies"/>
+		  <img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
 		</section>
 		<section>
 		  <h3>Reducing Communication Overhead</h3>
@@ -1228,7 +1291,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		<section>
 		  <h4>Using Pinned Host Memory</h4>
 		  <ul>
-			<li><b>BandwidthTest</b> from the CUDA official SDK samples:</li>
+			<li><b>BandwidthTest</b> from the CUDA official SDK samples:
 			<table class="fragment">
 			  <tr>
 				<td></td>
@@ -1245,14 +1308,14 @@ improve the temporary locality and reduce cache misses when an array is accessed
 				<td>5888.6</td>
 				<td>6394.5</td>
 			  </tr>
-			</table>
+			</table></li>
 		  </ul>
 		</section>
 		<section>
 		  <h4>Using Pinned Host Memory</h4>
 		  <ul>
 			<li>Real case for Reed-Solomon Codes: encode a 1000 MB file with $k = 4, n = 6$.</li>
-			<img src="./images/exp/pageable vs. pinned/comm-comp.png" width="80%" height="80%" alt="pageable vs. pinned"/>
+			<img src="./images/exp/pageable vs. pinned/comm-comp.png" width="80%" height="80%" alt="pageable vs. pinned">
 		  </ul>
 		</section>
 		<section>
@@ -1263,14 +1326,14 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		  <p>
 		  The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
 		  </p>
-		  <img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="80%" height="80%" alt="streaming speedup"/>
+		  <img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
 		</section>
 		<section>
 		  <h4>Using CUDA Streams</h4>
 		  <p>
 		  encoding a 2000 MB file under $k = 4, n = 6$ settings.
 		  </p>
-		  <img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="80%" height="80%" alt="streaming time breakdown"/>
+		  <img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
 		</section>
 	  </section>
 
