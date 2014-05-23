@@ -1000,6 +1000,42 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		<!-- <h2>Accelerate Matrix Multiplication over Galois Field</h2> -->
 		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
 	  </section>
+	  <section>
+		<h3>How to Determine the Parameter of Tiles</h3>
+		<ul>
+		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile</li>
+		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
+		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
+		  </ul>
+	  </section>
+	  <section>
+		<h3>How to Determine the Parameter of Tiles</h3>
+		<h4>Strategy 1</h4>
+		<ul>
+		  <li class="fragment">Assume that achieving the highest computation/memory ratio of the kernel is the best.</li>
+		  <li class="fragment">Set: $\textrm{tileWidthRow} = \textrm{tileWidthCol}$</li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>How to Determine the Parameter of Tiles</h3>
+		<h4>Strategy 2</h4>
+		<ul>
+		  <li class="fragment">Assume that loading the entire encoding matrix (i.e. matrix $A$) into the shared memory is the best.</li>
+		  <li class="fragment">Set: $\textrm{tileWidthRow} = n - k$</li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>How to Determine the Parameter of Tiles</h3>
+		<h4>Strategy 3</h4>
+		<ul>
+		  <li class="fragment">Assume that the most balanced tiling division of the matrix $A$ and $B$ is the best.</li>
+		  <li class="fragment">Set: 
+$$
+\dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
+$$
+</li>
+		</ul>
+	  </section>
 	</section>
 
 	<section>
