@@ -1,0 +1,34 @@
+.reveal table {
+    width: 95%;
+    margin-left:auto; 
+    margin-right:auto;
+    border: 1px solid #666;
+}
+
+.reveal table th {text-transform:uppercase;}
+.reveal table td, .reveal table th {border: 1px solid #666; }
+
+.reveal .theorem {
+    display: block;
+    font-style: italic;
+    margin-left: 4.5%; margin-right: 4.5%; margin-top: 0.5em;
+    content: "Theorem&nbsp;";
+}
+  
+.reveal .theorem:before {
+    content: inherit;
+    font-weight: bold;
+    font-style: normal;
+}
+
+.reveal .definition {
+    display: block;
+    margin: 12px 0;
+    font-style: normal;
+}
+
+.reveal .definition:before {
+    content: "Definition.";
+    font-weight: bold;
+    font-style: normal;
+}

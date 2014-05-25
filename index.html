@@ -15,13 +15,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <link rel="stylesheet" href="css/reveal.min.css">
+<link rel="stylesheet" href="css/custom.css">
 <link rel="stylesheet" href="css/theme/serif.css" id="theme">
 
 <!-- For syntax highlighting -->
 <link rel="stylesheet" href="lib/css/zenburn.css">
 
-<!-- For displaying theorems in LaTeX ways -->
+<!-- For displaying theorems in LaTeX ways, 
+moved to custom.css.
 <link rel="stylesheet" href="css/theorems.css">
+-->
 
 <!-- For printing -->
 <!--
@@ -208,13 +211,16 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  <section>
 		<h4>Reed-Solomon Encoding Mechanism</h4>
 		<p>
-		Given file $F$:
+		Given a file $F$:
 		divide it into $k$ equal-size native chunks: 
 		$F = [F_{i}]_{i=1,2,\dots,k}$.
+		</p>
+		<p>
 		Encode them into $(n-k)$ code chunks: 
 		$C = [C_{i}]_{i=1,2,\dots,n-k}$.
-
-		Use Encoding Matrix $EM_{(n-k) \times k}$ to produce code chunks:
+		</p>
+		<p>
+		Use an Encoding Matrix $EM_{(n-k) \times k}$ to produce code chunks:
 		$$
 		C^{T} = EM \times F^{T} 
 		$$
@@ -224,7 +230,8 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  <section>
 		<h4>Reed-Solomon Encoding Mechanism</h4>
 		<p>
-		In our case,
+		For example:
+		</p>
 		\begin{align}
 		\begin{array}{rcl}
 		F &=& \begin{pmatrix} A & B \end{pmatrix} \\
@@ -237,14 +244,13 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		&=& \begin{pmatrix} A+B \\ A+2B \end{pmatrix}
 		\end{array}
 		\end{align}
-		</p>
 	  </section>
 	  <section>
 		<h4>Reed-Solomon Encoding Mechanism</h4>
 		<p align="left">
 		Let $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$ be the $n$ chunks in storage, 
 		$EM' = \begin{pmatrix} I \\ EM \end{pmatrix}$,
-		Here 
+		where
 		$$
 		I = \begin{pmatrix} 
 		1 & 0 & \ldots & 0 \\ 
@@ -265,7 +271,8 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  <section>
 		<h4>Reed-Solomon Encoding Mechanism</h4>
 		<p>
-		In our case,
+		In the formal example,
+		</p>
 		<small>
 		  \begin{align}
 		  \begin{array}{rcl}
@@ -294,7 +301,6 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  \end{array}
 		  \end{align}
 		</small>
-		</p>
 	  </section>
 	  <section>
 		<h4>Reed-Solomon Encoding Mechanism</h4>
@@ -302,7 +308,8 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		$EM'$ is the key of MDS property!
 		</p>
 		<div class="theorem">
-		  [necessary and sufficient condition]Every possible $k \times k$ submatrix obtained by removing $(n-k)$ rows from $EM'$ has full rank.
+		  [necessary and sufficient condition]
+		  <br>Every possible $k \times k$ submatrix obtained by removing $(n-k)$ rows from $EM'$ has full rank.
 		  <br>equivalent expression of full rank:
 		  <ul>
 			<li>
@@ -316,9 +323,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 			</li>
 		  </ul>
 		</div>
+		<br>
 		<p>
 		Alternative view:
-
+		</p>
+		<p align="left">
 		Consider the linear space of $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$,
 		its dimension is $k$, and any $k$ out of $n$ vectors form a basis of the linear space.
 		</p>
@@ -1052,7 +1061,7 @@ improve the temporary locality and reduce cache misses when an array is accessed
 		</p>
 	  </section>
 	  <section>
-		<h2>Accelerate Decoding Matrix Generation (Matrix Inversion)</h2>
+		<h2>Accelerate Decoding Matrix Generation</h2>
 		<p>
 		Gauss elimination contains the following steps:
 		</p>
