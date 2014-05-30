@@ -34,11 +34,11 @@ moved to custom.css.
 <!-- If the query includes 'print-pdf', include the PDF print sheet -->
 <script>
 if( window.location.search.match( /print-pdf/gi ) ) {
-  var link = document.createElement( 'link' );
-  link.rel = 'stylesheet';
-  link.type = 'text/css';
-  link.href = 'css/print/pdf.css';
-  document.getElementsByTagName( 'head' )[0].appendChild( link );
+		var link = document.createElement( 'link' );
+		link.rel = 'stylesheet';
+		link.type = 'text/css';
+		link.href = 'css/print/pdf.css';
+		document.getElementsByTagName( 'head' )[0].appendChild( link );
 }
 </script>
 <!--[if lt IE 9]>
@@ -50,328 +50,328 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 <div class="reveal">
 
-  <!-- Any section element inside of this container is displayed as a slide -->
-  <div class="slides">
-	<section>
-	  <h2>Accelerate Reed-Solomon Codes on GPUs</h2>
-	  <br>
-	  <h3>
-		<a href="http://yszheda.github.io">Shuai YUAN</a> 
-		<br>
-		<a href="lsalab.cs.nthu.edu.tw/home">LSALab</a>
-	  </h3>
-	</section>
+		<!-- Any section element inside of this container is displayed as a slide -->
+		<div class="slides">
+				<section>
+						<h2>Accelerate Reed-Solomon Codes on GPUs</h2>
+						<br>
+						<h3>
+								<a href="http://yszheda.github.io">Shuai YUAN</a> 
+								<br>
+								<a href="lsalab.cs.nthu.edu.tw/home">LSALab</a>
+						</h3>
+				</section>
 
-	<section>
-	  <h2>Overview</h2>
-	  <ul>
-		<li>Introduction</li>
-		<li>Background</li>
-		<li>Accelerating Operations in Galois Field</li>
-		<li>Accelerating Matrix Multiplication</li>
-		<li>Reducing Data Transfer Overhead</li>
-		<li>Experiment</li>
-		<li>Conclusion</li>
-	  </ul>
-	  <aside class="notes">
-		Oh hey, these are some notes. They'll be hidden in your presentation, but you can see them if you open the speaker notes window (hit 's' on your keyboard).
-	  </aside>
-	</section>
+				<section>
+						<h2>Overview</h2>
+						<ul>
+								<li>Introduction</li>
+								<li>Background</li>
+								<li>Accelerating Operations in Galois Field</li>
+								<li>Accelerating Matrix Multiplication</li>
+								<li>Reducing Data Transfer Overhead</li>
+								<li>Experiment</li>
+								<li>Conclusion</li>
+						</ul>
+						<aside class="notes">
+								Oh hey, these are some notes. They'll be hidden in your presentation, but you can see them if you open the speaker notes window (hit 's' on your keyboard).
+						</aside>
+				</section>
 
-	<!-- Example of nested vertical slides -->
-	<section>
-	  <section>
-		<h2>Introduction</h2>
-	  </section>
-	  <section>
-		<h3>Why Redundancy?</h3>
-		<ul>
-		  <li class="fragment">
-		  Nowadays, cloud storage vendors claim to provide highly available and stable services.
-		  </li>
-		  <li class="fragment">
-		  However, as the scale of storage system grows larger and larger, the probability of failure becomes significant:
-		  <br>
-		  If the MTTF (Mean Time To Failure) of one storage node is $P$, then the MTTF of a system of $n$ storage nodes is $\dfrac{P}{n}$.
-		  <br><p class="fragment">→ SLA (Service-Level Agreement) violation</p>
-		  </li>
-		</ul>
-		<p class="fragment">
-		Therefore, redundancy must be introduced into cloud system.
-		</p>
-	  </section>
-	  <section>
-		<h3>Why Redundancy?</h3>
-		<ul>
-		  <li class="fragment">
-		  The simplest and straightforward redundancy solution is <font color="#ff0000">replication</font> of the data in multiple storage nodes.
-		  </li>
-		  <li class="fragment">
-		  Triple replication solution have been favored in distributed cloud systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
-		  </li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Why Erasure Codes?</h3>
-		<ul>
-		  <li class="fragment">
-		  Problem of replication: <font color="#ff0000">large storage overhead</font>.
-		  </li>
-		  <li class="fragment">
-		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of reliability as replication.
-		  </li>
-		  <li class="fragment">
-		  $(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
-		  <ul>
-			<li class="fragment">File → $k$ equal-size native chunks.</li>
-			<li class="fragment">$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
-			<li class="fragment">The native and code chunks are distributed on $n$ different storage nodes.</li>
-			<li class="fragment">tolerates the failure of any $n - k$ storage nodes.</li>
-		  </ul>
-		  </li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Why Erasure Codes?</h3>
-		<p>Example:</p>
-		<table>
-		  <tr align="center">
-			<td>
-			  <img src="./images/dot-graph/e-c.png" alt="erasure code">
-			</td>
-			<td>
-			  <img src="./images/dot-graph/replica.png" alt="replication">
-			</td>
-		  </tr>
-		  <tr align="center">
-			<td>
-			  Reed-Solomon Code (n=4, k=2)
-			</td>
-			<td>
-			  Replication
-			</td>
-		  </tr>
-		</table>
-		<p class="fragment">
-		Save 50% space!
-		</p>
-	  </section>
-	  <section>
-		<h3>Why Reed-Solomon Codes?</h3>
-		<ul>
-		  <li class="fragment">
-		  Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
-		  </li>
-		  <li class="fragment">
-		  $RS(10, 4)$ is used in HDFS-RAID in Facebook and $RS(6, 3)$ is used in GFS II in Google.
-		  </li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Shortcomings of Reed-Solomon Codes</h3>
-		<ul>
-		  <li class="fragment">
-		  use matrix multiplication over Galois Field for encoding and decoding → <font color="#ff0000">extra high computation cost</font> compared to replication
-		  </li>
-		  <li class="fragment">
-		  Our contributions: use GPU to accelerate the Reed-Solomon encoding and decoding.
-		  </li>
-		</ul>
-	  </section>
-	</section>
+				<!-- Example of nested vertical slides -->
+				<section>
+						<section>
+								<h2>Introduction</h2>
+						</section>
+						<section>
+								<h3>Why Redundancy?</h3>
+								<ul>
+										<li class="fragment">
+										Nowadays, cloud storage vendors claim to provide highly available and stable services.
+										</li>
+										<li class="fragment">
+										However, as the scale of storage system grows larger and larger, the probability of failure becomes significant:
+										<br>
+										If the MTTF (Mean Time To Failure) of one storage node is $P$, then the MTTF of a system of $n$ storage nodes is $\dfrac{P}{n}$.
+										<br><p class="fragment">→ SLA (Service-Level Agreement) violation</p>
+										</li>
+								</ul>
+								<p class="fragment">
+								Therefore, redundancy must be introduced into cloud system.
+								</p>
+						</section>
+						<section>
+								<h3>Why Redundancy?</h3>
+								<ul>
+										<li class="fragment">
+										The simplest and straightforward redundancy solution is <font color="#ff0000">replication</font> of the data in multiple storage nodes.
+										</li>
+										<li class="fragment">
+										Triple replication solution have been favored in distributed cloud systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
+										</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Why Erasure Codes?</h3>
+								<ul>
+										<li class="fragment">
+										Problem of replication: <font color="#ff0000">large storage overhead</font>.
+										</li>
+										<li class="fragment">
+										Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of reliability as replication.
+										</li>
+										<li class="fragment">
+										$(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
+										<ul>
+												<li class="fragment">File → $k$ equal-size native chunks.</li>
+												<li class="fragment">$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
+												<li class="fragment">The native and code chunks are distributed on $n$ different storage nodes.</li>
+												<li class="fragment">tolerates the failure of any $n - k$ storage nodes.</li>
+										</ul>
+										</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Why Erasure Codes?</h3>
+								<p>Example:</p>
+								<table>
+										<tr align="center">
+												<td>
+														<img src="./images/dot-graph/e-c.png" alt="erasure code">
+												</td>
+												<td>
+														<img src="./images/dot-graph/replica.png" alt="replication">
+												</td>
+										</tr>
+										<tr align="center">
+												<td>
+														Reed-Solomon Code (n=4, k=2)
+												</td>
+												<td>
+														Replication
+												</td>
+										</tr>
+								</table>
+								<p class="fragment">
+								Save 50% space!
+								</p>
+						</section>
+						<section>
+								<h3>Why Reed-Solomon Codes?</h3>
+								<ul>
+										<li class="fragment">
+										Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
+										</li>
+										<li class="fragment">
+										$RS(10, 4)$ is used in HDFS-RAID in Facebook and $RS(6, 3)$ is used in GFS II in Google.
+										</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Shortcomings of Reed-Solomon Codes</h3>
+								<ul>
+										<li class="fragment">
+										use matrix multiplication over Galois Field for encoding and decoding → <font color="#ff0000">extra high computation cost</font> compared to replication
+										</li>
+										<li class="fragment">
+										Our contributions: use GPU to accelerate the Reed-Solomon encoding and decoding.
+										</li>
+								</ul>
+						</section>
+				</section>
 
-	<section>
-	  <section>
-		<h2>Background</h2>
-	  </section>
-	  <section>
-		<h3>Reed-Solomon Code Overview</h3>
-		<table>
-		  <tr align="center">
-			<td>
-			  <img src="./images/dot-graph/encode.png" alt="RS encode">
-			</td>
-			<td>
-			  <img src="./images/dot-graph/decode.png" alt="RS decode">
-			</td>
-		  </tr>
-		  <tr align="center">
-			<td>
-			  Reed-Solomon Encoding
-			</td>
-			<td>
-			  Reed-Solomon Decoding
-			</td>
-		  </tr>
-		</table>
-	  </section>
-	  <section>
-		<h3>Reed-Solomon Coding Mechanism</h3>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		Given a file $F$:
-		divide it into $k$ equal-size native chunks: 
-		$F = [F_{i}]_{i=1,2,\dots,k}$.
-		</p>
-		<p>
-		Encode them into $(n-k)$ code chunks: 
-		$C = [C_{i}]_{i=1,2,\dots,n-k}$.
-		</p>
-		<p>
-		Use an Encoding Matrix $EM_{(n-k) \times k}$ to produce code chunks:
-		$$
-		C^{T} = EM \times F^{T} 
-		$$
-		$C_{i}$ is the linear combination of $F_{1}, F_{2}, \dots, F_{k}$.
-		</p>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		For example:
-		</p>
-		\begin{align}
-		\begin{array}{rcl}
-		F &=& \begin{pmatrix} A & B \end{pmatrix} \\
-		EM &=& 	\begin{pmatrix}
-		1 & 1 \\
-		1 & 2 \\
-		\end{pmatrix} \\
-		%C &=& \begin{pmatrix} A & B & A+B & A+2B \end{pmatrix}
-		C^{T} &=& \begin{pmatrix} 1 & 1 \\  1 & 2 \\ \end{pmatrix} \times \begin{pmatrix} A \\ B \end{pmatrix} \\
-		&=& \begin{pmatrix} A+B \\ A+2B \end{pmatrix}
-		\end{array}
-		\end{align}
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p align="left">
-		Let $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$ be the $n$ chunks in storage, 
-		$EM' = \begin{pmatrix} I \\ EM \end{pmatrix}$,
-		where
-		$$
-		I = \begin{pmatrix} 
-		1 & 0 & \ldots & 0 \\ 
-		0 & 1 & \ldots & 0 \\
-		\vdots & \vdots & \ddots & \vdots \\
-		0 & 0 & \ldots & 1 
-		\end{pmatrix}
-		$$
-		then
-		\begin{align}
-		\begin{array}{rcl}
-		P^{T} &=& EM' \times F^{T} \\
-		&=& \begin{pmatrix} F^{T} \\ C^{T} \end{pmatrix}
-		\end{array}
-		\end{align}
-		</p>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		In the formal example,
-		</p>
-		<small>
-		  \begin{align}
-		  \begin{array}{rcl}
-		  EM' &=& \begin{pmatrix} I \\ EM \end{pmatrix} 
-		  = \begin{pmatrix}
-		  1 & 0 \\
-		  0 & 1 \\
-		  1 & 1 \\
-		  1 & 2 \\
-		  \end{pmatrix} \\	
-		  P^{T} &=& EM' \times F^{T} \\
-		  &=& \begin{pmatrix}
-		  1 & 0 \\
-		  0 & 1 \\
-		  1 & 1 \\
-		  1 & 2 \\
-		  \end{pmatrix}
-		  \times
-		  \begin{pmatrix} A \\ B \end{pmatrix} \\
-		  &=& \begin{pmatrix}
-		  A \\
-		  B \\
-		  A+B \\
-		  A+2B
-		  \end{pmatrix}
-		  \end{array}
-		  \end{align}
-		</small>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		$EM'$ is the key of MDS property!
-		</p>
-		<div class="theorem">
-		  [necessary and sufficient condition]
-		  <br>Every possible $k \times k$ submatrix obtained by removing $(n-k)$ rows from $EM'$ has full rank.
-		  <br>equivalent expression of full rank:
-		  <ul>
-			<li>
-			rank = $k$
-			</li>
-			<li>
-			non-singular
-			</li>
-			<li>
-			$\vdots$
-			</li>
-		  </ul>
-		</div>
-		<br>
-		<p>
-		Alternative view:
-		</p>
-		<p align="left">
-		Consider the linear space of $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$,
-		its dimension is $k$, and any $k$ out of $n$ vectors form a basis of the linear space.
-		</p>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		Reed-Solomon Codes uses Vandermonde matrix $V$ as $EM$
-		$$
-		V =
-		\begin{bmatrix}
-		1 & 1 & 1 & \ldots & 1 \\
-		1 & 2 & 3 & \ldots & k \\
-		1^2 & 2^2 & 3^2 & \ldots & k^2 \\
-		\vdots & \vdots & \vdots & \ddots & \vdots \\
-		1^{(n-k)} & 2^{(n-k)} & 3^{(n-k)} & \ldots & k^{(n-k)}
-		\end{bmatrix}
-		$$
-		</p>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		$$
-		EM' =
-		\begin{bmatrix}
-		1 & 0 & 0 & \ldots & 0 \\
-		0 & 1 & 0 & \ldots & 0 \\
-		0 & 0 & 1 & \ldots & 0 \\
-		\vdots & \vdots & \vdots & \ddots & \vdots \\
-		0 & 0 & 0 & \ldots & 1 \\
-		1 & 1 & 1 & \ldots & 1 \\
-		1 & 2 & 3 & \ldots & k \\
-		1^2 & 2^2 & 3^2 & \ldots & k^2 \\
-		\vdots & \vdots & \vdots & \ddots & \vdots \\
-		1^{(n-k)} & 2^{(n-k)} & 3^{(n-k)} & \ldots & k^{(n-k)}
-		\end{bmatrix}
-		$$
-		</p>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Encoding Mechanism</h4>
-		<p>
-		<!--
+				<section>
+						<section>
+								<h2>Background</h2>
+						</section>
+						<section>
+								<h3>Reed-Solomon Code Overview</h3>
+								<table>
+										<tr align="center">
+												<td>
+														<img src="./images/dot-graph/encode.png" alt="RS encode">
+												</td>
+												<td>
+														<img src="./images/dot-graph/decode.png" alt="RS decode">
+												</td>
+										</tr>
+										<tr align="center">
+												<td>
+														Reed-Solomon Encoding
+												</td>
+												<td>
+														Reed-Solomon Decoding
+												</td>
+										</tr>
+								</table>
+						</section>
+						<section>
+								<h3>Reed-Solomon Coding Mechanism</h3>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								Given a file $F$:
+								divide it into $k$ equal-size native chunks: 
+								$F = [F_{i}]_{i=1,2,\dots,k}$.
+								</p>
+								<p>
+								Encode them into $(n-k)$ code chunks: 
+								$C = [C_{i}]_{i=1,2,\dots,n-k}$.
+								</p>
+								<p>
+								Use an Encoding Matrix $EM_{(n-k) \times k}$ to produce code chunks:
+								$$
+								C^{T} = EM \times F^{T} 
+								$$
+								$C_{i}$ is the linear combination of $F_{1}, F_{2}, \dots, F_{k}$.
+								</p>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								For example:
+								</p>
+								\begin{align}
+								\begin{array}{rcl}
+								F &=& \begin{pmatrix} A & B \end{pmatrix} \\
+								EM &=& 	\begin{pmatrix}
+								1 & 1 \\
+								1 & 2 \\
+								\end{pmatrix} \\
+								%C &=& \begin{pmatrix} A & B & A+B & A+2B \end{pmatrix}
+								C^{T} &=& \begin{pmatrix} 1 & 1 \\  1 & 2 \\ \end{pmatrix} \times \begin{pmatrix} A \\ B \end{pmatrix} \\
+								&=& \begin{pmatrix} A+B \\ A+2B \end{pmatrix}
+								\end{array}
+								\end{align}
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p align="left">
+								Let $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$ be the $n$ chunks in storage, 
+								$EM' = \begin{pmatrix} I \\ EM \end{pmatrix}$,
+								where
+								$$
+								I = \begin{pmatrix} 
+								1 & 0 & \ldots & 0 \\ 
+								0 & 1 & \ldots & 0 \\
+								\vdots & \vdots & \ddots & \vdots \\
+								0 & 0 & \ldots & 1 
+								\end{pmatrix}
+								$$
+								then
+								\begin{align}
+								\begin{array}{rcl}
+								P^{T} &=& EM' \times F^{T} \\
+								&=& \begin{pmatrix} F^{T} \\ C^{T} \end{pmatrix}
+								\end{array}
+								\end{align}
+								</p>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								In the formal example,
+								</p>
+								<small>
+										\begin{align}
+										\begin{array}{rcl}
+										EM' &=& \begin{pmatrix} I \\ EM \end{pmatrix} 
+										= \begin{pmatrix}
+										1 & 0 \\
+										0 & 1 \\
+										1 & 1 \\
+										1 & 2 \\
+										\end{pmatrix} \\	
+										P^{T} &=& EM' \times F^{T} \\
+										&=& \begin{pmatrix}
+										1 & 0 \\
+										0 & 1 \\
+										1 & 1 \\
+										1 & 2 \\
+										\end{pmatrix}
+										\times
+										\begin{pmatrix} A \\ B \end{pmatrix} \\
+										&=& \begin{pmatrix}
+										A \\
+										B \\
+										A+B \\
+										A+2B
+										\end{pmatrix}
+										\end{array}
+										\end{align}
+								</small>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								$EM'$ is the key of MDS property!
+								</p>
+								<div class="theorem">
+										[necessary and sufficient condition]
+										<br>Every possible $k \times k$ submatrix obtained by removing $(n-k)$ rows from $EM'$ has full rank.
+										<br>equivalent expression of full rank:
+										<ul>
+												<li>
+												rank = $k$
+												</li>
+												<li>
+												non-singular
+												</li>
+												<li>
+												$\vdots$
+												</li>
+										</ul>
+								</div>
+								<br>
+								<p>
+								Alternative view:
+								</p>
+								<p align="left">
+								Consider the linear space of $P = [P_{i}]_{i=1,2,\dots,n} = [F_{1}, F_{2}, \dots, F_{k}, C_{1}, C_{2}, \dots, C_{n-k}]$,
+								its dimension is $k$, and any $k$ out of $n$ vectors form a basis of the linear space.
+								</p>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								Reed-Solomon Codes uses Vandermonde matrix $V$ as $EM$
+								$$
+								V =
+								\begin{bmatrix}
+								1 & 1 & 1 & \ldots & 1 \\
+								1 & 2 & 3 & \ldots & k \\
+								1^2 & 2^2 & 3^2 & \ldots & k^2 \\
+								\vdots & \vdots & \vdots & \ddots & \vdots \\
+								1^{(n-k)} & 2^{(n-k)} & 3^{(n-k)} & \ldots & k^{(n-k)}
+								\end{bmatrix}
+								$$
+								</p>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								$$
+								EM' =
+								\begin{bmatrix}
+								1 & 0 & 0 & \ldots & 0 \\
+								0 & 1 & 0 & \ldots & 0 \\
+								0 & 0 & 1 & \ldots & 0 \\
+								\vdots & \vdots & \vdots & \ddots & \vdots \\
+								0 & 0 & 0 & \ldots & 1 \\
+								1 & 1 & 1 & \ldots & 1 \\
+								1 & 2 & 3 & \ldots & k \\
+								1^2 & 2^2 & 3^2 & \ldots & k^2 \\
+								\vdots & \vdots & \vdots & \ddots & \vdots \\
+								1^{(n-k)} & 2^{(n-k)} & 3^{(n-k)} & \ldots & k^{(n-k)}
+								\end{bmatrix}
+								$$
+								</p>
+						</section>
+						<section>
+								<h4>Reed-Solomon Encoding Mechanism</h4>
+								<p>
+								<!--
 %\begin{displaymath}
 %\begin{array}{rcl}
 %\textrm{For } i=1,2,\dots,n(n-k) &&\\
@@ -384,39 +384,39 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 %\end{displaymath}
 %$ECV_{i}$: encoding coeffient vector of $P_{i}$.
 -->
-		Remark:
-		<ul>
-		  <li>
-		  All arithmetic operations in Galois Field GF($2^{w}$). Then every number is less than $2^{w}$.
-		  </li>
-		  <li>
-		  $EM'$ satisfies MDS property.
-		  </li>
-		</ul>
-	  </section>
-	  <section>
-		<h4>Reed-Solomon Decoding Mechanism</h4>
-		<p>
-		We randomly select $k$ out of $n$ chunks, say $X = [x_{1}, x_{2}, \cdots, x_{k}]^{T}$.
+								Remark:
+								<ul>
+										<li>
+										All arithmetic operations in Galois Field GF($2^{w}$). Then every number is less than $2^{w}$.
+										</li>
+										<li>
+										$EM'$ satisfies MDS property.
+										</li>
+								</ul>
+						</section>
+						<section>
+								<h4>Reed-Solomon Decoding Mechanism</h4>
+								<p>
+								We randomly select $k$ out of $n$ chunks, say $X = [x_{1}, x_{2}, \cdots, x_{k}]^{T}$.
 
-		Then we use the coefficients of each chunks $x_{i}$ to construct a $k \times k$ matrix $V'$.
+								Then we use the coefficients of each chunks $x_{i}$ to construct a $k \times k$ matrix $V'$.
 
-		Original data can be regenerated by multiplying matrix $X$ with the inverse of matrix $V'$:
+								Original data can be regenerated by multiplying matrix $X$ with the inverse of matrix $V'$:
 
-		$$
-		F = V'^{-1} X 
-		$$
-		</p>
-	  </section>
-	  <!--
+								$$
+								F = V'^{-1} X 
+								$$
+								</p>
+						</section>
+						<!--
 					<section>
 						<h2>Optimization Motivation</h2>
 					</section>
 					-->
-	  <section>
-		<h3>Brief Introduction of Galois Field</h3>
-	  </section>
-	  <!--
+						<section>
+								<h3>Brief Introduction of Galois Field</h3>
+						</section>
+						<!--
 					<section>
 						<h2>Introduction of Galois Field</h2>
 						<p class="frame">
@@ -436,191 +436,191 @@ GF($2^w$) field is constructed by finding a primitive polynomial $q(x)$ of degre
 						</p>
 					</section>
 					-->
-	  <section>
-		<h4>Breif Introduction of Galois Field GF($p^w$)</h4>
-		<p>
-		Galois field GF($p^w$), where $p$ is a prime and $w$ is a positive integer, is a set of $p^w$ polynomials of degree at most $w - 1$. 
-		</p>
-		<ul>
-		  <li class="fragment">
-		  The field is <font color="#ff0000">closed under addition and multiplication</font>, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
-		  </li>
-		  <li class="fragment">
-		  there exists an element $\alpha$ in GF($p^w$),
-		  such that
-		  all the non-zero elements of GF($p^w$) can be written as $\alpha^i$ for some integer $i$.
-		  The element $\alpha$ is called a <font color="#ff0000">primitive element</font> or <font color="#ff0000">generator</font> of the GF($p^w$).
-		  </li>
-		  <li class="fragment">
-		  Any primitive element $\alpha$ has the property of $\alpha^{p^w - 1} = 1$.
-		  </li>
-		</ul>
-	  </section>
-	  <section>
-		<h4>Breif Introduction of Galois Field GF($2^w$)</h4>
-		<p align="left">
-		Among the Galois Fields, the binary extension fields GF($2^w$) are of particular interest in erasure codes due to the byte-based nature of memory in many computer architectures.
-		</p>
-		<p align="left" class="fragment">
-		GF($2^w$) is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over GF$(2)=\{ 0, 1 \}$, and then enumerating the polynomial elements with a generator.
-		</p>
-	  </section>
-	  <section>
-		<h4>Generation of GF($2^w$)</h4>
-		<p align="left">
-		In GF($2^w$), the polynomial $x$ can be considered a generator.
-		</p>
-		<p class="fragment">
-		Generation of GF($2^w$): 
-		</p>
-		<ul> 
-		  <li class="fragment">start with the elements 0, 1, and $x$</li>
-		  <li class="fragment">continue to enumerate the elements by multiplying the last element by $x$ and taking the result modulo $q(x)$ if it has a degree no less than $w$.</li>
-		  <li class="fragment">This enumeration ends at $2^w$ elements – the last element multiplied by $x$ mod $q(x)$ equals 1.</li>
-		</ul>
-	  </section>
-	  <section>
-		<h4>Generation of GF($2^w$)</h4>
-		<p>
-		e.g. Generation of GF($2^2$): 
-		$w = 2$, and $q(x) = x^2 + x + 1$.
-		</p>
-		<p class="fragment">
-		Initial set: $\{ 0, 1, x \}$
-		</p>
-		<p class="fragment">
-		$x^2 \textrm{ mod } q(x) = x + 1$, insert into the set: $\{ 0, 1, x, 1+x \}$.
-		</p>
-		<p class="fragment">
-		$(x+1)x \textrm{ mod } q(x) = 1$, end of enumeration.
-		</p>
-	  </section>
-	  <section>
-		<h3>Breif Introduction of Galois Field GF($2^w$)</h3>
-		<p align="left" class="frame roll-in">
-		Each polynomial elements of GF($2^w$) can be mapped into a binary word $b$ of size $w$ by setting the $i$th bit of $b$ to the coefficient of $x^i$ in the polynomial.
-		<!--Mapping from polynomial elements of Galois Field into binary elements: equivalent to letting the generator $x = 2$.-->
-		</p>
-		<p class="fragment">
-		e.g. GF($2^2$)
-		</p>
-		<table class="fragment">
-		  <tr>
-			<td>generated element</td>
-			<td>polynomial element</td>
-			<td>binary element $b$</td>
-			<td>decimal representation of $b$</td>
-		  </tr>
-		  <tr>
-			<td>0</td>
-			<td>0</td>
-			<td>00</td>
-			<td>0</td>
-		  </tr>
-		  <tr>
-			<td>$x^0$</td>
-			<td>1</td>
-			<td>01</td>
-			<td>1</td>
-		  </tr>
-		  <tr>
-			<td>$x^1$</td>
-			<td>$x$</td>
-			<td>10</td>
-			<td>2</td>
-		  </tr>
-		  <tr>
-			<td>$x^2$</td>
-			<td>$x+1$</td>
-			<td>11</td>
-			<td>3</td>
-		  </tr>
-		</table>
-		<p class="fragment">
-		For GF($2^8$), every element can be mapped into a byte.
-		</p>
-	  </section>
+						<section>
+								<h4>Breif Introduction of Galois Field GF($p^w$)</h4>
+								<p>
+								Galois field GF($p^w$), where $p$ is a prime and $w$ is a positive integer, is a set of $p^w$ polynomials of degree at most $w - 1$. 
+								</p>
+								<ul>
+										<li class="fragment">
+										The field is <font color="#ff0000">closed under addition and multiplication</font>, for which every element has an additive and multiplicative inverse (except for the 0 element which has no multiplicative inverse).
+										</li>
+										<li class="fragment">
+										there exists an element $\alpha$ in GF($p^w$),
+										such that
+										all the non-zero elements of GF($p^w$) can be written as $\alpha^i$ for some integer $i$.
+										The element $\alpha$ is called a <font color="#ff0000">primitive element</font> or <font color="#ff0000">generator</font> of the GF($p^w$).
+										</li>
+										<li class="fragment">
+										Any primitive element $\alpha$ has the property of $\alpha^{p^w - 1} = 1$.
+										</li>
+								</ul>
+						</section>
+						<section>
+								<h4>Breif Introduction of Galois Field GF($2^w$)</h4>
+								<p align="left">
+								Among the Galois Fields, the binary extension fields GF($2^w$) are of particular interest in erasure codes due to the byte-based nature of memory in many computer architectures.
+								</p>
+								<p align="left" class="fragment">
+								GF($2^w$) is constructed by finding a primitive polynomial $q(x)$ of degree $w$ over GF$(2)=\{ 0, 1 \}$, and then enumerating the polynomial elements with a generator.
+								</p>
+						</section>
+						<section>
+								<h4>Generation of GF($2^w$)</h4>
+								<p align="left">
+								In GF($2^w$), the polynomial $x$ can be considered a generator.
+								</p>
+								<p class="fragment">
+								Generation of GF($2^w$): 
+								</p>
+								<ul> 
+										<li class="fragment">start with the elements 0, 1, and $x$</li>
+										<li class="fragment">continue to enumerate the elements by multiplying the last element by $x$ and taking the result modulo $q(x)$ if it has a degree no less than $w$.</li>
+										<li class="fragment">This enumeration ends at $2^w$ elements – the last element multiplied by $x$ mod $q(x)$ equals 1.</li>
+								</ul>
+						</section>
+						<section>
+								<h4>Generation of GF($2^w$)</h4>
+								<p>
+								e.g. Generation of GF($2^2$): 
+								$w = 2$, and $q(x) = x^2 + x + 1$.
+								</p>
+								<p class="fragment">
+								Initial set: $\{ 0, 1, x \}$
+								</p>
+								<p class="fragment">
+								$x^2 \textrm{ mod } q(x) = x + 1$, insert into the set: $\{ 0, 1, x, 1+x \}$.
+								</p>
+								<p class="fragment">
+								$(x+1)x \textrm{ mod } q(x) = 1$, end of enumeration.
+								</p>
+						</section>
+						<section>
+								<h3>Breif Introduction of Galois Field GF($2^w$)</h3>
+								<p align="left" class="frame roll-in">
+								Each polynomial elements of GF($2^w$) can be mapped into a binary word $b$ of size $w$ by setting the $i$th bit of $b$ to the coefficient of $x^i$ in the polynomial.
+								<!--Mapping from polynomial elements of Galois Field into binary elements: equivalent to letting the generator $x = 2$.-->
+								</p>
+								<p class="fragment">
+								e.g. GF($2^2$)
+								</p>
+								<table class="fragment">
+										<tr>
+												<td>generated element</td>
+												<td>polynomial element</td>
+												<td>binary element $b$</td>
+												<td>decimal representation of $b$</td>
+										</tr>
+										<tr>
+												<td>0</td>
+												<td>0</td>
+												<td>00</td>
+												<td>0</td>
+										</tr>
+										<tr>
+												<td>$x^0$</td>
+												<td>1</td>
+												<td>01</td>
+												<td>1</td>
+										</tr>
+										<tr>
+												<td>$x^1$</td>
+												<td>$x$</td>
+												<td>10</td>
+												<td>2</td>
+										</tr>
+										<tr>
+												<td>$x^2$</td>
+												<td>$x+1$</td>
+												<td>11</td>
+												<td>3</td>
+										</tr>
+								</table>
+								<p class="fragment">
+								For GF($2^8$), every element can be mapped into a byte.
+								</p>
+						</section>
 
-	</section>
-	<!--
+				</section>
+				<!--
 				<section>
 					<section>
 						<h2>Optimization Techniques</h2>
 					</section>
 				</section>
 -->
-	<section>
-	  <section>
-		<h2>Accelerate Operations in Galois Field</h2>
-	  </section>
-	  <section>
-		<h2>Accelerate Operations in Galois Field</h2>
-		<ul>
-		  <li class="fragment">
-		  Addition/subtraction of two elements in GF($2^w$) in this field can be performed by inexpensive bitwise XOR of the elements.
-		  </li>
-		  <li class="fragment">
-		  Multiplication of two elements is defined as the multiplication of two polynomials which represents the elements and modulo an irreducible generator polynomial.
-		  </li>
-		</ul>
-		<p class="fragment">
-		<br>
-		Therefore, how to accelerate the time-consuming <font color="#ff0000">multiplication</font> over GF($2^w$) will be our focus.
-		<!--Here we focus on the acceleration of multiplication on Galois Fields.-->
-		</p>
-	  </section>
+				<section>
+						<section>
+								<h2>Accelerate Operations in Galois Field</h2>
+						</section>
+						<section>
+								<h2>Accelerate Operations in Galois Field</h2>
+								<ul>
+										<li class="fragment">
+										Addition/subtraction of two elements in GF($2^w$) in this field can be performed by inexpensive bitwise XOR of the elements.
+										</li>
+										<li class="fragment">
+										Multiplication of two elements is defined as the multiplication of two polynomials which represents the elements and modulo an irreducible generator polynomial.
+										</li>
+								</ul>
+								<p class="fragment">
+								<br>
+								Therefore, how to accelerate the time-consuming <font color="#ff0000">multiplication</font> over GF($2^w$) will be our focus.
+								<!--Here we focus on the acceleration of multiplication on Galois Fields.-->
+								</p>
+						</section>
 
-	  <section>
-		<h3>GPU Implementation: Loop-based or Table-based?</h3>
-	  </section>
-	  <section>
-		<h4>Loop-based Method</h4>
-	  </section>
-	  <section>
-		<h5>Overview of the Loop-based Method</h5>
-		<p align="left">
-		To perform the multiplication of two binary numbers in GF($2^w$), the numbers should be converted to their polynomial elements, multiplied by the polynomials modulo $q(x)$, and then converted back to binary.
-		<!--Basically, multiplication over Galois Field is polynomial multiplication and taking the result modulo $q(x)$.-->
-		</p>
-		<p class="fragment">
-		<font color="#ff0000">Russian peasant multiplication algorithm</font> can be used to turn it into bitwise operations.
-		</p>
-	  </section>
+						<section>
+								<h3>GPU Implementation: Loop-based or Table-based?</h3>
+						</section>
+						<section>
+								<h4>Loop-based Method</h4>
+						</section>
+						<section>
+								<h5>Overview of the Loop-based Method</h5>
+								<p align="left">
+								To perform the multiplication of two binary numbers in GF($2^w$), the numbers should be converted to their polynomial elements, multiplied by the polynomials modulo $q(x)$, and then converted back to binary.
+								<!--Basically, multiplication over Galois Field is polynomial multiplication and taking the result modulo $q(x)$.-->
+								</p>
+								<p class="fragment">
+								<font color="#ff0000">Russian peasant multiplication algorithm</font> can be used to turn it into bitwise operations.
+								</p>
+						</section>
 
-	  <section>
-		<h5>Russian Peasant Multiplication Algorithm</h5>
-		<p>
-		e.g. Russian peasant multiplication in normal field:
-		\begin{align}
-		9 \times 12 &\leadsto (9/2) \times (12 \times 2) + 12 \\
-		&\leadsto (4/2) \times (24 \times 2) + 12 \\
-		&\leadsto (2/2) \times (48 \times 2) + 12 \\
-		&\leadsto (48 \times 2) + 12 \\
-		&\leadsto 108
-		\end{align}
-		</p>
-	  </section>
+						<section>
+								<h5>Russian Peasant Multiplication Algorithm</h5>
+								<p>
+								e.g. Russian peasant multiplication in normal field:
+								\begin{align}
+								9 \times 12 &\leadsto (9/2) \times (12 \times 2) + 12 \\
+								&\leadsto (4/2) \times (24 \times 2) + 12 \\
+								&\leadsto (2/2) \times (48 \times 2) + 12 \\
+								&\leadsto (48 \times 2) + 12 \\
+								&\leadsto 108
+								\end{align}
+								</p>
+						</section>
 
-	  <section>
-		<h5>Russian Peasant Multiplication Algorithm</h5>
-		<p>
-		e.g. Russian peasant multiplication in GF($2^8$):
-		\begin{align}
-		(x^3+1) \times (x^3+x^2) &\leadsto (x^2) \times (x(x^3+x^2)) + (x^3+x^2) \\
-		&\leadsto (x) \times (x(x^4+x^3)) + (x^3+x^2) \\
-		&\leadsto 1 \times (x(x^5+x^4)) + (x^3+x^2) \\
-		&\leadsto x^6+x^5+x^3+x^2 (\equiv 108) \\
-		\end{align}
-		</p>
-		<p class="fragment roll-in">
-		Actually multiplication in GF($2^w$) is the same as that in normal field, except that we have to add necessary modulo operations so that the result is smaller than $2^w$.
-		</p>
-	  </section>
+						<section>
+								<h5>Russian Peasant Multiplication Algorithm</h5>
+								<p>
+								e.g. Russian peasant multiplication in GF($2^8$):
+								\begin{align}
+								(x^3+1) \times (x^3+x^2) &\leadsto (x^2) \times (x(x^3+x^2)) + (x^3+x^2) \\
+								&\leadsto (x) \times (x(x^4+x^3)) + (x^3+x^2) \\
+								&\leadsto 1 \times (x(x^5+x^4)) + (x^3+x^2) \\
+								&\leadsto x^6+x^5+x^3+x^2 (\equiv 108) \\
+								\end{align}
+								</p>
+								<p class="fragment roll-in">
+								Actually multiplication in GF($2^w$) is the same as that in normal field, except that we have to add necessary modulo operations so that the result is smaller than $2^w$.
+								</p>
+						</section>
 
-	  <section>
-		<h5>Example Implementation of Russian Peasant Multiplication Algorithm</h5>
-		<small>multiply two operands $a$ and $b$ in GF($2^8$):</small>
-		<pre><code class="cpp" data-trim contenteditable>
+						<section>
+								<h5>Example Implementation of Russian Peasant Multiplication Algorithm</h5>
+								<small>multiply two operands $a$ and $b$ in GF($2^8$):</small>
+								<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
   uint8_t result;
@@ -648,131 +648,131 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   }
   return result;
 }
-		</code></pre>
-		<p class="fragment">
-		costs at most eight iterations to complete → <font color="#ff0000" class="fragment">computation-bound</font>
-		</p>
-	  </section>
+								</code></pre>
+								<p class="fragment">
+								costs at most eight iterations to complete → <font color="#ff0000" class="fragment">computation-bound</font>
+								</p>
+						</section>
 
-	  <section>
-		<h4>Table-based Methods</h4>
-	  </section>
-	  <section>
-		<h5>Full Multiplication Table Method</h5>
-		<p>
-		Pre-compute all the multiplication result in a table.
-		Multiplication becomes one table-lookup operation.
-		</p>
-		<p class="fragment">
-		<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the full multiplication table:</small>
-		</p>
-		<pre class="fragment"><code class="cpp" data-trim contenteditable>
+						<section>
+								<h4>Table-based Methods</h4>
+						</section>
+						<section>
+								<h5>Full Multiplication Table Method</h5>
+								<p>
+								Pre-compute all the multiplication result in a table.
+								Multiplication becomes one table-lookup operation.
+								</p>
+								<p class="fragment">
+								<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the full multiplication table:</small>
+								</p>
+								<pre class="fragment"><code class="cpp" data-trim contenteditable>
 uint8_t gf256_mul_table[256][256];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
   return gf256_mul_table[a][b];
 }
-		</code></pre>
-		<ul>
-		  <li class="fragment roll-in">Pros: least computation operations: only one table-lookup.</li>
-		  <li class="fragment roll-in">Cons:
-		  <ul>
-			<li class="fragment roll-in">large memory consumption: $O(2^w \times 2^w)$ for GF($2^w$).</li>
-			<li class="fragment roll-in">redundancies in the table: a waste of space<br>e.g. gf256_mul_table[a][b] = gf256_mul_table[b][a]</li>
-		  </ul>
-		  </li>
-		</ul>				
-	  </section>
-	  <section>
-		<h5>"Double Table"/"Left-Right Table" Method</h5>
-		<p>
-		Based on the following observation:
-		</p>
-		<small>
-		  \begin{align}
-		  a(x) \times b(x) &= (a_{0} + a_{1}x + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
-		  &= (a_{0} + a_{1}x + ... + a_{w/2-1}x^{w/2-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
-		  &+ (a_{w/2}x^{w/2}  + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1})
-		  \end{align}
-		</small>
-		<p><small>Note: add operations in Galois Field are equivalent to XOR.</small></p>
-		<p class="fragment">
-		Split the full multiplication table into two smaller tables containing the product for the MSB part and the LSB one.
-		</p>
-	  </section>
-	  <section>
-		<!-- <h2>Example Implementation of Multiplication Using the "Double Table"/"Left-Right Table" Method</h2> -->
-		<h5>"Double Table"/"Left-Right Table" Method</h5>
-		<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the double table method:</small>
-		<pre><code class="cpp" data-trim contenteditable>
+								</code></pre>
+								<ul>
+										<li class="fragment roll-in">Pros: least computation operations: only one table-lookup.</li>
+										<li class="fragment roll-in">Cons:
+										<ul>
+												<li class="fragment roll-in">large memory consumption: $O(2^w \times 2^w)$ for GF($2^w$).</li>
+												<li class="fragment roll-in">redundancies in the table: a waste of space<br>e.g. gf256_mul_table[a][b] = gf256_mul_table[b][a]</li>
+										</ul>
+										</li>
+								</ul>				
+						</section>
+						<section>
+								<h5>"Double Table"/"Left-Right Table" Method</h5>
+								<p>
+								Based on the following observation:
+								</p>
+								<small>
+										\begin{align}
+										a(x) \times b(x) &= (a_{0} + a_{1}x + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
+										&= (a_{0} + a_{1}x + ... + a_{w/2-1}x^{w/2-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1}) \\
+										&+ (a_{w/2}x^{w/2}  + ... + a_{w-1}x^{w-1}) \times (b_{0} + b_{1}x + ... + b_{w-1}x^{w-1})
+										\end{align}
+								</small>
+								<p><small>Note: add operations in Galois Field are equivalent to XOR.</small></p>
+								<p class="fragment">
+								Split the full multiplication table into two smaller tables containing the product for the MSB part and the LSB one.
+								</p>
+						</section>
+						<section>
+								<!-- <h2>Example Implementation of Multiplication Using the "Double Table"/"Left-Right Table" Method</h2> -->
+								<h5>"Double Table"/"Left-Right Table" Method</h5>
+								<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the double table method:</small>
+								<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_left_table[16][256];
 uint8_t gf256_right_table[16][256];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
   return gf256_left_table[(a >> 4) & 0x0f][b] ^ gf256_left_table[a & 0x0f][b];
 }
-		</code></pre>
-		<ul>
-		  <li class="fragment roll-in">Space complexity: $O(2^{3w/2+1})$ for GF($2^w$).</li>
-		  <li class="fragment roll-in">Computation complexity: 2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT operations.</li>
-		</ul>				
-	  </section>
-	  <section>
-		<h5>Log&Exp Table Method</h5>
-		<p align="left">
-		Basis: every non-zero element can be represented as a power to a primitive element $\alpha$.
-		</p>
-		<p class="fragment" align="left">
-		Assume that $a = \alpha^i$ and $b = \alpha^j$ are two non-zero elements in GF($2^w$), then their product $ab = \alpha^{i + j}$.
-		</p>
-		<p class="fragment" align="left">
-		For any primitive element $\alpha$: $\alpha^{2^w - 1} = 1$.
-		<br>
-		Thus, we have:
-		\begin{align}
-		ab &= \alpha^{(i + j) \% (2^w - 1)} \\
-		&= \alpha^{(log_{\alpha}a + log_{\alpha}b) \% (2^w - 1)}
-		\end{align}
-		</p>
-		<!--
+								</code></pre>
+								<ul>
+										<li class="fragment roll-in">Space complexity: $O(2^{3w/2+1})$ for GF($2^w$).</li>
+										<li class="fragment roll-in">Computation complexity: 2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT operations.</li>
+								</ul>				
+						</section>
+						<section>
+								<h5>Log&Exp Table Method</h5>
+								<p align="left">
+								Basis: every non-zero element can be represented as a power to a primitive element $\alpha$.
+								</p>
+								<p class="fragment" align="left">
+								Assume that $a = \alpha^i$ and $b = \alpha^j$ are two non-zero elements in GF($2^w$), then their product $ab = \alpha^{i + j}$.
+								</p>
+								<p class="fragment" align="left">
+								For any primitive element $\alpha$: $\alpha^{2^w - 1} = 1$.
+								<br>
+								Thus, we have:
+								\begin{align}
+								ab &= \alpha^{(i + j) \% (2^w - 1)} \\
+								&= \alpha^{(log_{\alpha}a + log_{\alpha}b) \% (2^w - 1)}
+								\end{align}
+								</p>
+								<!--
 						<p>
 						Every element in a finite field can be represented uniquely by a power of a primitive element $\alpha$, except for 0.
 						<br>Observation: $a \times b = exp(log(a) + log(b))$
 						</p>
 						-->
-	  </section>
-	  <section>
-		<h5>Log&Exp Table Method</h5>
-		<p>
-		Construct two tables:
-		</p>
-		<ul>
-		  <li>
-		  exponential table: maps from a binary element $b$ to power $j$ such that $\alpha^j$ is equivalent to $b$.
-		  </li>
-		  <li>
-		  logarithm table: maps from a power $j$ to its binary element $b$ such that $\alpha^j$ is equivalent to $b$.
-		  </li>
-		</ul>
-		<p class="fragment">
-		Multiplication in GF($2^w$) consists of: 
-		</p>
-		<ul>
-		  <li class="fragment">
-		  looking each binary number in the logarithm table for its logarithm 
-		  </li>
-		  <li class="fragment">
-		  adding the logarithms modulo $2^w-1$ 
-		  </li>
-		  <li class="fragment">
-		  looking up the exponential table to convert the result back to a binary number.
-		  </li>
-		</ul>
-	  </section>
-	  <section>
-		<h5>Log&Exp Table Method</h5>
-		<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the log&exp table method:</small>
-		<pre><code class="cpp" data-trim contenteditable>
+						</section>
+						<section>
+								<h5>Log&Exp Table Method</h5>
+								<p>
+								Construct two tables:
+								</p>
+								<ul>
+										<li>
+										exponential table: maps from a binary element $b$ to power $j$ such that $\alpha^j$ is equivalent to $b$.
+										</li>
+										<li>
+										logarithm table: maps from a power $j$ to its binary element $b$ such that $\alpha^j$ is equivalent to $b$.
+										</li>
+								</ul>
+								<p class="fragment">
+								Multiplication in GF($2^w$) consists of: 
+								</p>
+								<ul>
+										<li class="fragment">
+										looking each binary number in the logarithm table for its logarithm 
+										</li>
+										<li class="fragment">
+										adding the logarithms modulo $2^w-1$ 
+										</li>
+										<li class="fragment">
+										looking up the exponential table to convert the result back to a binary number.
+										</li>
+								</ul>
+						</section>
+						<section>
+								<h5>Log&Exp Table Method</h5>
+								<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the log&exp table method:</small>
+								<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_log_table[256];
 uint8_t gf256_exp_table[255];
 // width of GF(2^8)
@@ -790,67 +790,67 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   + gf256_log_table[b]) % (NW-1);
   return gf256_exp_table[result];
 }
-		</code></pre>
-		<ul>
-		  <li class="fragment roll-in">Space complexity: $O( 2^{w+1} )$ for GF($2^w$).</li>
-		  <li class="fragment roll-in">Computation complexity: 3 table-lookup, 1 MOD, 1 ADD, and 2 branch operations.</li>
-		</ul>				
-	  </section>
-	  <section>
-		<h4>Choice for GPU Implementation</h4>
-		<p>
-		Criteria: to avoid high latency of off-chip memory access, the tables are expected to fit into the cache or on-chip memory (the so-called "shared memory" in GPU).
-		</p>
-		<p class="fragment">
-		memory space of tables for multiplication over GF($2^8$):
-		</p>
-		<ul>
-		  <li class="fragment roll-in">Full table: 64 KB → exceed cache limit</li>
-		  <li class="fragment roll-in">"double tables": 8 KB → low GPU occupancy → performance degradation
-		  <small>occupancy: the ratio of the number of active warps per multiprocessor to the maximum number of possible active warps</small>
-		  </li>
-		  <li class="fragment roll-in">log&exp tables: 512 Bytes <p class="fragment">→ used in our GPU implementation</p></li>
-		</ul>				
-	  </section>
-	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-	  </section>
-	  <section>
-		<h4>Log&Exp Table Method - Improvement I</h4>
-		<p>
-		Replace slow MOD operation with more efficient operations.
-		</p>
-		<p class="fragment">
-		Observation: 
-		Let $Q = 2^w$, then $log(a), log(b) \in [0,Q-1]$.
-		Therefore: $(log(a)+log(b)) \in [0, 2Q -2]$
-		<!--Therefore: $(log(a)+log(b)) \in [0, 2^{w+1}-2]$-->
-		</p>
-		<p class="fragment">
-		<small>
-		  \begin{equation*}
-		  (log(a) + log(b)) \% Q = \left\{
-		  \begin{array}{ll}
-		  0 & \textrm{if } (log(a) + log(b)) = Q \\
-		  (log(a) + log(b)) \& Q + (log(a) + log(b)) >> w & \textrm{otherwises}
-		  \end{array} \right.
-		  \end{equation*}
-		</small>
-		</p>
-		<p class="fragment">
-		We can extend the exponential table to make sure $exp[Q] = 0$.
-		After augmenting the exponential table, the modular operation can be simply the following equation:
-		<small>
-		  \begin{equation*}
-		  (log(a) + log(b)) \% Q = (log(a) + log(b)) \& Q + (log(a) + log(b)) >> w
-		  \end{equation*}
-		</small>
-		</p>
-	  </section>
-	  <section>
-		<h4>Log&Exp Table Method - Improvement I</h4>
-		<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement I approach:</small>
-		<pre><code class="cpp" data-trim contenteditable>
+								</code></pre>
+								<ul>
+										<li class="fragment roll-in">Space complexity: $O( 2^{w+1} )$ for GF($2^w$).</li>
+										<li class="fragment roll-in">Computation complexity: 3 table-lookup, 1 MOD, 1 ADD, and 2 branch operations.</li>
+								</ul>				
+						</section>
+						<section>
+								<h4>Choice for GPU Implementation</h4>
+								<p>
+								Criteria: to avoid high latency of off-chip memory access, the tables are expected to fit into the cache or on-chip memory (the so-called "shared memory" in GPU).
+								</p>
+								<p class="fragment">
+								memory space of tables for multiplication over GF($2^8$):
+								</p>
+								<ul>
+										<li class="fragment roll-in">Full table: 64 KB → exceed cache limit</li>
+										<li class="fragment roll-in">"double tables": 8 KB → low GPU occupancy → performance degradation
+										<small>occupancy: the ratio of the number of active warps per multiprocessor to the maximum number of possible active warps</small>
+										</li>
+										<li class="fragment roll-in">log&exp tables: 512 Bytes <p class="fragment">→ used in our GPU implementation</p></li>
+								</ul>				
+						</section>
+						<section>
+								<h3>Further Improvement of the Log&exp Table-based Method</h3>
+						</section>
+						<section>
+								<h4>Log&Exp Table Method - Improvement I</h4>
+								<p>
+								Replace slow MOD operation with more efficient operations.
+								</p>
+								<p class="fragment">
+								Observation: 
+								Let $Q = 2^w$, then $log(a), log(b) \in [0,Q-1]$.
+								Therefore: $(log(a)+log(b)) \in [0, 2Q -2]$
+								<!--Therefore: $(log(a)+log(b)) \in [0, 2^{w+1}-2]$-->
+								</p>
+								<p class="fragment">
+								<small>
+										\begin{equation*}
+										(log(a) + log(b)) \% Q = \left\{
+										\begin{array}{ll}
+										0 & \textrm{if } (log(a) + log(b)) = Q \\
+										(log(a) + log(b)) \& Q + (log(a) + log(b)) >> w & \textrm{otherwises}
+										\end{array} \right.
+										\end{equation*}
+								</small>
+								</p>
+								<p class="fragment">
+								We can extend the exponential table to make sure $exp[Q] = 0$.
+								After augmenting the exponential table, the modular operation can be simply the following equation:
+								<small>
+										\begin{equation*}
+										(log(a) + log(b)) \% Q = (log(a) + log(b)) \& Q + (log(a) + log(b)) >> w
+										\end{equation*}
+								</small>
+								</p>
+						</section>
+						<section>
+								<h4>Log&Exp Table Method - Improvement I</h4>
+								<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement I approach:</small>
+								<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_log_table[256];
 uint8_t gf256_exp_table[256];
 // width of GF(2^8)
@@ -868,26 +868,26 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   + (gf256_log_table[a] + gf256_log_table[b]) >> width;
   return gf256_exp_table[result];
 }
-		</code></pre>
-	  </section>
-	  <section>
-		<h4>Log&Exp Table Method - Improvement II</h4>
-		<p align="left">
-		Remove the slow modular operation by augmenting the exponential table (adopted by Jerasure as the LOGS policy).
-		</p>
-		<p class="fragment" align="left">
-		insert $Q - 2$ more elements in the exponential table apart from $exp[Q] = 0$:
-		$exp[i] = exp[i \% Q] (i \in [Q, 2Q-2])$
-		</p>
-		<!--
+								</code></pre>
+						</section>
+						<section>
+								<h4>Log&Exp Table Method - Improvement II</h4>
+								<p align="left">
+								Remove the slow modular operation by augmenting the exponential table (adopted by Jerasure as the LOGS policy).
+								</p>
+								<p class="fragment" align="left">
+								insert $Q - 2$ more elements in the exponential table apart from $exp[Q] = 0$:
+								$exp[i] = exp[i \% Q] (i \in [Q, 2Q-2])$
+								</p>
+								<!--
 						<p>
 						This improved method is adopted by Jerasure as the LOGS multiplication policy.
 						</p>
 						-->
-		<p class="fragment">
-		<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement II approach:</small>
-		</p>
-		<pre class="fragment"><code class="cpp" data-trim contenteditable>
+								<p class="fragment">
+								<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement II approach:</small>
+								</p>
+								<pre class="fragment"><code class="cpp" data-trim contenteditable>
 uint8_t gf256_log_table[256];
 uint8_t gf256_exp_table[509];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
@@ -900,39 +900,39 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   result = (gf256_log_table[a] + gf256_log_table[b]);
   return gf256_exp_table[result];
 }
-		</code></pre>
-	  </section>
-	  <section>
-		<h4>Log&Exp Table Method - Improvement III</h4>
-		<p>
-		Further eliminates the conditional branch by augmenting both the exponential table and the logarithm tables.
-		</p>
-		<!--Remove expensive MOD and branch operations by extending the exponential and logarithm tables.-->
-		<p class="fragment">
-		Let $Q = 2^w$, $\alpha$ be a primitive element, then
-		<br>
-		\begin{equation*}
-		exp[i] = \left\{
-		\begin{array}{ll}
-		\alpha^{i} & \textrm{if } i \in [0, Q-1] \\
-		exp[i \% Q] & \textrm{if } i \in [Q, 2Q-1] \\
-		0 & \textrm{if } i \in [2Q, 4Q]
-		\end{array} \right.
-		\end{equation*}
-		<br>
-		\begin{equation*}
-		log[x] = \left\{
-		\begin{array}{ll}
-		2Q & \textrm{if } x = 0 \\
-		i & \textrm{if } x \in [1, Q], x = \alpha^{i}
-		\end{array} \right.
-		\end{equation*}
-		</p>
-	  </section>
-	  <section>
-		<h4>Log&Exp Table Method - Improvement III</h4>
-		<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement III approach:</small>
-		<pre><code class="cpp" data-trim contenteditable>
+								</code></pre>
+						</section>
+						<section>
+								<h4>Log&Exp Table Method - Improvement III</h4>
+								<p>
+								Further eliminates the conditional branch by augmenting both the exponential table and the logarithm tables.
+								</p>
+								<!--Remove expensive MOD and branch operations by extending the exponential and logarithm tables.-->
+								<p class="fragment">
+								Let $Q = 2^w$, $\alpha$ be a primitive element, then
+								<br>
+								\begin{equation*}
+								exp[i] = \left\{
+								\begin{array}{ll}
+								\alpha^{i} & \textrm{if } i \in [0, Q-1] \\
+								exp[i \% Q] & \textrm{if } i \in [Q, 2Q-1] \\
+								0 & \textrm{if } i \in [2Q, 4Q]
+								\end{array} \right.
+								\end{equation*}
+								<br>
+								\begin{equation*}
+								log[x] = \left\{
+								\begin{array}{ll}
+								2Q & \textrm{if } x = 0 \\
+								i & \textrm{if } x \in [1, Q], x = \alpha^{i}
+								\end{array} \right.
+								\end{equation*}
+								</p>
+						</section>
+						<section>
+								<h4>Log&Exp Table Method - Improvement III</h4>
+								<small>example implementation to multiply $a$ and $b$ in GF($2^8$) using the Improvement III approach:</small>
+								<pre><code class="cpp" data-trim contenteditable>
 uint16_t gf256_log_table[256];
 uint8_t gf256_exp_table[1021];
 uint8_t gf256_mul(uint8_t a, uint8_t b)
@@ -941,35 +941,35 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   result = (gf256_log_table[a] + gf256_log_table[b]);
   return gf256_exp_table[result];
 }
-		</code></pre>
-	  </section>
-	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-		<p>
-		In GPU implementation, where to store the log and exp tables and how to initialize them will affect the performance.
-		</p>
-		<p class="fragment">
-		Appropriate GPU memory:
-		</p>
-		<ul class="fragment">
-		  <li>constant memory: off-chip memory whose accesses are usually cached in the constant cache</li>
-		  <li>shared memory: on-chip memory which has the smallest access latency except the register file</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-		<p>
-		What we have implemented:
-		</p>
-		<ul class="fragment">
-		  <li>Store two tables in the constant memory and initialize them at compile time.</li>
-		  <li>Store two tables in the shared memory and run-time initialize them serially at the beginning of each kernel function.</li>
-		  <li>Store two tables in the off-chip memory and then load into the shared memory parallely at the beginning of each kernel function.</li>
-		</ul>
-	  </section>
-	</section>
+								</code></pre>
+						</section>
+						<section>
+								<h3>Further Improvement of the Log&exp Table-based Method</h3>
+								<p>
+								In GPU implementation, where to store the log and exp tables and how to initialize them will affect the performance.
+								</p>
+								<p class="fragment">
+								Appropriate GPU memory:
+								</p>
+								<ul class="fragment">
+										<li>constant memory: off-chip memory whose accesses are usually cached in the constant cache</li>
+										<li>shared memory: on-chip memory which has the smallest access latency except the register file</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Further Improvement of the Log&exp Table-based Method</h3>
+								<p>
+								What we have implemented:
+								</p>
+								<ul class="fragment">
+										<li>Store two tables in the constant memory and initialize them at compile time.</li>
+										<li>Store two tables in the shared memory and run-time initialize them serially at the beginning of each kernel function.</li>
+										<li>Store two tables in the off-chip memory and then load into the shared memory parallely at the beginning of each kernel function.</li>
+								</ul>
+						</section>
+				</section>
 
-	<!--
+				<!--
 				<section>
 					<section>
 						<h2>Accelerate Encoding Matrix Generation</h2>
@@ -981,162 +981,162 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 				</section>
 				-->
 
-	<section>
-	  <section>
-		<h2>Accelerate Encoding/Decoding (Matrix Multiplication over Galois Field)</h2>
-		<!--
+				<section>
+						<section>
+								<h2>Accelerate Encoding/Decoding (Matrix Multiplication over Galois Field)</h2>
+								<!--
 						<p>
 Tile algorithm is used to
 improve the temporary locality and reduce cache misses when an array is accessed in a row major order and in a column major order at the same time.
 						</p>
 						-->
-	  </section>
-	  <section>
-		<h3>Naive Implementation</h3>
-		<!--<h2>Accelerate Matrix Multiplication</h2>-->
-		<!--<h2>Accelerate Matrix Multiplication over Galois Field</h2>-->
-		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
-	  </section>
-	  <section>
-		<h3>Tiling Algorithm</h3>
-		<!--<h2>Accelerate Matrix Multiplication</h2>-->
-		<!--<h2>Accelerate Matrix Multiplication over Galois Field</h2>-->
-		<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
-	  </section>
-	  <section>
-		<h3>Further Improvement of Tiling Algorithm</h3>
-		<!-- <h2>Accelerate Matrix Multiplication</h2> -->
-		<!-- <h2>Accelerate Matrix Multiplication over Galois Field</h2> -->
-		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
-	  </section>
-	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<ul>
-		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile</li>
-		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
-		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<h4>Strategy 1</h4>
-		<ul>
-		  <li class="fragment">Assume that achieving the highest computation/memory ratio of the kernel is the best.</li>
-		  <li class="fragment">Set: $\textrm{tileWidthRow} = \textrm{tileWidthCol}$</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<h4>Strategy 2</h4>
-		<ul>
-		  <li class="fragment">Assume that loading the entire encoding matrix (i.e. matrix $A$) into the shared memory is the best.</li>
-		  <li class="fragment">Set: $\textrm{tileWidthRow} = n - k$</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<h4>Strategy 3</h4>
-		<ul>
-		  <li class="fragment">Assume that the most balanced tiling division of the matrix $A$ and $B$ is the best.</li>
-		  <li class="fragment">Set: 
-		  $$
-		  \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
-		  $$
-		  </li>
-		</ul>
-	  </section>
-	</section>
+						</section>
+						<section>
+								<h3>Naive Implementation</h3>
+								<!--<h2>Accelerate Matrix Multiplication</h2>-->
+								<!--<h2>Accelerate Matrix Multiplication over Galois Field</h2>-->
+								<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
+						</section>
+						<section>
+								<h3>Tiling Algorithm</h3>
+								<!--<h2>Accelerate Matrix Multiplication</h2>-->
+								<!--<h2>Accelerate Matrix Multiplication over Galois Field</h2>-->
+								<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
+						</section>
+						<section>
+								<h3>Further Improvement of Tiling Algorithm</h3>
+								<!-- <h2>Accelerate Matrix Multiplication</h2> -->
+								<!-- <h2>Accelerate Matrix Multiplication over Galois Field</h2> -->
+								<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
+						</section>
+						<section>
+								<h3>How to Determine the Parameter of Tiles</h3>
+								<ul>
+										<li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile</li>
+										<li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
+										<li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
+								</ul>
+						</section>
+						<section>
+								<h3>How to Determine the Parameter of Tiles</h3>
+								<h4>Strategy 1</h4>
+								<ul>
+										<li class="fragment">Assume that achieving the highest computation/memory ratio of the kernel is the best.</li>
+										<li class="fragment">Set: $\textrm{tileWidthRow} = \textrm{tileWidthCol}$</li>
+								</ul>
+						</section>
+						<section>
+								<h3>How to Determine the Parameter of Tiles</h3>
+								<h4>Strategy 2</h4>
+								<ul>
+										<li class="fragment">Assume that loading the entire encoding matrix (i.e. matrix $A$) into the shared memory is the best.</li>
+										<li class="fragment">Set: $\textrm{tileWidthRow} = n - k$</li>
+								</ul>
+						</section>
+						<section>
+								<h3>How to Determine the Parameter of Tiles</h3>
+								<h4>Strategy 3</h4>
+								<ul>
+										<li class="fragment">Assume that the most balanced tiling division of the matrix $A$ and $B$ is the best.</li>
+										<li class="fragment">Set: 
+										$$
+										\dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
+										$$
+										</li>
+								</ul>
+						</section>
+				</section>
 
-	<section>
-	  <section>
-		<h2>Accelerate Decoding Matrix Generation (Matrix Inversion)</h2>
-		<p>
-		After knowing which $k$ chunks are used for decoding, we know the corresponding rows of coefficients in the encoding matrix $V$ . These rows form the $k \times k$ matrix $V′$ , and we need to compute its inverse. 
-		</p>
-		<p>
-		We use Gauss elimination to compute inverse matrix: augment the square matrix $V′$
-		with the identity matrix $I$ of the same dimensions to obtain $[V′ | I]$ and then
-		apply matrix operations to transfer $[V′ | I]$ into its reduced row echelon form:
-		$V′^{−1} [V′ | I] = [I | V′^{−1}]$.
-		</p>
-	  </section>
-	  <section>
-		<h2>Accelerate Decoding Matrix Generation</h2>
-		<p>
-		Gauss elimination contains the following steps:
-		</p>
-		<ol>
-		  <li>
-		  Check whether the diagonal item in the current row of $V$ is nonzero. If it is zero, find a nonzero item and switch the two columns. The same column switching should also apply to $I$. Then the diagonal item in the current row of $V′$ is our pivot.
-		  </li>
-		  <li>
-		  Normalize the current row by the pivot.
-		  </li>
-		  <li>
-		  Eliminate other rows so that the reverse column of the current row becomes reduced echelon form.
-		  </li>
-		</ol>
-		<p>
-		Step 2 and Step 3 are suitable to be parallelized, but since we have
-		to set barriers between steps, Gauss elimination is still not a fully-paralleled
-		algorithm. CPU-GPU corporation may be an appropriate solution.
-		</p>
-	  </section>
-	</section>
+				<section>
+						<section>
+								<h2>Accelerate Decoding Matrix Generation (Matrix Inversion)</h2>
+								<p>
+								After knowing which $k$ chunks are used for decoding, we know the corresponding rows of coefficients in the encoding matrix $V$ . These rows form the $k \times k$ matrix $V′$ , and we need to compute its inverse. 
+								</p>
+								<p>
+								We use Gauss elimination to compute inverse matrix: augment the square matrix $V′$
+								with the identity matrix $I$ of the same dimensions to obtain $[V′ | I]$ and then
+								apply matrix operations to transfer $[V′ | I]$ into its reduced row echelon form:
+								$V′^{−1} [V′ | I] = [I | V′^{−1}]$.
+								</p>
+						</section>
+						<section>
+								<h2>Accelerate Decoding Matrix Generation</h2>
+								<p>
+								Gauss elimination contains the following steps:
+								</p>
+								<ol>
+										<li>
+										Check whether the diagonal item in the current row of $V$ is nonzero. If it is zero, find a nonzero item and switch the two columns. The same column switching should also apply to $I$. Then the diagonal item in the current row of $V′$ is our pivot.
+										</li>
+										<li>
+										Normalize the current row by the pivot.
+										</li>
+										<li>
+										Eliminate other rows so that the reverse column of the current row becomes reduced echelon form.
+										</li>
+								</ol>
+								<p>
+								Step 2 and Step 3 are suitable to be parallelized, but since we have
+								to set barriers between steps, Gauss elimination is still not a fully-paralleled
+								algorithm. CPU-GPU corporation may be an appropriate solution.
+								</p>
+						</section>
+				</section>
 
-	<section>
-	  <section>
-		<h2>Reduce Data Transfer Overhead</h2>
-	  </section>
-	  <section>
-		<h2>Reduce Data Transfer Overhead</h2>
-		<ul>
-		  <li>Using Pinned Host Memory</li>
-		  <li>Using CUDA Streams</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Using Pinned Host Memory</h3>
-		<p>
-		By default, the host data is allocated as <font color="#ff0000">pageable</font> 
-		</p>
-		<p class="fragment">
-		→ can be swapped out to disk and change the mapping from virtual address to physical address 
-		</p>
-		<p class="fragment">
-		→ unavailable for the device to access directly.
-		</p>
-	  </section>
-	  <section>
-		<h3>Pageable Host Memory</h3>
-		<p><small>simplified procedure of H2D data transfer using pageable memory</small></p>
-		<img src="./images/dot-graph/pageableDataTransfer.png" alt="pageable data transfer">
-		<ul>
-		  <li>extra works for the host: allocation and release of staging buffers and the memory copy from pageable memory to staging buffers.</li>
-		  <li>the PCI-E bus connecting the host and the device is not fully utilized.</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Pinned Host Memory</h3>
-		<p align="left">
-		<font color="#ff0000">pinned</font> memory is page-locked: its physical address is marked as ineligible for eviction and cannot be changed by the operating system.
-		</p>
-		<p><small>simplified procedure of H2D data transfer using pageable memory</small></p>
-		<img src="./images/dot-graph/pinnedDataTransfer.png" alt="pinned data transfer">
-		<ul>
-		  <li class="fragment">Pros: The DMA can fetch pinned memory without the involvement of the CPU and achieve higher throughput than accessing pageable memory.</li>
-		  <li class="fragment">Cons: Pinned memory is scarce and costs more time for allocation and deallocation.</li>
-		</ul>
-	  </section>
-	  <section>
-		<h3>Using CUDA Streams</h3>
-		<p>
-		CUDA streams are used for further overlapping data transfers with computation.
-		</p>
-		<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
-		<br> Sequential vs. Concurrent copy and execute
-	  </section>
-	  <!--
+				<section>
+						<section>
+								<h2>Reduce Data Transfer Overhead</h2>
+						</section>
+						<section>
+								<h2>Reduce Data Transfer Overhead</h2>
+								<ul>
+										<li>Using Pinned Host Memory</li>
+										<li>Using CUDA Streams</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Using Pinned Host Memory</h3>
+								<p>
+								By default, the host data is allocated as <font color="#ff0000">pageable</font> 
+								</p>
+								<p class="fragment">
+								→ can be swapped out to disk and change the mapping from virtual address to physical address 
+								</p>
+								<p class="fragment">
+								→ unavailable for the device to access directly.
+								</p>
+						</section>
+						<section>
+								<h3>Pageable Host Memory</h3>
+								<p><small>simplified procedure of H2D data transfer using pageable memory</small></p>
+								<img src="./images/dot-graph/pageableDataTransfer.png" alt="pageable data transfer">
+								<ul>
+										<li>extra works for the host: allocation and release of staging buffers and the memory copy from pageable memory to staging buffers.</li>
+										<li>the PCI-E bus connecting the host and the device is not fully utilized.</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Pinned Host Memory</h3>
+								<p align="left">
+								<font color="#ff0000">pinned</font> memory is page-locked: its physical address is marked as ineligible for eviction and cannot be changed by the operating system.
+								</p>
+								<p><small>simplified procedure of H2D data transfer using pageable memory</small></p>
+								<img src="./images/dot-graph/pinnedDataTransfer.png" alt="pinned data transfer">
+								<ul>
+										<li class="fragment">Pros: The DMA can fetch pinned memory without the involvement of the CPU and achieve higher throughput than accessing pageable memory.</li>
+										<li class="fragment">Cons: Pinned memory is scarce and costs more time for allocation and deallocation.</li>
+								</ul>
+						</section>
+						<section>
+								<h3>Using CUDA Streams</h3>
+								<p>
+								CUDA streams are used for further overlapping data transfers with computation.
+								</p>
+								<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
+								<br> Sequential vs. Concurrent copy and execute
+						</section>
+						<!--
 					<section>
 						<h2>Reduce CPU-GPU Communication Overhead</h2>
 						<p>
@@ -1144,246 +1144,246 @@ improve the temporary locality and reduce cache misses when an array is accessed
 						</p>
 					</section>
 					-->
-	</section>
+				</section>
 
-	<section>
-	  <section>
-		<h2>Experiment</h2>
-	  </section>
-	  <section>
-		<h3>Experiment Setup</h3>
-	  </section>
-	  <section>
-		<h3>Experiment Setup</h3>
-		<ul>
-		  <li>
-		  CentOS-6 with 2.6.32 Linux kernel.
-		  </li>
-		  <ul>
-			<li>Intel Xeon Processor E5-2670 v2 x 2
-			<ul>
-			  <li>10 cores</li>
-			  <li>2.5 GHz</li>
-			</ul>
-			</li>
-			<li>NVIDIA Tesla K20X GPU x 2
-			<ul>
-			  <li>2688 CUDA cores</li>
-			  <li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
-			  <li>maximum size of GPU GDDR5 memory: 6 GB</li>
-			  <li>theoretical memory bandwidth 243 GB/s</li>
-			  <li>two copy engines → supports concurrent data copy and kernel execution</li>
-			</ul>
-			</li>
-			<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Experiment Setup</h3>
-		  <ul>
-			<li>Input files are randomly generated.</li>
-			<li>Most of our experimental results reflect the average of 100 runs.</li>
-			<li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Evaluation Metrics</h3>
-		  <ul>
-			<li>Execution time for a single kernel or memory transaction</li>
-			<li>Effective bandwidth</li>
-			<li>Total GPU encoding time</li>
-			<li>Total GPU decoding time</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Evaluation Metrics</h3>
-		  <h4>Execution time for a single kernel or memory transaction</h4>
-		  <p>
-		  measured by recording two CUDA events at the beginning and the end of the kernel and calculating their elapsed time.
-		  </p>
-		</section>
-		<section>
-		  <h3>Evaluation Metrics</h3>
-		  <h4>Effective bandwidth</h4>
-		  <p>
-		  defined as the ratio of the number of bytes read or written by the kernel and the execution time of the kernel. 
-		  </p>
-		  <p>
-		  Assume that $CS$ is the chunk size, and $t$ is the kernel execution time, then:
-		  </p>
-		  <ul>
-			<li>the effective bandwidth of the encoding kernel is: $CS \cdot n / t$.</li>
-			<li>the effective bandwidth of the decoding kernel is: $CS \cdot 2k / t$.</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Evaluation Metrics</h3>
-		  <h4>Total GPU encoding time</h4>
-		  including the execution time of the following processes:
-		  <ul>
-			<li>
-			Copy data chunks from CPU to GPU
-			</li>
-			<li>
-			Generating encoding matrix
-			</li>
-			<li>
-			Copy encoding matrix from GPU to CPU
-			</li>
-			<li>
-			Encoding file
-			</li>
-			<li>
-			Copy code chunks from GPU to CPU
-			</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Evaluation Metrics</h3>
-		  <h4>Total GPU decoding time</h4>
-		  <ul>
-			<li>
-			Copy code chunks from CPU to GPU
-			</li>
-			<li>
-			Copy decoding matrix from CPU to GPU
-			</li>
-			<li>
-			Decoding file
-			</li>
-			<li>
-			Copy data chunks from GPU to CPU
-			</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <p>
-		  We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
-		  </p>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>GPU vs. CPU</h4>
-		  <ul>
-			<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
-			<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Accelerating Operations in Galois Field</h3>
-		</section>
-		<section>
-		  <h4>GPU Implementation: Loop-based or Table-based?</h4>
-		  <img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
-		</section>
-		<section>
-		  <h4>Further Improvement of the Log&exp Table-based Method</h4>
-		  <p>
-		  encoding a 1GB file with $k = 4$ and $n = 6$.
-		  </p>
-		  <img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="60%" height="60%" alt="Log&exp improvement techniques">
-		</section>
-		<section>
-		  <h3>Accelerating Matrix Multiplication over Galois Field</h3>
-		  <p>
-		  use the following ten testcases:
-		  </p>
-		  <ul>
-			<li>
-			$k = 4$, $n = 6$, chunk size = 256 MB
-			</li>
-			<li>
-			$k = 32$, $n = 64$, chunk size = 16 MB
-			</li>
-			<li>
-			$k = 4$, $n = 132$, chunk size = 3968 Bytes
-			</li>
-			<li>
-			$k = 8$, $n = 10$, chunk size = 64 MB
-			</li>
-			<li>
-			$k = 16$, $n = 18$, chunk size = 16 MB
-			</li>
-			<li>
-			$k = 128$, $n = 130$, chunk size = 2 KB
-			</li>
-			<li>
-			$k = 32$, $n = 34$, chunk size = 8 MB
-			</li>
-			<li>
-			$k = 2$, $n = 4$, chunk size = 4 MB
-			</li>
-			<li>
-			$k = 2$, $n = 4$, chunk size = 1 KB
-			</li>
-			<li>
-			$k = 16$, $n = 20$, chunk size = 16 MB
-			</li>
-		  </ul>
-		</section>
-		<section>
-		  <h3>Accelerating Matrix Multiplication over Galois Field</h3>
-		  <img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
-		</section>
-		<section>
-		  <h3>Reducing Communication Overhead</h3>
-		</section>
-		<section>
-		  <h4>Using Pinned Host Memory</h4>
-		  <ul>
-			<li><b>BandwidthTest</b> from the CUDA official SDK samples:</li>
-		  </ul>
-		  <table class="fragment">
-			<tr>
-			  <td></td>
-			  <td>H2D bandwidth (MB/s)</td>
-			  <td>D2H bandwidth (MB/s)</td>
-			</tr>
-			<tr>
-			  <td>pageable host memory</td>
-			  <td>1440.6</td>
-			  <td>2339.7</td>
-			</tr>
-			<tr>
-			  <td>pinned host memory</td>
-			  <td>5888.6</td>
-			  <td>6394.5</td>
-			</tr>
-		  </table>
-		</section>
-		<section>
-		  <h4>Using Pinned Host Memory</h4>
-		  <ul>
-			<li>Real case for Reed-Solomon Codes: encode a 1000 MB file with $k = 4, n = 6$.</li>
-		  </ul>
-		  <img src="./images/exp/pageable vs. pinned/comm-comp.png" width="60%" height="60%" alt="pageable vs. pinned">
-		</section>
-		<section>
-		  <h4>Using CUDA Streams</h4>
-		  <p>
-		  encoding under $k = 4, n = 6$ settings.
-		  </p>
-		  <p>
-		  The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
-		  </p>
-		  <img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
-		</section>
-		<section>
-		  <h4>Using CUDA Streams</h4>
-		  <p>
-		  encoding a 2000 MB file under $k = 4, n = 6$ settings.
-		  </p>
-		  <img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
-		</section>
-	  </section>
+				<section>
+						<section>
+								<h2>Experiment</h2>
+						</section>
+						<section>
+								<h3>Experiment Setup</h3>
+						</section>
+						<section>
+								<h3>Experiment Setup</h3>
+								<ul>
+										<li>
+										CentOS-6 with 2.6.32 Linux kernel.
+										</li>
+										<ul>
+												<li>Intel Xeon Processor E5-2670 v2 x 2
+												<ul>
+														<li>10 cores</li>
+														<li>2.5 GHz</li>
+												</ul>
+												</li>
+												<li>NVIDIA Tesla K20X GPU x 2
+												<ul>
+														<li>2688 CUDA cores</li>
+														<li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
+														<li>maximum size of GPU GDDR5 memory: 6 GB</li>
+														<li>theoretical memory bandwidth 243 GB/s</li>
+														<li>two copy engines → supports concurrent data copy and kernel execution</li>
+												</ul>
+												</li>
+												<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Experiment Setup</h3>
+										<ul>
+												<li>Input files are randomly generated.</li>
+												<li>Most of our experimental results reflect the average of 100 runs.</li>
+												<li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Evaluation Metrics</h3>
+										<ul>
+												<li>Execution time for a single kernel or memory transaction</li>
+												<li>Effective bandwidth</li>
+												<li>Total GPU encoding time</li>
+												<li>Total GPU decoding time</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Evaluation Metrics</h3>
+										<h4>Execution time for a single kernel or memory transaction</h4>
+										<p>
+										measured by recording two CUDA events at the beginning and the end of the kernel and calculating their elapsed time.
+										</p>
+								</section>
+								<section>
+										<h3>Evaluation Metrics</h3>
+										<h4>Effective bandwidth</h4>
+										<p>
+										defined as the ratio of the number of bytes read or written by the kernel and the execution time of the kernel. 
+										</p>
+										<p>
+										Assume that $CS$ is the chunk size, and $t$ is the kernel execution time, then:
+										</p>
+										<ul>
+												<li>the effective bandwidth of the encoding kernel is: $CS \cdot n / t$.</li>
+												<li>the effective bandwidth of the decoding kernel is: $CS \cdot 2k / t$.</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Evaluation Metrics</h3>
+										<h4>Total GPU encoding time</h4>
+										including the execution time of the following processes:
+										<ul>
+												<li>
+												Copy data chunks from CPU to GPU
+												</li>
+												<li>
+												Generating encoding matrix
+												</li>
+												<li>
+												Copy encoding matrix from GPU to CPU
+												</li>
+												<li>
+												Encoding file
+												</li>
+												<li>
+												Copy code chunks from GPU to CPU
+												</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Evaluation Metrics</h3>
+										<h4>Total GPU decoding time</h4>
+										<ul>
+												<li>
+												Copy code chunks from CPU to GPU
+												</li>
+												<li>
+												Copy decoding matrix from CPU to GPU
+												</li>
+												<li>
+												Decoding file
+												</li>
+												<li>
+												Copy data chunks from GPU to CPU
+												</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Overall Performance Evaluation</h3>
+										<p>
+										We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
+										</p>
+								</section>
+								<section>
+										<h3>Overall Performance Evaluation</h3>
+										<h4>Step-by-step Improvement</h4>
+										<img src="./images/exp/step-perf/stepBreakdown.png" width="60%" height="60%" alt="Step-by-step Improvement">
+								</section>
+								<section>
+										<h3>Overall Performance Evaluation</h3>
+										<h4>GPU vs. CPU</h4>
+										<ul>
+												<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
+												<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Accelerating Operations in Galois Field</h3>
+								</section>
+								<section>
+										<h4>GPU Implementation: Loop-based or Table-based?</h4>
+										<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
+								</section>
+								<section>
+										<h4>Further Improvement of the Log&exp Table-based Method</h4>
+										<p>
+										encoding a 1GB file with $k = 4$ and $n = 6$.
+										</p>
+										<img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="60%" height="60%" alt="Log&exp improvement techniques">
+								</section>
+								<section>
+										<h3>Accelerating Matrix Multiplication over Galois Field</h3>
+										<p>
+										use the following ten testcases:
+										</p>
+										<ul>
+												<li>
+												$k = 4$, $n = 6$, chunk size = 256 MB
+												</li>
+												<li>
+												$k = 32$, $n = 64$, chunk size = 16 MB
+												</li>
+												<li>
+												$k = 4$, $n = 132$, chunk size = 3968 Bytes
+												</li>
+												<li>
+												$k = 8$, $n = 10$, chunk size = 64 MB
+												</li>
+												<li>
+												$k = 16$, $n = 18$, chunk size = 16 MB
+												</li>
+												<li>
+												$k = 128$, $n = 130$, chunk size = 2 KB
+												</li>
+												<li>
+												$k = 32$, $n = 34$, chunk size = 8 MB
+												</li>
+												<li>
+												$k = 2$, $n = 4$, chunk size = 4 MB
+												</li>
+												<li>
+												$k = 2$, $n = 4$, chunk size = 1 KB
+												</li>
+												<li>
+												$k = 16$, $n = 20$, chunk size = 16 MB
+												</li>
+										</ul>
+								</section>
+								<section>
+										<h3>Accelerating Matrix Multiplication over Galois Field</h3>
+										<img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
+								</section>
+								<section>
+										<h3>Reducing Communication Overhead</h3>
+								</section>
+								<section>
+										<h4>Using Pinned Host Memory</h4>
+										<ul>
+												<li><b>BandwidthTest</b> from the CUDA official SDK samples:</li>
+										</ul>
+										<table class="fragment">
+												<tr>
+														<td></td>
+														<td>H2D bandwidth (MB/s)</td>
+														<td>D2H bandwidth (MB/s)</td>
+												</tr>
+												<tr>
+														<td>pageable host memory</td>
+														<td>1440.6</td>
+														<td>2339.7</td>
+												</tr>
+												<tr>
+														<td>pinned host memory</td>
+														<td>5888.6</td>
+														<td>6394.5</td>
+												</tr>
+										</table>
+								</section>
+								<section>
+										<h4>Using Pinned Host Memory</h4>
+										<ul>
+												<li>Real case for Reed-Solomon Codes: encode a 1000 MB file with $k = 4, n = 6$.</li>
+										</ul>
+										<img src="./images/exp/pageable vs. pinned/comm-comp.png" width="60%" height="60%" alt="pageable vs. pinned">
+								</section>
+								<section>
+										<h4>Using CUDA Streams</h4>
+										<p>
+										encoding under $k = 4, n = 6$ settings.
+										</p>
+										<p>
+										The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
+										</p>
+										<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
+								</section>
+								<section>
+										<h4>Using CUDA Streams</h4>
+										<p>
+										encoding a 2000 MB file under $k = 4, n = 6$ settings.
+										</p>
+										<img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
+								</section>
+						</section>
 
-	  <!--
+						<!--
 				<section>
 				<h2>Future Work & Schedule</h2>
 				<ul>
@@ -1420,32 +1420,32 @@ Find the bound of file size under which CPU performance is better than that of G
 				</ul>
 				</section>
 				-->
-	  <section>
-		<h2>Conclusion</h2>
-		<ul>
-		  <li class="fragment">We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
-		  <li class="fragment">We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
-		  <li class="fragment">We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
-		</ul>
-	  </section>
+						<section>
+								<h2>Conclusion</h2>
+								<ul>
+										<li class="fragment">We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
+										<li class="fragment">We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
+										<li class="fragment">We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
+								</ul>
+						</section>
 
-	  <section>
-		<h1>THE END</h1>
-		<h3>Q & A</h3>
-	  </section>
+						<section>
+								<h1>THE END</h1>
+								<h3>Q & A</h3>
+						</section>
 
-	</div>
+				</div>
 
-  </div>
+		</div>
 
-  <script src="lib/js/head.min.js"></script>
-  <script src="js/reveal.min.js"></script>
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
 
-  <script>
+		<script>
 
 // Full list of configuration options available here:
 // https://github.com/hakimel/reveal.js#configuration
-  Reveal.initialize({
+		Reveal.initialize({
 controls: true,
 progress: true,
 history: true,
@@ -1471,9 +1471,9 @@ dependencies: [
 ]
 });
 
-  </script>
+		</script>
 
-  <a href="https://github.com/yszheda/GPU-RSCode"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png" alt="Fork GPU-RSCode on GitHub"></a>
+		<a href="https://github.com/yszheda/GPU-RSCode"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png" alt="Fork GPU-RSCode on GitHub"></a>
 
-  </body>
-  </html>
+		</body>
+		</html>
