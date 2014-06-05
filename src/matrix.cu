@@ -36,7 +36,7 @@ __shared__ uint16_t gflog[gflog_table_size];
 __device__ int setup_tables()
 {
 	const unsigned int prim_poly = 0435;
-   	int log;
+	int log;
 	int exp = 1;
 	// use int as book-keeping index instead of unsigned int
 	for (log = 0; log < field_size - 1; log++) 
@@ -129,10 +129,10 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b)
 	// Can't divide by 0
 	if (b == 0)
 	{
-		return -1;
+	return -1;
 	}
 	*/
-//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
+	//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
 	diff_log = gflog[a] - gflog[b];
 	if (diff_log < 0)
 	{	
@@ -153,10 +153,10 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 	// Can't divide by 0
 	if (b == 0)
 	{
-		return -1;
+	return -1;
 	}
 	*/
-//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
+	//	diff_log = (gflog[a] - gflog[b]) % (field_size-1);
 	diff_log = gflog[a] - gflog[b];
 	if (diff_log < 0)
 	{	
@@ -178,9 +178,9 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 }
 
 // input matrix A and B, compute the product matrix C=AB
-// A: nxp
-// B: pxm
-// C: nxm
+// A: A_height x A_width
+// B: A_width x B_width
+// C: A_height x B_width
 __global__ void matrix_mul(unsigned char *A, unsigned int *B, unsigned int *C, int A_height, int A_width, int B_width, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	extern __shared__ uint8_t sMemBytes[];
@@ -189,25 +189,23 @@ __global__ void matrix_mul(unsigned char *A, unsigned int *B, unsigned int *C, i
 	unsigned int product;
 
 	int bx = blockIdx.x;
-   	int by = blockIdx.y;
+	int by = blockIdx.y;
 	int tx = threadIdx.x;
 	int ty = threadIdx.y;
 	int row;
 	int col;
-	unsigned int C_word_item = 0;
-	uint8_t *C_byte_item = (uint8_t *) &C_word_item;
 
-//	setup_tables();
-//	__syncthreads();
+	//	setup_tables();
+	//	__syncthreads();
 
-	#pragma unroll
-//	for(int j = tx; j < gflog_table_size; j += blockDim.x)
+#pragma unroll
+	//	for(int j = tx; j < gflog_table_size; j += blockDim.x)
 	for(int j = tx * blockDim.y + ty; j < gflog_table_size; j += blockDim.x * blockDim.y)
 	{
 		gflog[j] = gflog_cMem[j];
 	}
-	#pragma unroll
-//	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
+#pragma unroll
+	//	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
 	for(int j = tx * blockDim.y + ty; j < gfexp_table_size; j += blockDim.x * blockDim.y)
 	{
 		gfexp[j] = gfexp_cMem[j];
@@ -220,55 +218,48 @@ __global__ void matrix_mul(unsigned char *A, unsigned int *B, unsigned int *C, i
 		col = bx * tileWidthCol + tx;
 		product = 0;
 		__syncthreads();
-		
+
 		if(row < A_height && col < B_width)
 		{
 			for (int i = 0; i < (int) (ceil((float) A_width / tileDepth)); ++i)
 			{
 				/* 
-				for(int j = tx; j < tileDepth; j += blockDim.x)
-				{
-					sMem[ index(ty, j, tileDepth) ] = A[row * A_width + i * tileDepth + j];
-				}
-				for(int j = ty; j < tileDepth; j += blockDim.y)
-				{
-					sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + (j + i * tileDepth) * B_width];
-				}
-				*/
+				   for(int j = tx; j < tileDepth; j += blockDim.x)
+				   {
+				   sMemBytes[ index(ty, j, tileDepth) ] = A[row * A_width + i * tileDepth + j];
+				   }
+				   for(int j = ty; j < tileDepth; j += blockDim.y)
+				   {
+				   sMemBytes[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + (j + i * tileDepth) * B_width];
+				   }
+				   */
 				for(int j = 0; j < tileDepth; ++j)
 				{
-					sMem[ index(ty, j, tileDepth) ] = A[row * A_width + i * tileDepth + j];
+					sMemBytes[ index(ty, j, tileDepth) ] = A[row * A_width + i * tileDepth + j];
 				}
 				for(int j = 0; j < tileDepth; ++j)
 				{
-					// TODO: padding
 					sMemWords[rowVectorSize / sizeof(unsigned int) + index(j, tx, tileWidthCol)] = B[col + (j + i * tileDepth) * B_width];
-//					unsigned int word_tmp = B[col + (j + i * tileDepth) * B_width];
-//					sMem[rowVectorSize + index(j, 4 * tx, tileWidthCol)] = word_tmp & (0x0FF);
-//					sMem[rowVectorSize + index(j, 4 * tx + 1, tileWidthCol)] = (word_tmp >> 8) & (0x0FF);
-//					sMem[rowVectorSize + index(j, 4 * tx + 2, tileWidthCol)] = (word_tmp >> 16) & (0x0FF);
-//					sMem[rowVectorSize + index(j, 4 * tx + 3, tileWidthCol)] = (word_tmp >> 24) & (0x0FF);
 				}
-//				TODO: Assume removing the loop
-//				if (tx < tileDepth)
-//				{
-//					sMem[ index(ty, tx, tileDepth) ] = A[row * A_width + tx];
-//				}
-//				if (ty < tileDepth)
-//				{
-//					sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty * B_width];
-//				}
+				//				TODO: Assume removing the loop
+				//				if (tx < tileDepth)
+				//				{
+				//					sMemBytes[ index(ty, tx, tileDepth) ] = A[row * A_width + tx];
+				//				}
+				//				if (ty < tileDepth)
+				//				{
+				//					sMemBytes[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty * B_width];
+				//				}
 				__syncthreads();
-				
+
 				for(int j = 0; j < tileDepth; j++)
 				{
-//					unsigned int C_word_item = 0;
-//					unsigned char *C_byte_item = (unsigned char *) &C_word_item;
-					C_word_item = 0;
+					unsigned int C_word_item = 0;
+					unsigned char *C_byte_item = (unsigned char *) &C_word_item;
+					//					C_word_item = 0;
 					for (int k = 0; k < sizeof(unsigned int); ++k)
 					{
-						C_byte_item[k] = gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, sizeof(unsigned int) * tx + k, tileWidthCol * sizeof(unsigned int))]);
-//						C_word_item = (C_word_item << 8) | gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, sizeof(unsigned int) * tx + k, tileWidthCol * sizeof(unsigned int))]);
+						C_byte_item[k] = gf_mul(sMemBytes[ index(ty, j, tileDepth) ], sMemBytes[rowVectorSize + index(j, sizeof(unsigned int) * tx + k, tileWidthCol * sizeof(unsigned int))]);
 					}
 					product ^= C_word_item;
 				}
@@ -285,173 +276,173 @@ __global__ void matrix_mul(unsigned char *A, unsigned int *B, unsigned int *C, i
 // switch rows if the current row is not the pivot row
 __global__ void switch_rows(uint8_t *matrix, uint8_t *result, int rowSrc, int rowDes, int size)
 {
-    int col = threadIdx.y + blockDim.y * blockIdx.y;
-    uint8_t oldMatrixItem;
-    uint8_t oldResultItem;
+	int col = threadIdx.y + blockDim.y * blockIdx.y;
+	uint8_t oldMatrixItem;
+	uint8_t oldResultItem;
 
-    if( col < size )
-    {
-        oldMatrixItem = matrix[ index(rowSrc, col, size) ];
-        matrix[ index(rowSrc, col, size) ] = matrix[ index(rowDes, col, size) ];
-        matrix[ index(rowDes, col, size) ] = oldMatrixItem; 
+	if( col < size )
+	{
+		oldMatrixItem = matrix[ index(rowSrc, col, size) ];
+		matrix[ index(rowSrc, col, size) ] = matrix[ index(rowDes, col, size) ];
+		matrix[ index(rowDes, col, size) ] = oldMatrixItem; 
 
-        oldResultItem = result[ index(rowSrc, col, size) ];
-        result[ index(rowSrc, col, size) ] = result[ index(rowDes, col, size) ];
-        result[ index(rowDes, col, size) ] = oldResultItem; 
-    }
+		oldResultItem = result[ index(rowSrc, col, size) ];
+		result[ index(rowSrc, col, size) ] = result[ index(rowDes, col, size) ];
+		result[ index(rowDes, col, size) ] = oldResultItem; 
+	}
 } 
 
 // switch columns if the current row is not the pivot row
 __global__ void switch_columns(uint8_t *matrix, uint8_t *result, int colSrc, int colDes, int size)
 {
-    int row = threadIdx.y + blockDim.y * blockIdx.y;
-    uint8_t oldMatrixItem;
-    uint8_t oldResultItem;
+	int row = threadIdx.y + blockDim.y * blockIdx.y;
+	uint8_t oldMatrixItem;
+	uint8_t oldResultItem;
 
-    if( row < size )
-    {
-        oldMatrixItem = matrix[ index(row, colSrc, size) ];
-        matrix[ index(row, colSrc, size) ] = matrix[ index(row, colDes, size) ];
-        matrix[ index(row, colDes, size) ] = oldMatrixItem; 
+	if( row < size )
+	{
+		oldMatrixItem = matrix[ index(row, colSrc, size) ];
+		matrix[ index(row, colSrc, size) ] = matrix[ index(row, colDes, size) ];
+		matrix[ index(row, colDes, size) ] = oldMatrixItem; 
 
-        oldResultItem = result[ index(row, colSrc, size) ];
-        result[ index(row, colSrc, size) ] = result[ index(row, colDes, size) ];
-        result[ index(row, colSrc, size) ] = oldResultItem; 
-    }
+		oldResultItem = result[ index(row, colSrc, size) ];
+		result[ index(row, colSrc, size) ] = result[ index(row, colDes, size) ];
+		result[ index(row, colSrc, size) ] = oldResultItem; 
+	}
 } 
 
 // normalize the row by the pivot value
 __global__ void normalize_pivot_row(uint8_t *matrix, uint8_t *result, int row, int size)
 {
-    int ty = threadIdx.y;
+	int ty = threadIdx.y;
 	int col = blockDim.y*blockIdx.y + ty;
 
-    __shared__ uint8_t pivotValue;
+	__shared__ uint8_t pivotValue;
 
 	setup_tables();
 	__syncthreads();
 
-    if( col < size )
-    {
-    	// let the first thread of loads the pivotValue
-        if ( ty == 0 )
+	if( col < size )
+	{
+		// let the first thread of loads the pivotValue
+		if ( ty == 0 )
 		{
-            pivotValue = matrix[ index(row, row, size) ];
+			pivotValue = matrix[ index(row, row, size) ];
 		}
-        __syncthreads();
+		__syncthreads();
 		// Normalize the pivot row!
 		// Every thread divides the element of its position with the pivotValue
-        matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
-        result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
-    }
+		matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
+		result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
+	}
 }
 
 // normalize the column by the pivot value
 __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, int size)
 {
-    int ty = threadIdx.y;
+	int ty = threadIdx.y;
 	int row = blockDim.y*blockIdx.y + ty;
 
-    __shared__ uint8_t pivotValue;
+	__shared__ uint8_t pivotValue;
 
 	setup_tables();
 	__syncthreads();
 
-    if( col < size )
-    {
-    	// let the first thread of loads the pivotValue
-        if ( ty == 0 )
+	if( col < size )
+	{
+		// let the first thread of loads the pivotValue
+		if ( ty == 0 )
 		{
-            pivotValue = matrix[ index(col, col, size) ];
+			pivotValue = matrix[ index(col, col, size) ];
 		}
-        __syncthreads();
+		__syncthreads();
 		// Normalize the pivot row!1024
 		// Every thread divides the element of its position with the pivotValue
-        matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
-        result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
-    }
+		matrix[ index(row, col, size)] = gf_div(matrix[ index(row, col, size) ], pivotValue);
+		result[ index(row, col, size)] = gf_div(result[ index(row, col, size) ], pivotValue);
+	}
 }
 
 // eliminate by row to make the pivot column become reduced echelon form
 __global__ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
-    int ty = threadIdx.y;
+	int ty = threadIdx.y;
 
 	int row = blockDim.y * blockIdx.y + threadIdx.y;
 	int col = blockIdx.x;
 
-    __shared__ uint8_t pivotCol[ SINGLE_BLOCK_SIZE ];
+	__shared__ uint8_t pivotCol[ SINGLE_BLOCK_SIZE ];
 
-    __shared__ uint8_t matrixPivotValue;
-    __shared__ uint8_t resultPivotValue;
-    __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
-    __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
+	__shared__ uint8_t matrixPivotValue;
+	__shared__ uint8_t resultPivotValue;
+	__shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
+	__shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
 	setup_tables();
 	__syncthreads();
 
-    if ( row < size )
-    {
-        if ( ty == 0 )
-        {
-            matrixPivotValue = matrix[ index(pivotIndex, col, size) ];
-            resultPivotValue = result[ index(pivotIndex, col, size) ];
-        }
-        pivotCol[ty] = matrix[ index(row, pivotIndex, size) ];
-        
-        matrixCol[ty] = matrix[ index(row, col, size) ]; 
-        resultCol[ty] = result[ index(row, col, size) ]; 
-        __syncthreads();
+	if ( row < size )
+	{
+		if ( ty == 0 )
+		{
+			matrixPivotValue = matrix[ index(pivotIndex, col, size) ];
+			resultPivotValue = result[ index(pivotIndex, col, size) ];
+		}
+		pivotCol[ty] = matrix[ index(row, pivotIndex, size) ];
+
+		matrixCol[ty] = matrix[ index(row, col, size) ]; 
+		resultCol[ty] = result[ index(row, col, size) ]; 
+		__syncthreads();
 
 		// substraction in GF
 		// make the pivotCol become reduced echelon form
-        if ( row != pivotIndex )
-        {
+		if ( row != pivotIndex )
+		{
 			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotCol[ty], matrixPivotValue);
 			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotCol[ty], resultPivotValue);
-        }
-    }
+		}
+	}
 }
 
 // eliminate by column to make the pivot row become reduced echelon form
 __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
-    int ty = threadIdx.y;
+	int ty = threadIdx.y;
 
 	int row = blockIdx.x;
 	int col = blockDim.y * blockIdx.y + threadIdx.y;
 
-    __shared__ uint8_t pivotRow[ SINGLE_BLOCK_SIZE ];
+	__shared__ uint8_t pivotRow[ SINGLE_BLOCK_SIZE ];
 
-    __shared__ uint8_t matrixPivotValue;
-    __shared__ uint8_t resultPivotValue;
-    __shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
-    __shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
+	__shared__ uint8_t matrixPivotValue;
+	__shared__ uint8_t resultPivotValue;
+	__shared__ uint8_t matrixCol[ SINGLE_BLOCK_SIZE ];
+	__shared__ uint8_t resultCol[ SINGLE_BLOCK_SIZE];
 
 	setup_tables();
 	__syncthreads();
 
-    if ( row < size )
-    {
-        if ( ty == 0 )
-        {
-            matrixPivotValue = matrix[ index(row, pivotIndex, size) ];
-            resultPivotValue = result[ index(row, pivotIndex, size) ];
-        }
-        pivotRow[ty] = matrix[ index(pivotIndex, col, size) ];
-        
-        matrixCol[ty] = matrix[ index(row, col, size) ]; 
-        resultCol[ty] = result[ index(row, col, size) ]; 
-        __syncthreads();
+	if ( row < size )
+	{
+		if ( ty == 0 )
+		{
+			matrixPivotValue = matrix[ index(row, pivotIndex, size) ];
+			resultPivotValue = result[ index(row, pivotIndex, size) ];
+		}
+		pivotRow[ty] = matrix[ index(pivotIndex, col, size) ];
+
+		matrixCol[ty] = matrix[ index(row, col, size) ]; 
+		resultCol[ty] = result[ index(row, col, size) ]; 
+		__syncthreads();
 
 		// substraction in GF
 		// make the pivotRow become reduced echelon form
-        if ( col != pivotIndex )
-        {
+		if ( col != pivotIndex )
+		{
 			matrix[ index(row, col, size) ] = matrixCol[ty] ^ gf_mul(pivotRow[ty], matrixPivotValue);
 			result[ index(row, col, size) ] = resultCol[ty] ^ gf_mul(pivotRow[ty], resultPivotValue);
-        }
-    }
+		}
+	}
 }
 
 // generate an identity matrix
@@ -460,34 +451,34 @@ __global__ void get_identity_matrix(uint8_t *result, int size)
 	int row = blockIdx.x * blockDim.x + threadIdx.x;
 	int col = blockIdx.y * blockDim.y + threadIdx.y;
 
-    if ( row == col )
+	if ( row == col )
 	{
-        result[ index(row, col, size) ] = 1;
+		result[ index(row, col, size) ] = 1;
 	}
-    else
+	else
 	{
-        result[ index(row, col, size) ] = 0;
+		result[ index(row, col, size) ] = 0;
 	}
 }
 
 // find the pivot index in the given row/column
 int get_pivot_index(uint8_t *vector, int index, int size)
 {
-    int pivotIndex = -1;
-    int i = index;
-    while( pivotIndex == -1 && i < size )
-    {
-        pivotIndex = (vector[i] > 0)? i: -1;        
-        i++;
-    }
-    return pivotIndex;
+	int pivotIndex = -1;
+	int i = index;
+	while( pivotIndex == -1 && i < size )
+	{
+		pivotIndex = (vector[i] > 0)? i: -1;        
+		i++;
+	}
+	return pivotIndex;
 }
 
 #ifdef DEBUG
 void show_squre_matrix_debug(uint8_t *matrix, int size)
 {
 	int i;1024
-	int j;
+		int j;
 	for(i=0; i<size; i++)
 	{
 		for(j=0; j<size; j++)
@@ -496,63 +487,63 @@ void show_squre_matrix_debug(uint8_t *matrix, int size)
 		}
 		printf("\n");
 	}
-		printf("\n");
+	printf("\n");
 }
 #endif
 
 // compute the inverse of a given matrix
 // Gaussian/Gauss-Jordan elimination
-extern "C"
+	extern "C"
 void invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
 {
 	int row;
 	int pivotIndex;
-    uint8_t currentRow[size];
-    int currentRowSize = size*sizeof(uint8_t);
+	uint8_t currentRow[size];
+	int currentRowSize = size*sizeof(uint8_t);
 
-    dim3 gimGrid( (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)), (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)) );
-    dim3 gimBlock( min(size, SQUARE_BLOCK_SIZE), min(size, SQUARE_BLOCK_SIZE) );
-    get_identity_matrix<<< gimGrid, gimBlock >>>(result_dev, size);
-//	cudaDeviceSynchronize();
-	
+	dim3 gimGrid( (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)), (int)(ceil( (float)size / SQUARE_BLOCK_SIZE)) );
+	dim3 gimBlock( min(size, SQUARE_BLOCK_SIZE), min(size, SQUARE_BLOCK_SIZE) );
+	get_identity_matrix<<< gimGrid, gimBlock >>>(result_dev, size);
+	//	cudaDeviceSynchronize();
+
 	for( row = 0; row < size; row++ )
-    {
+	{
 		// check whether the leading coefficient of the current row is in the 'index'th column
 		int index = row;
-        cudaMemcpy(currentRow, matrix_dev+row*size, currentRowSize, cudaMemcpyDeviceToHost);
-        pivotIndex = get_pivot_index(currentRow, index, size);
-        if( pivotIndex != row )
+		cudaMemcpy(currentRow, matrix_dev+row*size, currentRowSize, cudaMemcpyDeviceToHost);
+		pivotIndex = get_pivot_index(currentRow, index, size);
+		if( pivotIndex != row )
 		{
 			dim3 scGrid(1, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 			dim3 scBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
-            switch_columns<<< scGrid, scBlock >>>(matrix_dev, result_dev, index, pivotIndex, size);
+			switch_columns<<< scGrid, scBlock >>>(matrix_dev, result_dev, index, pivotIndex, size);
 		}
 		cudaDeviceSynchronize();
 
 		dim3 nprGrid(1, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 nprBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
-    	// Normalize the pivot row
-        normalize_pivot_row<<< nprGrid, nprBlock >>>(matrix_dev, result_dev, index, size);
-//    	// Normalize the pivot column
-//        normalize_pivot_col<<< nprGrid, linearBlock >>>(matrix_dev, result_dev, index, size);
+		// Normalize the pivot row
+		normalize_pivot_row<<< nprGrid, nprBlock >>>(matrix_dev, result_dev, index, size);
+		//    	// Normalize the pivot column
+		//        normalize_pivot_col<<< nprGrid, linearBlock >>>(matrix_dev, result_dev, index, size);
 		cudaDeviceSynchronize();
 
 		dim3 ebrGrid(size, (int)(ceil( (float)size / SINGLE_BLOCK_SIZE )));
 		dim3 ebrBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
-        eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, size);
+		eliminate_by_row<<< ebrGrid, ebrBlock >>>(matrix_dev, result_dev, row, size);
 		cudaDeviceSynchronize();
 
 #ifdef DEBUG
-uint8_t matrix_host[size*size];
-cudaMemcpy(matrix_host, matrix_dev, size*size, cudaMemcpyDeviceToHost);
-printf("matrix:\n");
-show_squre_matrix_debug(matrix_host, size);
-uint8_t result_host[size*size];
-cudaMemcpy(result_host, result_dev, size*size, cudaMemcpyDeviceToHost);
-printf("result:\n");
-show_squre_matrix_debug(result_host, size);
+		uint8_t matrix_host[size*size];
+		cudaMemcpy(matrix_host, matrix_dev, size*size, cudaMemcpyDeviceToHost);
+		printf("matrix:\n");
+		show_squre_matrix_debug(matrix_host, size);
+		uint8_t result_host[size*size];
+		cudaMemcpy(result_host, result_dev, size*size, cudaMemcpyDeviceToHost);
+		printf("result:\n");
+		show_squre_matrix_debug(result_host, size);
 #endif
-    }
+	}
 
 }
 
@@ -571,13 +562,13 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
 __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int threadsPerBlock = 128;
-//	int tileWidthRow;
-//	int tileWidthCol = threadsPerBlock / tileWidthRow;
+	//	int tileWidthRow;
+	//	int tileWidthCol = threadsPerBlock / tileWidthRow;
 
-//	tileWidthCol = threadsPerBlock / tileWidthRow;
+	//	tileWidthCol = threadsPerBlock / tileWidthRow;
 
-//	int tileDepth = nativeBlockNum;
-//	tileDepth = nativeBlockNum;
+	//	int tileDepth = nativeBlockNum;
+	//	tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / sizeof(unsigned int) / tileWidthCol) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)parityBlockNum / tileWidthRow) );
 	dim3 grid(gridDimX, gridDimY);
@@ -588,12 +579,12 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	int sMemMinSize = (tileWidthRow * sizeof(uint8_t) + tileWidthCol * sizeof(unsigned int)) * tileDepth;
 	int tunedSMemSize = 2048;
 	/* 
-	size_t sMemSize = tunedSMemSize;
-	if (sMemMinSize > tunedSMemSize)
-	{
-		sMemSize = sMemMinSize;
-	}
-	*/
+	   size_t sMemSize = tunedSMemSize;
+	   if (sMemMinSize > tunedSMemSize)
+	   {
+	   sMemSize = sMemMinSize;
+	   }
+	   */
 	size_t sMemSize = sMemMinSize;
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
@@ -603,7 +594,7 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	// record event
 	cudaEventRecord(stepStart);
 	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, (unsigned int *)dataChunk, (unsigned int *)codeChunk, parityBlockNum, nativeBlockNum, (chunkSize / sizeof(unsigned int)), tileWidthRow, tileWidthCol, tileDepth);
-//	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	//	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
@@ -615,13 +606,13 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
 	int threadsPerBlock = 128;
-//	int tileWidthRow = parityBlockNum;
-//	int tileWidthCol = threadsPerBlock / tileWidthRow;
+	//	int tileWidthRow = parityBlockNum;
+	//	int tileWidthCol = threadsPerBlock / tileWidthRow;
 
-//	tileWidthCol = threadsPerBlock / tileWidthRow;
+	//	tileWidthCol = threadsPerBlock / tileWidthRow;
 
-//	int tileDepth = nativeBlockNum;
-//	tileDepth = nativeBlockNum;
+	//	int tileDepth = nativeBlockNum;
+	//	tileDepth = nativeBlockNum;
 	int gridDimX = min( (int)( ceil((float)chunkSize / tileWidthCol) ), SINGLE_GRID_SIZE );
 	int gridDimY = (int)( ceil((float)nativeBlockNum / tileWidthRow) );
 	dim3 grid(gridDimX, gridDimY);
@@ -632,12 +623,12 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
 	int tunedSMemSize = 2048;
 	/* 
-	size_t sMemSize = tunedSMemSize;
-	if (sMemMinSize > tunedSMemSize)
-	{
-		sMemSize = sMemMinSize;
-	}
-	*/
+	   size_t sMemSize = tunedSMemSize;
+	   if (sMemMinSize > tunedSMemSize)
+	   {
+	   sMemSize = sMemMinSize;
+	   }
+	   */
 	size_t sMemSize = sMemMinSize;
 	float stepTime = 0;
 	cudaEvent_t stepStart, stepStop;
@@ -647,7 +638,7 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 	// record event
 	cudaEventRecord(stepStart);
 	matrix_mul<<<grid, block, sMemSize>>>(parityCoeff, (unsigned int *) codeChunk, (unsigned int *) dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+	//	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
 	// record event and synchronize
 	cudaEventRecord(stepStop);
 	cudaEventSynchronize(stepStop);
