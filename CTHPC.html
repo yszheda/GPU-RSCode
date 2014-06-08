@@ -120,275 +120,275 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li class="fragment">
 		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of reliability as replication.
 		  </li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h3>Why Erasure Codes?</h3>
-		<p>
-		$(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
-		<ul>
+  <h3>Why Erasure Codes?</h3>
+  <p>
+  $(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
+  <ul>
 		  <li>File → $k$ equal-size native chunks.</li>
 		  <li>$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
 		  <li>The native and code chunks are distributed on $n$ different storage nodes.</li>
 		  <li>tolerates the failure of any $n - k$ storage nodes.</li>
-		</ul>
-		</p>
-		<p>Example:</p>
-		<table>
+  </ul>
+  </p>
+  <p>Example:</p>
+  <table>
 		  <tr align="center">
-			<td>
-			  <img src="./images/dot-graph/e-c.png" alt="erasure code">
-			</td>
-			<td>
-			  <img src="./images/dot-graph/replica.png" alt="replication">
-			</td>
+				  <td>
+						  <img src="./images/dot-graph/e-c.png" alt="erasure code">
+				  </td>
+				  <td>
+						  <img src="./images/dot-graph/replica.png" alt="replication">
+				  </td>
 		  </tr>
 		  <tr align="center">
-			<td>
-			  Reed-Solomon Code (n=4, k=2)
-			</td>
-			<td>
-			  Replication
-			</td>
+				  <td>
+						  Reed-Solomon Code (n=4, k=2)
+				  </td>
+				  <td>
+						  Replication
+				  </td>
 		  </tr>
-		</table>
-		<p class="fragment">
-		Save 50% space!
-		</p>
+  </table>
+  <p class="fragment">
+  Save 50% space!
+  </p>
 	  </section>
 	  <section>
-		<h3>Why Reed-Solomon Codes?</h3>
-		<ul>
+  <h3>Why Reed-Solomon Codes?</h3>
+  <ul>
 		  <li class="fragment">
 		  Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
 		  </li>
 		  <li class="fragment">
 		  $RS(10, 4)$ is used in HDFS-RAID in Facebook and $RS(6, 3)$ is used in GFS II in Google.
 		  </li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h3>Shortcomings of Reed-Solomon Codes</h3>
-		<ul>
+  <h3>Shortcomings of Reed-Solomon Codes</h3>
+  <ul>
 		  <li class="fragment">
 		  use <font color="#ff0000">matrix multiplication over Galois Field</font> for encoding and decoding → <font color="#ff0000">extra high computation cost</font> compared to replication
 		  </li>
 		  <li class="fragment">
 		  Our contributions: use GPU to accelerate the Reed-Solomon encoding and decoding.
 		  </li>
-		</ul>
+  </ul>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Background</h2>
+  <h2>Background</h2>
 	  </section>
 	  <section>
-		<h3>Reed-Solomon Code Overview</h3>
-		<table>
+  <h3>Reed-Solomon Code Overview</h3>
+  <table>
 		  <tr align="center">
-			<td>
-			  <img src="./images/dot-graph/encode.png" alt="RS encode">
-			</td>
-			<td>
-			  <img src="./images/dot-graph/decode.png" alt="RS decode">
-			</td>
+				  <td>
+						  <img src="./images/dot-graph/encode.png" alt="RS encode">
+				  </td>
+				  <td>
+						  <img src="./images/dot-graph/decode.png" alt="RS decode">
+				  </td>
 		  </tr>
 		  <tr align="center">
-			<td>
-			  Reed-Solomon Encoding
-			</td>
-			<td>
-			  Reed-Solomon Decoding
-			</td>
+				  <td>
+						  Reed-Solomon Encoding
+				  </td>
+				  <td>
+						  Reed-Solomon Decoding
+				  </td>
 		  </tr>
-		</table>
+  </table>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Accelerate Operations in Galois Field</h2>
+  <h2>Accelerate Operations in Galois Field</h2>
 	  </section>
 	  <section>
-		<h2>Accelerate Operations in Galois Field</h2>
-		<ul>
+  <h2>Accelerate Operations in Galois Field</h2>
+  <ul>
 		  <li class="fragment">
 		  Addition/subtraction of two elements in GF($2^w$) in this field can be performed by inexpensive bitwise XOR of the elements.
 		  </li>
 		  <li class="fragment">
 		  Multiplication of two elements is defined as the multiplication of two polynomials which represents the elements and modulo an irreducible generator polynomial.
 		  </li>
-		</ul>
-		<p class="fragment">
-		<br>
-		Therefore, how to accelerate the time-consuming <font color="#ff0000">multiplication</font> over GF($2^w$) will be our focus.
-		<!--Here we focus on the acceleration of multiplication on Galois Fields.-->
-		</p>
+  </ul>
+  <p class="fragment">
+  <br>
+  Therefore, how to accelerate the time-consuming <font color="#ff0000">multiplication</font> over GF($2^w$) will be our focus.
+  <!--Here we focus on the acceleration of multiplication on Galois Fields.-->
+  </p>
 	  </section>
 
 	  <section>
-		<h3>GPU Implementation: Loop-based or Table-based?</h3>
+  <h3>GPU Implementation: Loop-based or Table-based?</h3>
 	  </section>
 	  <section>
-		<h4>Loop-based Method</h4>
-		<ul>
+  <h4>Loop-based Method</h4>
+  <ul>
 		  <li>compute directly</li>
 		  <li>computation bound</li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h4>Table-based Methods</h4>
-		<table>
+  <h4>Table-based Methods</h4>
+  <table>
 		  <tr>
-			<td></td>
-			<td>Full Multiplication Table</td>
-			<td>"Double Table"/"Left-Right Table"</td>
-			<td>Log&Exp Table</td>
+				  <td></td>
+				  <td>Full Multiplication Table</td>
+				  <td>"Double Table"/"Left-Right Table"</td>
+				  <td>Log&Exp Table</td>
 		  </tr>
 		  <tr>
-			<td>Space Complexity for GF($2^w$)</td>
-			<!--<td>$O(2^w \times 2^w)$</td>-->
-			<td>$O(2 ^ { 2w })$</td>
-			<td>$O(2^{3w/2+1})$</td>
-			<td>$O( 2^{w+1} )$</td>
+				  <td>Space Complexity for GF($2^w$)</td>
+				  <!--<td>$O(2^w \times 2^w)$</td>-->
+				  <td>$O(2 ^ { 2w })$</td>
+				  <td>$O(2^{3w/2+1})$</td>
+				  <td>$O( 2^{w+1} )$</td>
 		  </tr>
 		  <tr>
-			<td>Computation Complexity</td>
-			<td>one table-lookup</td>
-			<td>2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT</td>
-			<td>3 table-lookup, 1 MOD, 1 ADD, and 2 branches</td>
+				  <td>Computation Complexity</td>
+				  <td>one table-lookup</td>
+				  <td>2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT</td>
+				  <td>3 table-lookup, 1 MOD, 1 ADD, and 2 branches</td>
 		  </tr>
 		  <tr class="fragment">
-			<td>Memory space for GF($2^8$)</td>
-			<td>64 KB</td>
-			<td>8 KB</td>
-			<td>512 Bytes</td>
+				  <td>Memory space for GF($2^8$)</td>
+				  <td>64 KB</td>
+				  <td>8 KB</td>
+				  <td>512 Bytes</td>
 		  </tr>
-		</table>
-		<p class="fragment">
-		Use log&exp table-based method in our GPU implementation.
-		</p>
+  </table>
+  <p class="fragment">
+  Use log&exp table-based method in our GPU implementation.
+  </p>
 	  </section>
 	  <section>
-		<h4>GPU Implementation: Loop-based or Table-based?</h4>
-		<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
-		<ul>
+  <h4>GPU Implementation: Loop-based or Table-based?</h4>
+  <img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
+  <ul>
 		  <li>The loop-based method is able to achieve the maximum bandwidth even when the chunk size is small.</li>
 		  <li>The bandwidth of the table-based method can still scale up as the chunk size grows larger.</li>
 		  <li>The maximum bandwidth of the table-based method exceeds that of the loop-based method.</li>
-		</ul>
+  </ul>
 	  </section>
 
 	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+  <h3>Further Improvement of the Log&exp Table-based Method</h3>
 	  </section>
 	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-		<table>
+  <h3>Further Improvement of the Log&exp Table-based Method</h3>
+  <table>
 		  <tr>
-			<td>Improvement Approach 1</td>
-			<td>Replace slow modular operation with more efficient operations.</td>
+				  <td>Improvement Approach 1</td>
+				  <td>Replace slow modular operation with more efficient operations.</td>
 		  </tr>
 		  <tr>
-			<td>Improvement Approach 2</td>
-			<td>Remove the slow modular operation by augmenting the exponential table.</td>
+				  <td>Improvement Approach 2</td>
+				  <td>Remove the slow modular operation by augmenting the exponential table.</td>
 		  </tr>
 		  <tr>
-			<td>Improvement Approach 3</td>
-			<td>Further eliminates the conditional branch by augmenting both the exponential table and the logarithm tables.</td>
+				  <td>Improvement Approach 3</td>
+				  <td>Further eliminates the conditional branch by augmenting both the exponential table and the logarithm tables.</td>
 		  </tr>
-		</table>
+  </table>
 	  </section>
 	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-		<p>
-		In GPU implementation, where to store the log and exp tables and how to initialize them will affect the performance.
-		</p>
-		<p class="fragment">
-		Appropriate GPU memory:
-		</p>
-		<ul class="fragment">
+  <h3>Further Improvement of the Log&exp Table-based Method</h3>
+  <p>
+  In GPU implementation, where to store the log and exp tables and how to initialize them will affect the performance.
+  </p>
+  <p class="fragment">
+  Appropriate GPU memory:
+  </p>
+  <ul class="fragment">
 		  <li>constant memory: off-chip memory whose accesses are usually cached in the constant cache</li>
 		  <li>shared memory: on-chip memory which has the smallest access latency except the register file</li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-		<p>
-		What we have implemented:
-		</p>
-		<ul class="fragment">
+  <h3>Further Improvement of the Log&exp Table-based Method</h3>
+  <p>
+  What we have implemented:
+  </p>
+  <ul class="fragment">
 		  <li>Store two tables in the constant memory and initialize them at compile time.</li>
 		  <li>Store two tables in the shared memory and run-time initialize them serially at the beginning of each kernel function.</li>
 		  <li>Store two tables in the off-chip memory and then load into the shared memory parallely at the beginning of each kernel function.</li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h4>Further Improvement of the Log&exp Table-based Method</h4>
-		<p>
-		<small>encoding a 1GB file with $k = 4$ and $n = 6$.</small>
-		</p>
-		<img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="60%" height="60%" alt="Log&exp improvement techniques">
-		<ul>
+  <h4>Further Improvement of the Log&exp Table-based Method</h4>
+  <p>
+  <small>encoding a 1GB file with $k = 4$ and $n = 6$.</small>
+  </p>
+  <img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="60%" height="60%" alt="Log&exp improvement techniques">
+  <ul>
 		  <li>The elimination of conditional branches improves the performance, for it removes warp diverge.</li>
 		  <li>Accessing the tables in the constant memory is more time-consuming.</li>
-		</ul>
+  </ul>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Accelerate Encoding/Decoding (Matrix Multiplication over Galois Field)</h2>
+  <h2>Accelerate Encoding/Decoding (Matrix Multiplication over Galois Field)</h2>
 	  </section>
 	  <section>
-		<h3>Naive Implementation</h3>
-		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
+  <h3>Naive Implementation</h3>
+  <img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
 	  </section>
 	  <section>
-		<h3>Tiling Algorithm</h3>
-		<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
+  <h3>Tiling Algorithm</h3>
+  <img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
 	  </section>
 	  <section>
-		<h3>Further Improvement of Tiling Algorithm</h3>
-		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
+  <h3>Further Improvement of Tiling Algorithm</h3>
+  <img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
 	  </section>
 	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<ul>
+  <h3>How to Determine the Parameter of Tiles</h3>
+  <ul>
 		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile</li>
 		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
 		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<table>
+  <h3>How to Determine the Parameter of Tiles</h3>
+  <table>
 		  <tr>
-			<td>Strategy 1</td>
-			<td>$\textrm{tileWidthRow} = \textrm{tileWidthCol}$</td>
+				  <td>Strategy 1</td>
+				  <td>$\textrm{tileWidthRow} = \textrm{tileWidthCol}$</td>
 		  </tr>
 		  <tr>
-			<td>Strategy 2</td>
-			<td>$\textrm{tileWidthRow} = n - k$</td>
+				  <td>Strategy 2</td>
+				  <td>$\textrm{tileWidthRow} = n - k$</td>
 		  </tr>
 		  <tr>
-			<td>Strategy 3</td>
-			<td>
-			  $$
-			  \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
-			  $$
-			</td>
+				  <td>Strategy 3</td>
+				  <td>
+						  $$
+						  \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
+						  $$
+				  </td>
 		  </tr>
-		</table>
+  </table>
 	  </section>
 	  <section>
-		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
-		<p>
-		use the following ten testcases for encoding:
-		</p>
-		<ul>
+  <h3>Accelerating Matrix Multiplication over Galois Field</h3>
+  <p>
+  use the following ten testcases for encoding:
+  </p>
+  <ul>
 		  <li>
 		  $k = 4$, $n = 6$, chunk size = 256 MB
 		  </li>
@@ -419,20 +419,20 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li>
 		  $k = 16$, $n = 20$, chunk size = 16 MB
 		  </li>
-		</ul>
+  </ul>
 	  </section>
 	  <section>
-		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
-		<img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
-		<p class="fragment">
-		Use strategy 2.
-		</p>
+  <h3>Accelerating Matrix Multiplication over Galois Field</h3>
+  <img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
+  <p class="fragment">
+  Use strategy 2.
+  </p>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Reduce Data Transfer Overhead</h2>
+  <h2>Reduce Data Transfer Overhead</h2>
 	  </section>
 	  <!--
 	  <section>
@@ -444,111 +444,111 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 -->
 	  <section>
-		<h3>Using CUDA Streams</h3>
-		<p>
-		CUDA streams are used for further overlapping data transfers with computation.
-		</p>
-		<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
-		<br> Sequential vs. Concurrent copy and execute
+  <h3>Using CUDA Streams</h3>
+  <p>
+  CUDA streams are used for further overlapping data transfers with computation.
+  </p>
+  <img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
+  <br> Sequential vs. Concurrent copy and execute
 	  </section>
 	  <section>
-		<h4>Using CUDA Streams</h4>
-		<p>
-		encoding under $k = 4, n = 6$ settings.
-		</p>
-		<p>
-		The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
-		</p>
-		<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
-		<p class="fragment">
-		using CUDA streaming can improve the performance by more than 29%.
-		</p>
+  <h4>Using CUDA Streams</h4>
+  <p>
+  encoding under $k = 4, n = 6$ settings.
+  </p>
+  <p>
+  The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
+  </p>
+  <img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
+  <p class="fragment">
+  using CUDA streaming can improve the performance by more than 29%.
+  </p>
 	  </section>
 	  <section>
-		<h4>Using CUDA Streams</h4>
-		<p>
-		encoding a 2000 MB file under $k = 4, n = 6$ settings.
-		</p>
-		<img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
-		<p class="fragment">
-		The kernel execution time is increasing with the growth of the CUDA stream number. → The overhead of kernel execution will exceed the time saving of data transfer at some point.
-		</p>
+  <h4>Using CUDA Streams</h4>
+  <p>
+  encoding a 2000 MB file under $k = 4, n = 6$ settings.
+  </p>
+  <img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
+  <p class="fragment">
+  The kernel execution time is increasing with the growth of the CUDA stream number. → The overhead of kernel execution will exceed the time saving of data transfer at some point.
+  </p>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Experiment</h2>
+  <h2>Experiment</h2>
 	  </section>
 	  <section>
-		<h3>Experiment Setup</h3>
+  <h3>Experiment Setup</h3>
 	  </section>
 	  <section>
-		<h3>Experiment Setup</h3>
-		<ul>
+  <h3>Experiment Setup</h3>
+  <ul>
 		  <li>
 		  CentOS-6 with 2.6.32 Linux kernel.
 		  </li>
 		  <ul>
-			<li>Intel Xeon Processor E5-2670 v2 x 2
-			<ul>
-			  <li>10 cores</li>
-			  <li>2.5 GHz</li>
-			</ul>
-			</li>
-			<li>NVIDIA Tesla K20X GPU x 2
-			<ul>
-			  <li>2688 CUDA cores</li>
-			  <li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
-			  <li>maximum size of GPU GDDR5 memory: 6 GB</li>
-			  <li>theoretical memory bandwidth 243 GB/s</li>
-			  <li>two copy engines → supports concurrent data copy and kernel execution</li>
-			</ul>
-			</li>
-			<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
+				  <li>Intel Xeon Processor E5-2670 v2 x 2
+				  <ul>
+						  <li>10 cores</li>
+						  <li>2.5 GHz</li>
+				  </ul>
+				  </li>
+				  <li>NVIDIA Tesla K20X GPU x 2
+				  <ul>
+						  <li>2688 CUDA cores</li>
+						  <li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
+						  <li>maximum size of GPU GDDR5 memory: 6 GB</li>
+						  <li>theoretical memory bandwidth 243 GB/s</li>
+						  <li>two copy engines → supports concurrent data copy and kernel execution</li>
+				  </ul>
+				  </li>
+				  <li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
 		  </ul>
-		</section>
-		<section>
+  </section>
+  <section>
 		  <h3>Experiment Setup</h3>
 		  <ul>
-			<li>Input files are randomly generated.</li>
-			<li>Most of our experimental results reflect the average of 100 runs.</li>
-			<li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
+				  <li>Input files are randomly generated.</li>
+				  <li>Most of our experimental results reflect the average of 100 runs.</li>
+				  <li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
 		  </ul>
-		</section>
-		<section>
+  </section>
+  <section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <p>
 		  We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
 		  </p>
-		</section>
-		<section>
+  </section>
+  <section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
 		  <img src="./images/exp/step-perf/stepBreakdown.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		</section>
-		<section>
+  </section>
+  <section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>GPU vs. CPU</h4>
 		  <ul>
-			<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
-			<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
+				  <li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
+				  <li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
 		  </ul>
-		</section>
+  </section>
 	  </section>
 
 	  <section>
-		<h2>Conclusion</h2>
-		<ul>
+  <h2>Conclusion</h2>
+  <ul>
 		  <li class="fragment">We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
 		  <li class="fragment">We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
 		  <li class="fragment">We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
-		</ul>
+  </ul>
 	  </section>
 
 	  <section>
-		<h1>THE END</h1>
-		<h3>Q & A</h3>
+  <h1>THE END</h1>
+  <h3>Q & A</h3>
 	  </section>
 
 	</div>
