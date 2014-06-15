@@ -56,9 +56,10 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  <h2>Accelerate Reed-Solomon Codes on GPUs</h2>
 	  <br>
 	  <h3>
-		<a href="http://yszheda.github.io">Shuai YUAN</a>, Jerry Chou 
+		Student: <a href="http://yszheda.github.io">Shuai YUAN</a>, 
+		<br>Prof. Jerry Chou 
 		<br>
-		<a href="lsalab.cs.nthu.edu.tw/home">LSALab</a>
+		<a href="lsalab.cs.nthu.edu.tw/home">LSALab, NTHU</a>
 	  </h3>
 	</section>
 
@@ -99,6 +100,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<p class="fragment">
 		Therefore, redundancy must be introduced into cloud system.
 		</p>
+		<aside class="notes">
+		  availability和stability是cloud storage system的重要考量。
+		  随着cloud storage system的有越来越多的node，发生failure的机率也越来越大。
+		  为了保证不违反SLA，我们需要引入redundancy来保证fault tolerance容错性。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Why Redundancy?</h3>
@@ -110,6 +116,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  Triple replication solution have been favored in distributed cloud systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
 		  </li>
 		</ul>
+		<aside class="notes">
+		  最简单的redundancy solution是replication。它把data拷贝若干份，再把这若干份分别分散在不同的storage node中。
+		  假如其中某个storage node发生failure，从其他的node仍可以拿到原来的data。
+		  这种solution也被广泛应用于cloud storage system中，例如GFS和HDFS就应用了triple replication（把同一块data存三份）。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Why Erasure Codes?</h3>
@@ -121,6 +132,10 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of reliability as replication.
 		  </li>
 		</ul>
+		<aside class="notes">
+		  replication的缺陷是有着很高的storage overhead。
+		  
+		</aside>
 	  </section>
 	  <section>
 		<h3>Why Erasure Codes?</h3>
@@ -205,6 +220,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  </tr>
 		</table>
 	  </section>
+	  <aside class="notes">
+		matrix multiplication
+	  </aside>
 	  <!-- Overview of Three Kinds of Implementation -->
 	</section>
 
@@ -280,6 +298,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li>The bandwidth of the table-based method can still scale up as the chunk size grows larger.</li>
 		  <li>The maximum bandwidth of the table-based method exceeds that of the loop-based method.</li>
 		</ul>
+		<aside class="notes">
+		  下面我们通过一个实验来决定
+		</aside>
 	  </section>
 
 	  <section>
@@ -590,7 +611,7 @@ Reveal.addEventListener('ready', function(event){
 // Full list of configuration options available here:
 // https://github.com/hakimel/reveal.js#configuration
   Reveal.initialize({
-controls: true,
+controls: false,
 progress: true,
 // Display the page number of the current slide
 slideNumber: true,
