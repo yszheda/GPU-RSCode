@@ -134,7 +134,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</ul>
 		<aside class="notes">
 		  replication的缺陷是有着很高的storage overhead。
-		  
+
 		</aside>
 	  </section>
 	  <section>
@@ -299,7 +299,14 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li>The maximum bandwidth of the table-based method exceeds that of the loop-based method.</li>
 		</ul>
 		<aside class="notes">
-		  下面我们通过一个实验来决定
+		  下面我们通过一个实验来决定采用loop-based或是table-based。
+		  在我们的实验中，chunk size从1MB scale到64MB，k从4 scale到16，采用double fault tolerance (code chunks的数目是二)。
+		  从图中可以看出（较平的三条线是loop-based，其他的是table-based）：
+		  Loop-based在chunk size很小的时候performance优于table-based。
+		  但是table-based的effective bandwidth仍然可以随着chunk size变大继续scale，而loop-based却早已达到它的最高bandwidth。
+		  最后从最大bandwidth来看，table-based要优于loop-based。
+
+		  之前我们survey时看到，一些paper在优化其他一些erasure codes时采用了loop-based。
 		</aside>
 	  </section>
 
@@ -367,10 +374,47 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  <section>
 		<h3>Naive Implementation</h3>
 		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  如图所示，要计算某行某列（红色方格）的结果，需要矩阵A红色的row和矩阵B红色的column。
+		</aside>
 	  </section>
 	  <section>
-		<h3>Tiling Algorithm</h3>
+		<h3>Naive Implementation</h3>
+		<img src="./images/matrix-multiplication/without-tiling-1.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  接下来，我们拿矩阵A红色的row中第一个element和矩阵B红色的column中第一个element相乘得到一个结果。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Naive Implementation</h3>
+		<img src="./images/matrix-multiplication/without-tiling-2.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  再拿第二个element相乘，其结果与上一个结果相加。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Naive Implementation</h3>
+		<img src="./images/matrix-multiplication/without-tiling-3.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  以此类推，计算出红色方格的值。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Problems of Naive Implementation</h3>
+		<img src="./images/matrix-multiplication/without-tiling.png" width="40%" height="40%" alt="without tiling">
+		<ul>
+		  <li>a lot of global memory (off-chip) transactions: each takes 400 - 800 clock cycles.</li>
+		  <li>memory access in column major → poor temporal locality and high cache missrate.</li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>Square-Tiling Algorithm</h3>
 		<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
+		<aside class="notes">
+		  如图，左边与上边被虚线框起来的黄色正方形称为tile。
+		  tile中的elements会从global memory中被load进shared memory，之后在计算中就直接在shared memory中进行access。
+		  正如之前所讲的，shared memory是一层programmable cache，latency大概在20-40个cycles。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
@@ -615,7 +659,7 @@ controls: false,
 progress: true,
 // Display the page number of the current slide
 slideNumber: true,
-history: false,
+history: true,
 center: true,
 embedded: true,
 
