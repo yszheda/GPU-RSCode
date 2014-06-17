@@ -32,3 +32,8 @@
     font-weight: bold;
     font-style: normal;
 }
+
+.reveal em {
+  font-style: italic;
+  color: #ff0000;
+}
