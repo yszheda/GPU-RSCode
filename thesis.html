@@ -413,47 +413,135 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<aside class="notes">
 		  如图，左边与上边被虚线框起来的黄色正方形称为tile。
 		  tile中的elements会从global memory中被load进shared memory，之后在计算中就直接在shared memory中进行access。
-		  正如之前所讲的，shared memory是一层programmable cache，latency大概在20-40个cycles。
+		  正如之前所讲的，shared memory是一层programmable cache，latency大概在20-40个cycles（实测值约48）。
 		</aside>
 	  </section>
 	  <section>
-		<h3>Further Improvement of Tiling Algorithm</h3>
+		<h3>Problems of Square-Tiling Algorithm</h3>
+		<p>not suitable for general input cases of Reed-Solomon Codes: <br>a small matrix multiple a huge matrix</p>
+		<ul>
+		  <li>encoding--A: $(n - k) \times k$, B: $k \times CS$.</li>
+		  <li>decoding--A: $k \times k$, B: $k \times CS$.</li>
+		</ul>
+		<p>where</p>
+		<ul>
+		  <li>$n$: total chunk number (1-100)</li>
+		  <li>$k$: native chunk number (1-100)</li>
+		  <li>$CS$: chunk size (more than 10,000,000)</li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>Generalized Tiling Algorithm</h3>
 		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
 	  </section>
 	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
+		<h4>How to Determine the Parameter of Tiles</h4>
 		<ul>
-		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile</li>
+		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		  <!--
 		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
+			-->
+		  <li class="fragment">$\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ is equal to the CUDA block size (number of threads in a CUDA block) → find the best CUDA block size by tuning occupancy.</li>
 		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
 		</ul>
 	  </section>
 	  <section>
-		<h3>How to Determine the Parameter of Tiles</h3>
-		<table>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<p>
+		Define the aspect ratio $AR$ of the tile in the result matrix as:
+		$$
+		AR = \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} }
+		$$
+		</p>
+		<p class="fragment">three strategies:</p>
+		<table class="fragment">
 		  <tr>
-			<td>Strategy 1</td>
+			<td>Min $AR$</td>
+			<td>minimize tileWidthRow, <br>maximize tileWidthCol</td>
+		  </tr>
+		  <tr>
+			<td>$AR=1$</td>
 			<td>$\textrm{tileWidthRow} = \textrm{tileWidthCol}$</td>
 		  </tr>
 		  <tr>
-			<td>Strategy 2</td>
-			<td>$\textrm{tileWidthRow} = n - k$</td>
-		  </tr>
-		  <tr>
-			<td>Strategy 3</td>
-			<td>
-			  $$
-			  \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} } = \dfrac{ n - k }{ \textrm{chunk size} }
-			  $$
-			</td>
+			<td>Max $AR$</td>
+			<td>maximize tileWidthRow, <br>minimize tileWidthCol</td>
 		  </tr>
 		</table>
 	  </section>
 	  <section>
+		<!--
 		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
+		-->
+		<h4>How to Determine the Parameter of Tiles</h4>
 		<p>
-		use the following ten testcases for encoding:
+		use the following testcases for encoding:
 		</p>
+		<small>
+		  <table>
+			<thead>
+			  <tr>
+				<th>testcase</th>
+				<th>$k$</th>
+				<th>$n$</th>
+				<th>chunk size (MB)</th>
+				<th>Description</th>
+			  </tr>
+			</thead>
+			<tbody>
+			<tr>
+			  <td>1</td>
+			  <td>2</td>
+			  <td>130</td>
+			  <td>1</td>
+			  <td>Small file, large code chunk number</td>
+			</tr>
+			<tr>
+			  <td>2</td>
+			  <td>4</td>
+			  <td>150</td>
+			  <td>1</td>
+			  <td>Small file, large code chunk number</td>
+			</tr>
+			<tr>
+			  <td>3</td>
+			  <td>4</td>
+			  <td>200</td>
+			  <td>1</td>
+			  <td>Small file, large code chunk number</td>
+			</tr>
+			<tr>
+			  <td>4</td>
+			  <td>2</td>
+			  <td>130</td>
+			  <td>10</td>
+			  <td>Big file, large code chunk number</td>
+			</tr>
+			<tr>
+			  <td>5</td>
+			  <td>4</td>
+			  <td>150</td>
+			  <td>10</td>
+			  <td>Big file, large code chunk number</td>
+			</tr>
+			<tr>
+			  <td>6</td>
+			  <td>4</td>
+			  <td>200</td>
+			  <td>10</td>
+			  <td>Big file, large code chunk number</td>
+			</tr>
+			<tr>
+			  <td>7</td>
+			  <td>4</td>
+			  <td>6</td>
+			  <td>256</td>
+			  <td>Big file, small code chunk number</td>
+			</tr>
+			</tbody>
+		  </table>
+		</small>
+		<!--
 		<ul>
 		  <li>
 		  $k = 4$, $n = 6$, chunk size = 256 MB
@@ -486,13 +574,98 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  $k = 16$, $n = 20$, chunk size = 16 MB
 		  </li>
 		</ul>
+		-->
 	  </section>
 	  <section>
+		<!--
 		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
-		<img src="./images/exp/tiling strategies/10cases/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
+		-->
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
+		<ul>
+		  <li>Generally, the "Min $AR$" strategy has the least number of conditional branches, while the "Max $AR$" has the most. The overhead of branches is significant when encoding a large file into a large number of code chunks.</li>
+		  <li>The ``AR=1'' strategy has significant performance degradation when the number of code chunks is smaller than tileWidthRow (wasting cache space, extra boundary checking).</li>
+		</ul>
 		<p class="fragment">
-		Use strategy 2.
+		Use the "Min $AR$" strategy.
 		</p>
+	  </section>
+	  <section>
+		<h3>Further Improvement of Tiling Algorithm</h3>
+		<p>
+		When each chunk can be word-aligned, we can further improve the tiling algorithm.
+		</p>
+	  </section>
+	  <section>
+		<h4>Observation 1: Global Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-load-1.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+	  <section>
+		<h4>Observation 1: Global Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-load-2.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+	  <section>
+		<h4>Observation 1: Global Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-load-3.png" width="80%" height="50%" alt="observation 1">
+		<p>a lot of 8-bit global memory transactions!</p>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-align-load-1.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-align-load-2.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-align-load-3.png" width="80%" height="50%" alt="observation 1">
+		<p>pack 8-bit global memory transactions into 32-bit transactions → reduce global memory load and store.</p>
+	  </section>
+	  <section>
+		<h4>Observation 2: Byte-length Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-ALU-1.png" width="80%" height="50%" alt="tiling alignment">
+		<ul>
+		  <li><del>Multiplication: table look-ups</del></li>
+		  <li>Addition: 8-bit addition in 32-bit ALU!</li>
+		</ul>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-align.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-align-1.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-align-2.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-align-3.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-align-4.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<img src="./images/matrix-multiplication/tiling-align-5.png" width="80%" height="50%" alt="observation 2">
+	  </section>
+	  <section>
+		<h3>Further Improvement of Tiling Algorithm</h3>
+		<img src="./images/exp/tiling strategies/align/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling alignment">
+		<p>performance improvement: more than 38%</p>
+	  </section>
+	  <section>
+		<h4>Profiler Evaluation: Global Memory Load Transactions</h4>
+		<img src="./images/exp/tiling strategies/align/global-load.png" width="60%" height="60%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Profiler Evaluation: ALU Operations</h4>
+		<img src="./images/exp/tiling strategies/align/alu-op.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
 	</section>
 
