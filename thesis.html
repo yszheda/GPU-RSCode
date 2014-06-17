@@ -67,7 +67,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  <h2>Overview</h2>
 	  <ul>
 		<li>Introduction</li>
-		<li>Background</li>
+		<li>Overview of Our Acceleration Targets</li>
 		<li>Accelerating Operations in Galois Field</li>
 		<li>Accelerating Matrix Multiplication</li>
 		<li>Reducing Data Transfer Overhead</li>
@@ -83,58 +83,65 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	<section>
 	  <section>
 		<h2>Introduction</h2>
-	  </section>
-	  <section>
-		<h3>Why Redundancy?</h3>
-		<ul>
-		  <li class="fragment">
-		  Nowadays, cloud storage vendors claim to provide highly available and stable services.
-		  </li>
-		  <li class="fragment">
-		  However, as the scale of storage system grows larger and larger, the probability of failure becomes significant:
-		  <br>
-		  If the MTTF (Mean Time To Failure) of one storage node is $P$, then the MTTF of a system of $n$ storage nodes is $\dfrac{P}{n}$.
-		  <br><p class="fragment">→ SLA (Service-Level Agreement) violation</p>
-		  </li>
-		</ul>
-		<p class="fragment">
-		Therefore, redundancy must be introduced into cloud system.
-		</p>
 		<aside class="notes">
-		  availability和stability是cloud storage system的重要考量。
-		  随着cloud storage system的有越来越多的node，发生failure的机率也越来越大。
-		  为了保证不违反SLA，我们需要引入redundancy来保证fault tolerance容错性。
+		  首先介绍这个题目的background与motivation。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Why Redundancy?</h3>
 		<ul>
-		  <li class="fragment">
-		  The simplest and straightforward redundancy solution is <font color="#ff0000">replication</font> of the data in multiple storage nodes.
+		  <li>
+		  Cloud storage vendors claim to provide highly <em>available</em> and <em>reliable</em> services in their SLA (Service-Level Agreement) with the customers.
+		  Both availability and reliability imply strict <em>fault tolerance</em> requirements for cloud storage system.
 		  </li>
-		  <li class="fragment">
-		  Triple replication solution have been favored in distributed cloud systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
+		  <li>
+		  However, as the scale of storage system grows larger and larger, the probability of failure becomes significant:
+		  <!--
+		  <br>
+		  If the MTTF (Mean Time To Failure) of one storage node is $P$, then the MTTF of a system of $n$ storage nodes is $\dfrac{P}{n}$.
+			-->
+		  <br><p>→ SLA violation.</p>
+		  </li>
+		</ul>
+		<p>
+		Therefore, redundancy must be introduced into cloud system.
+		</p>
+		<aside class="notes">
+		  availability和stability是cloud storage vendor与客户之间签署的SLA（Service Level Agreement）中的重要考量。
+		  不管是availability还是stability，都对cloud storage system的fault tolerance容错性提出了严格的要求。
+		  但是，随着cloud storage system的有越来越多的node，发生failure的机率也越来越大。
+		  为了保证不违反SLA，我们需要引入redundancy来保证系统的fault tolerance容错性。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Why Redundancy?</h3>
+		<ul>
+		  <li>
+		  The simplest and straightforward redundancy solution is <em>replication</em> of the data in multiple storage nodes.
+		  </li>
+		  <li>
+		  Triple replication solution have been favored in cloud storage systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
 		  </li>
 		</ul>
 		<aside class="notes">
 		  最简单的redundancy solution是replication。它把data拷贝若干份，再把这若干份分别分散在不同的storage node中。
 		  假如其中某个storage node发生failure，从其他的node仍可以拿到原来的data。
-		  这种solution也被广泛应用于cloud storage system中，例如GFS和HDFS就应用了triple replication（把同一块data存三份）。
+		  这种solution也被广泛应用于一些cloud storage system中，例如GFS和HDFS就应用了triple replication（把同一块data存三份）。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Why Erasure Codes?</h3>
 		<ul>
-		  <li class="fragment">
-		  Problem of replication: <font color="#ff0000">large storage overhead</font>.
+		  <li>
+		  Problem of replication: <em>large storage overhead</em>.
 		  </li>
-		  <li class="fragment">
-		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of reliability as replication.
+		  <li>
+		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of fault tolerance as replication → a better redundancy solution.
 		  </li>
 		</ul>
 		<aside class="notes">
-		  replication的缺陷是有着很高的storage overhead。
-
+		  replication的缺陷是有着很高的storage overhead，也就是需要很多额外的存储空间来存放对data的拷贝。
+		  而erasure codes在保证相同的fault tolerance level的前提下，可以显著降低这一storage overhead，这也使它成为比replication更好的redundancy solution。
 		</aside>
 	  </section>
 	  <section>
@@ -142,14 +149,14 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<p>
 		$(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
 		<ul>
-		  <li>File → $k$ equal-size native chunks.</li>
+		  <li>File → $k$ equal-size native data chunks.</li>
 		  <li>$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
 		  <li>The native and code chunks are distributed on $n$ different storage nodes.</li>
-		  <li>tolerates the failure of any $n - k$ storage nodes.</li>
+		  <li>tolerates the failure of any $(n - k)$ storage nodes.</li>
 		</ul>
 		</p>
-		<p>Example:</p>
-		<table>
+		<p class="fragment">Example:</p>
+		<table class="fragment">
 		  <tr align="center">
 			<td>
 			  <img src="./images/dot-graph/e-c.png" alt="erasure code">
@@ -163,41 +170,64 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 			  Reed-Solomon Code $(n=4, k=2)$
 			</td>
 			<td>
-			  Replication
+			  Triple Replication
 			</td>
 		  </tr>
 		</table>
 		<p class="fragment">
 		Save 50% space!
 		</p>
+		<aside class="notes">
+		  在我们的thesis中，我们所讨论的erasure codes是指(n,k) MDS codes。
+		  这一类codes首先会将file平均分为若干native chunks，native chunks的数目为k。
+		  之后，k个native chunks通过encode生成(n-k)个code chunks。
+		  native chunks和code chunks再被分散到n个不同的storage nodes中。
+		  (n,k) MDS codes可以容许高达(n-k)个任意的storage nodes发生failure。
+		  <next>
+		  下面我们通过一个例子来比较erasure codes和replication。
+		  左边是采用(4,2) MDS code，把file平均分为A、B两个native chunks，再通过encoding生成两个绿色方框所表示的code chunks。
+		  右边是采用triple replication的结果。
+		  <next>
+		  这二者都能容许任意两个storage nodes发生failure，但显然erasure codes更胜一筹，它可以节省50%的额外空间。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Why Reed-Solomon Codes?</h3>
 		<ul>
-		  <li class="fragment">
+		  <li>
 		  Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
 		  </li>
-		  <li class="fragment">
+		  <li>
 		  $RS(10, 4)$ is used in HDFS-RAID in Facebook and $RS(6, 3)$ is used in GFS II in Google.
 		  </li>
 		</ul>
+		<aside class="notes">
+		  在MDS erasure codes当中，Reed-Solomon codes是使用最为广泛的code之一，例如Fackbook和Google的cloud storage system就使用了不同setting的Reed-Solomon codes作为它们的redundancy solution。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Shortcomings of Reed-Solomon Codes</h3>
 		<ul>
-		  <li class="fragment">
-		  use <font color="#ff0000">matrix multiplication over Galois Field</font> for encoding and decoding → <font color="#ff0000">extra high computation cost</font> compared to replication
+		  <li>
+		  <em>extra high computation cost</em> compared to replication: encoding and decoding.
 		  </li>
 		  <li class="fragment">
 		  Our contributions: use GPU to accelerate the Reed-Solomon encoding and decoding.
 		  </li>
 		</ul>
+		<aside class="notes">
+		  然而，Reed-Solomon codes虽然有效地降低了storage overhead，但相比replication却需要encoding与decoding，这也造成了额外的high computation cost。
+		  为了弥补Reed-Solomon codes的这一缺陷，我们采用GPU作为accelerator来加速它的encoding与decoding，这也是我们这篇thesis的主要贡献。
+		</aside>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Overview of Our Acceleration Techniques</h2>
+		<h2>Overview of Our Acceleration Targets</h2>
+		<aside class="notes">
+		  下面介绍我们针对哪些方面来对Reed-Solomon codes进行加速。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Reed-Solomon Code Overview</h3>
@@ -220,7 +250,10 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  </tr>
 		</table>
 		<aside class="notes">
-		  matrix multiplication
+		  首先，为了了解Reed-Solomon codes为何有很高的computation cost，我们先来看encoding和decoding的大致过程。
+		  encoding的大致过程如左图：n与k被用来生成encoding matrix，encoding matrix再跟k个data chunks组成的matrix进行矩阵乘法，最后得到(n-k)个code chunks。
+		  decoding的大致过程如右图：首先从k个没有发生failure的storage nodes中得到k个chunks，并生成decoding matrix，decoding matrix再跟k个chunks组成的matrix进行矩阵乘法，最后得到原来的data。
+		  可以看到，无论是encoding还是decoding，其主要过程都是矩阵乘法，而这也正是Reed-Solomon codes的computation bottleneck。
 		</aside>
 	  </section>
 	  <!-- Overview of Three Kinds of Implementation -->
@@ -237,6 +270,14 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li class="fragment">Arithmetic over Galois Field.</li>
 		  <li class="fragment">Matrix multiplication.</li>
 		</ul>
+		<aside class="notes">
+		  下面让我们来了解矩阵乘法这一computation overhead。
+		  矩阵乘法的一般形式是C=AB，如果把它改写成等价的矩阵元素的形式，我们会发现是由一系列加法和乘法所组成。
+		  在Reed-Solomon codes的encoding和decoding中，这些加法和乘法并非是我们熟知的实数域的加法和乘法，而是Galois Field的加法和乘法。
+		  这个域的四则运算有自己一套法则，它也是造成Reed-Solomon codes的encoding和decoding的computation complexity高的原因之一。
+		  <next>
+		  所以，针对这些特点，我们需要从微观上加速Galois Field的加法和乘法，从宏观上加速矩阵的乘法。
+		</aside>
 	  </section>
 	  <section>
 		<h3>GPU-Accelerated Reed-Solomon Code Overview</h3>
@@ -258,20 +299,39 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 			</td>
 		  </tr>
 		</table>
+		<aside class="notes">
+		  然而，使用GPU来加速计算本身也会产生一些问题。
+		  从这两张使用GPU来加速Reed-Solomon Codes的encoding与decoding的过程图我们可以看到，由于CPU和GPU有不同的virtual address，使得计算的input和结果需要在二者的memory之间被transfer。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Acceleration Targets - 2</h3>
 		<p>Extra overhead in GPU implementation: data transfers between CPU and GPU.</p>
 		<p class="fragment">Another acceleration targets: reducing data transfer overhead.</p>
+		<aside class="notes">
+		  <next>
+		  因此，我们除了在GPU中加速计算过程之外，还需要减少CPU与GPU之间额外的data transfer overhead。
+		</aside>
+	  </section>
+	  <section>
+		<h2>Overview of Our Acceleration Targets</h2>
+		<ul>
+		  <li>Accelerating arithmetic over Galois Field.</li>
+		  <li>Accelerating matrix multiplication.</li>
+		  <li>Reducing data transfer overhead.</li>
+		</ul>
+		<aside class="notes">
+		  以上就是我们用GPU加速Reed-Solomon codes编解码的三大方面，下面的sessions将一一针对这些方面进行介绍。
+		</aside>
 	  </section>
 	</section>
 
 	<section>
 	  <section>
-		<h2>Accelerate Operations in Galois Field</h2>
+		<h2>Accelerating Arithmetic over Galois Field</h2>
 	  </section>
 	  <section>
-		<h2>Accelerate Operations in Galois Field</h2>
+		<h2>Accelerating Arithmetic over Galois Field</h2>
 		<ul>
 		  <li class="fragment">
 		  Addition/subtraction of two elements in GF($2^w$) in this field can be performed by inexpensive bitwise XOR of the elements.
@@ -409,7 +469,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 	<section>
 	  <section>
-		<h2>Accelerate Encoding/Decoding (Matrix Multiplication over Galois Field)</h2>
+		<h2>Accelerating Matrix Multiplication</h2>
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
@@ -711,7 +771,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 	<section>
 	  <section>
-		<h2>Reduce Data Transfer Overhead</h2>
+		<h2>Reducing Data Transfer Overhead</h2>
 	  </section>
 	  <!--
 	  <section>
