@@ -1,8 +1,8 @@
-%!PS-Adobe-3.0
+%!PS-Adobe-3.0 EPSF-3.0
 %%Creator: graphviz version 2.36.0 (20140111.2315)
 %%Title: GPUencode
-%%Pages: (atend)
-%%BoundingBox: (atend)
+%%Pages: 1
+%%BoundingBox: 36 36 630 181
 %%EndComments
 save
 %%BeginProlog
@@ -179,158 +179,187 @@ def
 %%EndSetup
 setupLatin1
 %%Page: 1 1
-%%PageBoundingBox: 36 36 499 166
+%%PageBoundingBox: 36 36 630 181
 %%PageOrientation: Portrait
 0 0 1 beginpage
 gsave
-36 36 463 130 boxprim clip newpath
+36 36 594 145 boxprim clip newpath
 1 1 set_scale 0 rotate 40 40 translate
 % clusterCPU
 gsave
 1 setlinewidth
 0 0 0 graphcolor
-newpath 0 8 moveto
-0 114 lineto
-167 114 lineto
-167 8 lineto
+newpath 472 8 moveto
+472 83 lineto
+578 83 lineto
+578 8 lineto
 closepath stroke
 0 0 0 graphcolor
 14 /Times-Roman set_font
-69.5 98.8 moveto 28 (CPU) alignedtext
-0 0 0 graphcolor
-14 /Times-Roman set_font
-8 67.8 moveto 151 (1.generate decoding matrix) alignedtext
+491 67.8 moveto 68 (CPU \(Host\)) alignedtext
 grestore
 % clusterGPU
 gsave
 1 setlinewidth
 0 0 0 graphcolor
-newpath 329 8 moveto
-329 114 lineto
-447 114 lineto
-447 8 lineto
+newpath 84 8 moveto
+84 129 lineto
+250 129 lineto
+250 8 lineto
 closepath stroke
 0 0 0 graphcolor
 14 /Times-Roman set_font
-373.5 98.8 moveto 29 (GPU) alignedtext
+127 113.8 moveto 80 (GPU \(Device\)) alignedtext
 0 0 0 graphcolor
 14 /Times-Roman set_font
-362 67.8 moveto 52 (3.decode) alignedtext
+92 82.8 moveto 150 (2.generate encoding matrix) alignedtext
+0 0 0 graphcolor
+14 /Times-Roman set_font
+141 67.8 moveto 52 (3.encode) alignedtext
 grestore
 % hostMem
 gsave
 0 0 0.82745 nodecolor
-newpath 128 52 moveto
-38 52 lineto
-38 16 lineto
-128 16 lineto
+newpath 570 52 moveto
+480 52 lineto
+480 16 lineto
+570 16 lineto
 closepath fill
 1 setlinewidth
 filled
 0 0 0 nodecolor
-newpath 128 52 moveto
-38 52 lineto
-38 16 lineto
-128 16 lineto
+newpath 570 52 moveto
+480 52 lineto
+480 16 lineto
+570 16 lineto
 closepath stroke
 0 0 0 nodecolor
 14 /Times-Roman set_font
-46 30.3 moveto 74 (host memory) alignedtext
+488 30.3 moveto 74 (host memory) alignedtext
 grestore
 % deviceMem
 gsave
 0 0 0.82745 nodecolor
-newpath 439 52 moveto
-337 52 lineto
-337 16 lineto
-439 16 lineto
+newpath 218 52 moveto
+116 52 lineto
+116 16 lineto
+218 16 lineto
 closepath fill
 1 setlinewidth
 filled
 0 0 0 nodecolor
-newpath 439 52 moveto
-337 52 lineto
-337 16 lineto
-439 16 lineto
+newpath 218 52 moveto
+116 52 lineto
+116 16 lineto
+218 16 lineto
 closepath stroke
 0 0 0 nodecolor
 14 /Times-Roman set_font
-345 30.3 moveto 86 (device memory) alignedtext
+124 30.3 moveto 86 (device memory) alignedtext
 grestore
 % hostMem->deviceMem
 gsave
 1 setlinewidth
 0 0 0 edgecolor
-newpath 128.27 43.2 moveto
-143.62 45.97 161 48.63 177 50 curveto
-239.88 55.37 256.31 57.28 319 50 curveto
-321.53 49.71 324.1 49.35 326.69 48.95 curveto
+newpath 479.9 46.83 moveto
+473.93 48.14 467.84 49.26 462 50 curveto
+372.94 61.31 349.45 57.72 260 50 curveto
+249.72 49.11 238.86 47.68 228.35 46.02 curveto
 stroke
 0 0 0 edgecolor
-newpath 327.48 52.37 moveto
-336.73 47.19 lineto
-326.27 45.47 lineto
+newpath 228.85 42.56 moveto
+218.41 44.38 lineto
+227.71 49.46 lineto
 closepath fill
 1 setlinewidth
 solid
 0 0 0 edgecolor
-newpath 327.48 52.37 moveto
-336.73 47.19 lineto
-326.27 45.47 lineto
+newpath 228.85 42.56 moveto
+218.41 44.38 lineto
+227.71 49.46 lineto
 closepath stroke
 0 0 0 edgecolor
 14 /Times-Roman set_font
-177 57.8 moveto 142 (1.copy k selected chunks) alignedtext
-grestore
-% hostMem->deviceMem
-gsave
-1 setlinewidth
-0 0 0 edgecolor
-newpath 128.46 32.27 moveto
-143.83 31.75 161.17 31.26 177 31 curveto
-240.1 29.98 255.9 29.61 319 31 curveto
-321.53 31.06 324.12 31.12 326.73 31.2 curveto
-stroke
-0 0 0 edgecolor
-newpath 326.76 34.7 moveto
-336.87 31.54 lineto
-327 27.71 lineto
-closepath fill
-1 setlinewidth
-solid
-0 0 0 edgecolor
-newpath 326.76 34.7 moveto
-336.87 31.54 lineto
-327 27.71 lineto
-closepath stroke
-0 0 0 edgecolor
-14 /Times-Roman set_font
-181.5 34.8 moveto 133 (2.copy decoding matrix) alignedtext
+300.5 60.8 moveto 121 (1.copy k data chunks) alignedtext
 grestore
 % deviceMem->hostMem
 gsave
 1 setlinewidth
 0 0 0 edgecolor
-newpath 337.3 15.97 moveto
-331.2 14.34 325.01 12.95 319 12 curveto
-256.66 2.17 239.69 4.69 177 12 curveto
-164.26 13.49 150.73 16.08 138.05 18.98 curveto
+newpath 218.13 32.07 moveto
+231.71 31.63 246.42 31.22 260 31 curveto
+349.77 29.54 372.25 28.83 462 31 curveto
+464.55 31.06 467.15 31.14 469.78 31.22 curveto
 stroke
 0 0 0 edgecolor
-newpath 137.01 15.63 moveto
-128.09 21.36 lineto
-138.63 22.44 lineto
+newpath 469.85 34.73 moveto
+479.98 31.61 lineto
+470.12 27.73 lineto
 closepath fill
 1 setlinewidth
 solid
 0 0 0 edgecolor
-newpath 137.01 15.63 moveto
-128.09 21.36 lineto
-138.63 22.44 lineto
+newpath 469.85 34.73 moveto
+479.98 31.61 lineto
+470.12 27.73 lineto
 closepath stroke
 0 0 0 edgecolor
 14 /Times-Roman set_font
-192.5 15.8 moveto 111 (4.copy original data) alignedtext
+260 34.8 moveto 202 (4.copy encoding matrix as metadata) alignedtext
+grestore
+% deviceMem->hostMem
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 218.2 19.09 moveto
+231.65 15.75 246.27 12.69 260 11 curveto
+349.11 .03 373.63 -4.86 462 11 curveto
+465.07 11.55 468.18 12.24 471.29 13.04 curveto
+stroke
+0 0 0 edgecolor
+newpath 470.61 16.49 moveto
+481.19 15.9 lineto
+472.55 9.76 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 470.61 16.49 moveto
+481.19 15.9 lineto
+472.55 9.76 lineto
+closepath stroke
+0 0 0 edgecolor
+14 /Times-Roman set_font
+288.5 14.8 moveto 145 (5.copy \(n-k\) code chunks) alignedtext
+grestore
+% n,k
+gsave
+1 setlinewidth
+0 0 0 nodecolor
+27 34 27 18 ellipse_path stroke
+0 0 0 nodecolor
+14 /Times-Roman set_font
+18 30.3 moveto 18 (n,k) alignedtext
+grestore
+% n,k->deviceMem
+gsave
+1 setlinewidth
+0 0 0 edgecolor
+newpath 54.28 34 moveto
+60.39 34 67.23 34 74.45 34 curveto
+stroke
+0 0 0 edgecolor
+newpath 74.48 37.5 moveto
+84.48 34 lineto
+74.48 30.5 lineto
+closepath fill
+1 setlinewidth
+solid
+0 0 0 edgecolor
+newpath 74.48 37.5 moveto
+84.48 34 lineto
+74.48 30.5 lineto
+closepath stroke
 grestore
 endpage
 showpage
@@ -338,8 +367,6 @@ grestore
 %%PageTrailer
 %%EndPage: 1
 %%Trailer
-%%Pages: 1
-%%BoundingBox: 36 36 499 166
 end
 restore
 %%EOF

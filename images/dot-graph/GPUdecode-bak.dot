@@ -7,7 +7,7 @@ subgraph clusterCPU
 {
 node [style=filled];
 shape=box;
-label="CPU (Host)\n\n1.generate decoding matrix";
+label="CPU";
 "hostMem"
 [
 style=filled
@@ -19,7 +19,7 @@ subgraph clusterGPU
 {
 node [style=filled];
 shape=box;
-label="GPU (Device)\n\n3.decode";
+label="GPU\n\n2.generate decoding matrix\n3.decode";
 "deviceMem"
 [
 style=filled
@@ -28,7 +28,6 @@ label="device memory"
 ]
 }
 //hostMem -> deviceMem [label="1.copy k selected chunks"];
-hostMem -> deviceMem [label="1.copy k selected chunks"];
-hostMem -> deviceMem [label="2.copy decoding matrix"];
+hostMem -> deviceMem [label="1.copy k selected chunks and encoding matrix"];
 deviceMem -> hostMem [label="4.copy original data"];
 }

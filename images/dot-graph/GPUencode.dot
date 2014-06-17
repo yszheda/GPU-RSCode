@@ -6,7 +6,7 @@ subgraph clusterCPU
 {
 node [style=filled];
 shape=box;
-label="CPU";
+label="CPU (Host)";
 "hostMem"
 [
 shape=box
@@ -27,7 +27,7 @@ subgraph clusterGPU
 {
 node [style=filled];
 shape=box;
-label="GPU\n\n2.generate encoding matrix\n3.encode";
+label="GPU (Device)\n\n2.generate encoding matrix\n3.encode";
 //"3.encode";
 "deviceMem"
 [

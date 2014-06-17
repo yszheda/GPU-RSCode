@@ -197,7 +197,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 	<section>
 	  <section>
-		<h2>Background</h2>
+		<h2>Overview of Our Acceleration Techniques</h2>
 	  </section>
 	  <section>
 		<h3>Reed-Solomon Code Overview</h3>
@@ -219,11 +219,51 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 			</td>
 		  </tr>
 		</table>
+		<aside class="notes">
+		  matrix multiplication
+		</aside>
 	  </section>
-	  <aside class="notes">
-		matrix multiplication
-	  </aside>
 	  <!-- Overview of Three Kinds of Implementation -->
+	  <section>
+		<h3>Acceleration Targets - 1</h3>
+		<p>Computation bottleneck: matrix multiplication.</p>
+		\begin{array}{rl}
+		& C = A \cdot B \\
+		\equiv & ( c_{j} = \sum_{i = 1}^{k} a_{i,j} \times b_{i} ) 
+		\end{array}
+		<p>Addition and multiplication are defined as arithmetic over Galois Field GF($2^8$).</p>
+		<p class="fragment">Acceleration targets for computation:</p>
+		<ul>
+		  <li class="fragment">Arithmetic over Galois Field.</li>
+		  <li class="fragment">Matrix multiplication.</li>
+		</ul>
+	  </section>
+	  <section>
+		<h3>GPU-Accelerated Reed-Solomon Code Overview</h3>
+		<table>
+		  <tr align="center">
+			<td>
+			  <small>Reed-Solomon Encoding in a GPU</small>
+			</td>
+			<td>
+			  <img src="./images/dot-graph/GPUencode.png" alt="RS encode in GPU">
+			</td>
+		  </tr>
+		  <tr align="center">
+			<td>
+			  <small>Reed-Solomon Decoding in a GPU</small>
+			</td>
+			<td>
+			  <img src="./images/dot-graph/GPUdecode.png" alt="RS decode in GPU">
+			</td>
+		  </tr>
+		</table>
+	  </section>
+	  <section>
+		<h3>Acceleration Targets - 2</h3>
+		<p>Extra overhead in GPU implementation: data transfers between CPU and GPU.</p>
+		<p class="fragment">Another acceleration targets: reducing data transfer overhead.</p>
+	  </section>
 	</section>
 
 	<section>
@@ -396,7 +436,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<h3>Naive Implementation</h3>
 		<img src="./images/matrix-multiplication/without-tiling-3.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
-		  以此类推，计算出红色方格的值。
+		  以此类推，计算出矩阵C中红色方格的值。
 		</aside>
 	  </section>
 	  <section>
