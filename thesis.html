@@ -440,13 +440,14 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</ul>
 		<aside class="notes">
 		  下面我们通过一个实验来决定采用loop-based或是table-based。
-		  在我们的实验中，chunk size从1MB scale到64MB，k从4 scale到16，采用double fault tolerance (code chunks的数目是二)。
+		  在我们的实验中，chunk size（也就是切file的一份chunk的大小）从1MB scale到64MB，k从4 scale到16，采用double fault tolerance (code chunks的数目是二)。
 		  从图中可以看出（较平的三条线是loop-based，其他的是table-based）：
 		  Loop-based在chunk size很小的时候performance优于table-based。
 		  但是table-based的effective bandwidth仍然可以随着chunk size变大继续scale，而loop-based却早已达到它的最高bandwidth。
 		  最后从最大bandwidth来看，table-based要优于loop-based。
 
-		  之前我们survey时看到，一些paper在优化其他一些erasure codes时采用了loop-based。
+		  之前我们survey时看到，一些paper在优化其他一些erasure codes时采用了loop-based。他们的理由是所谓的“memory wall”，也就是processor的computation power成长迅速，而memory的performance成长缓慢，导致这两者的gap越来越大（以每年约50%的速率增大）。所以，与其选择需要memory access的table-based，不如选择computation bound的loop-based方法。
+
 		</aside>
 	  </section>
 
