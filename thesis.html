@@ -983,6 +983,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  当file所切出来的chunk可以被word-aligned时，我们还可以对tiling algorithm做进一步的优化。
 		</aside>
 	  </section>
+	  <!--
 	  <section>
 		<h4>Observation 1: Global Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-load-1.png" width="80%" height="50%" alt="observation 1">
@@ -991,11 +992,20 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<h4>Observation 1: Global Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-load-2.png" width="80%" height="50%" alt="observation 1">
 	  </section>
+		-->
 	  <section>
 		<h4>Observation 1: Global Memory Transactions</h4>
-		<img src="./images/matrix-multiplication/tiling-load-3.png" width="80%" height="50%" alt="observation 1">
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<img src="./images/matrix-multiplication/tiling-load.png" width="80%" height="50%" alt="observation 1">
 		<p>a lot of 8-bit global memory transactions!</p>
+		<aside class="notes">
+		  我们的第一个observation是：之前的做法在把矩阵B黄色矩形的elements从gMem load到sMem的过程中，是一个一个byte同时load进来的。
+		  而8-bit是gMem transactions的最低单位，我们应该想办法让它每次load更多的bit，从而减少transactions的数量。 
+		</aside>
 	  </section>
+	  <!--
 	  <section>
 		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-align-load-1.png" width="80%" height="50%" alt="observation 1">
@@ -1004,54 +1014,116 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-align-load-2.png" width="80%" height="50%" alt="observation 1">
 	  </section>
+		-->
 	  <section>
 		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
-		<img src="./images/matrix-multiplication/tiling-align-load-3.png" width="80%" height="50%" alt="observation 1">
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<img src="./images/matrix-multiplication/tiling-align-load.png" width="80%" height="50%" alt="observation 1">
 		<p>pack 8-bit global memory transactions into 32-bit transactions → reduce global memory load and store.</p>
+		<aside class="notes">
+		  对此，我们的方法是把这些8-bit的transactions pack成32-bit，从而减少load的数量。
+		  如图所示，load相同数量的elements，用这种方法所需要的transactions明显降低。
+		  同样的techniques也能应用在global memory store上。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Observation 2: Byte-length Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-ALU-1.png" width="80%" height="50%" alt="tiling alignment">
 		<ul>
-		  <li><del>Multiplication: table look-ups</del></li>
-		  <li>Addition: 8-bit addition in 32-bit ALU!</li>
+		  <li><del>Multiplication: table look-ups → memory accesses</del></li>
+			<li>Addition: 8-bit XORs -> ALU operations
+			<ul>
+			  <li>Each ALU operation: <br>operand1 (8-bit) XOR operand2 (8-bit) = result (8-bit)</li>
+			  <li>GPU Execution Units: 32-bit</li>
+			  </ul>
+			</li>
 		</ul>
+		<aside class="notes">
+		  我们的第二个observation着重于对elements所执行的operations。
+		  首先，乘法的部分基本是table look-up，属于memory accesses，这里不予考虑。
+		  而加法的部分实际上是8-bit的XOR。
+		  在GPU中，EU的操作数和结果的registers是32-bit的。
+		  这表明原先的做法，每次的ALU operations都只占用了registers空间的四分之一来做运算，增加了ALU operations的数目。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-align.png" width="80%" height="50%" alt="tiling alignment">
+		<aside class="notes">
+		  我们在survey时看到，一些采用loop-based的paper为了解决这一问题，提出了byte-by-word矩阵乘法的solution。
+		  我们针对table-based也implement了byte-by-word的矩阵乘法。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-align-1.png" width="80%" height="50%" alt="tiling alignment">
+		<aside class="notes">
+		  我们的做法如图。
+		  首先，之前提过，乘法主要是memory accesses，与这部分ALU operations的优化无关，所以这里照旧是byte和byte相乘。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-align-2.png" width="80%" height="50%" alt="tiling alignment">
 	  </section>
 	  <section>
 		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-align-3.png" width="80%" height="50%" alt="tiling alignment">
 	  </section>
 	  <section>
 		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-align-4.png" width="80%" height="50%" alt="tiling alignment">
 	  </section>
 	  <section>
 		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling-align-5.png" width="80%" height="50%" alt="observation 2">
+		<aside class="notes">
+		  乘积的四个byte被pack到一个32-bit的register中，再与之前32-bit的结果做加法。这就保证了每次ALU的registers被充分使用。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/exp/tiling strategies/align/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling alignment">
 		<p>performance improvement: more than 38%</p>
 	  </section>
 	  <section>
 		<h4>Profiler Evaluation: Global Memory Load Transactions</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/exp/tiling strategies/align/global-load.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
 	  <section>
 		<h4>Profiler Evaluation: ALU Operations</h4>
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/exp/tiling strategies/align/alu-op.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
 	</section>
