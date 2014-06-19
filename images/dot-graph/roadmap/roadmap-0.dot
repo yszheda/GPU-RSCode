@@ -1,0 +1,13 @@
+digraph roadmap
+{
+  rankdir = LR;
+  node[shape=box];
+  root
+	[
+	label="Acceleration"
+	shape=folder
+	];
+  root -> "Accelerating arithmetic \nover Galois Field";
+  root -> "Accelerating matrix multiplication";
+  root -> "Reducing data transfer overhead";
+}

@@ -1,7 +1,7 @@
 bar(LogExpNew);
 set(gca,'XTickLabel',{'baseline', 'removing MOD(bit operations)', 'removing MOD(table augmentation)', 'further removing branches'});
 % legend('shared memory (initialize serially)', 'constant memory', 'shared memory (load parallelly from constant memory)', 'Location', 'Best');
-legend('constant memory', 'shared memory (initialize serially)', 'shared memory (load parallelly)', 'Location', 'Best');
+legend('constant memory', 'shared memory (initialize serially)', 'shared memory (load parallelly)', 'Location', 'SouthEast');
 ylabel('kernel execution time (ms)');
 rotateticklabel(gca,-20);
 

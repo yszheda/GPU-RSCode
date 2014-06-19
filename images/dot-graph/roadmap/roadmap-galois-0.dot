@@ -1,0 +1,30 @@
+digraph roadmap
+{
+  rankdir = LR;
+  node[shape=box];
+  root
+	[
+	label="Acceleration"
+	shape=folder
+	];
+  galois
+	[
+	label="Accelerating arithmetic \nover Galois Field";
+  //style="filled,setlinewidth(0.5)",fillcolor=red,color=gray,fontcolor=snow
+  style="filled, setlinewidth(2)";
+  fillcolor=yellow;
+  color=red;
+  fontcolor=black;
+  ]
+	mm
+	[
+	label="Accelerating matrix multiplication"
+	]
+	comm
+	[
+	label="Reducing data transfer overhead"
+	]
+	root -> galois;
+  root -> mm;
+  root -> comm;
+}
