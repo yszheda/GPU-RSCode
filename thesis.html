@@ -324,6 +324,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h2>Overview of Our Acceleration Targets</h2>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-0.png" width="100%" height="100%" alt="Roadmap">
+		</aside>
 		<ul>
 		  <li>Accelerating arithmetic over Galois Field.</li>
 		  <li>Accelerating matrix multiplication.</li>
@@ -338,12 +341,18 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	<section>
 	  <section>
 		<h2>Accelerating Arithmetic over Galois Field</h2>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="100%" height="100%" alt="Roadmap">
+		</aside>
 		<aside class="notes">
 		  首先介绍如何加速Galois Field的运算。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Breif Introduction of Galois Field</h3>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
 		<p>GF($2^w$) contains $2^w$ polynomials. For each polynomial, its degree is at most $w−1$ and its coefficient is in {0, 1}.</p>
 		<p align="left">For GF($2^8$), every element can be one-to-one mapped into a byte, and polynomial operations in GF($2^8$) is isomorphic to operations on bytes:</p>
 		<ul>
@@ -369,6 +378,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>GPU Accelerating Options for Multiplication</h3>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
 		<ul>
 		  <li><em>loop-based</em> method</li>
 		  <li>a set of <em>table-based</em> methods</li>
@@ -380,6 +392,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>Loop-based Method</h4>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
 		<ul>
 		  <li>compute directly: cost a loop of at most eight iterations to multiply two elements in GF($2^8$).</li>
 		  <li>computation bound</li>
@@ -393,6 +408,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>Table-based Methods</h4>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="50%" height="50%" alt="Roadmap">
+		</aside>
 		<table>
 		  <tr>
 			<td></td>
@@ -432,6 +450,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>GPU Implementation: Loop-based or Table-based?</h4>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
 		<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
 		<ul>
 		  <li>The loop-based method is able to achieve the maximum bandwidth even when the chunk size is small.</li>
@@ -453,24 +474,64 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="80%" height="80%" alt="Roadmap">
+		</aside>
+		<pre><code class="cpp" data-trim contenteditable>
+uint8_t gf256_mul(uint8_t a, uint8_t b)
+{
+  int result;
+  if (a == 0 || b == 0) {
+	return 0;
+  }
+  result = (gf256_log_table[a] + gf256_log_table[b]) % (NW-1);
+  return gf256_exp_table[result];
+}
+		</code></pre>
 		<aside class="notes">
 		  决定了GPU实作采用log&exp table-based方法之后，我们再继续对这一方法进行优化。
+		  前面提到log&exp table-based方法含有branches和time-consuming的MOD运算。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="50%" height="50%" alt="Roadmap">
+		</aside>
 		<table>
 		  <tr>
 			<td>Improvement Approach 1</td>
-			<td>Replace the slow modular operations with more efficient operations.</td>
+			<td>
+			  Replace the slow modular operations with more efficient operations.
+			  <pre><code class="cpp" data-trim contenteditable>
+if (a == 0 || b == 0) {
+  return 0;
+}
+result = (gf256_log_table[a] + gf256_log_table[b]) & (NW-1)
++ (gf256_log_table[a] + gf256_log_table[b]) >> width;
+			  </code></pre>
+			</td>
 		  </tr>
 		  <tr>
 			<td>Improvement Approach 2</td>
-			<td>Remove the slow modular operations by augmenting one table.</td>
+			<td>
+			  Remove the slow modular operations by augmenting one table.
+			  <pre><code class="cpp" data-trim contenteditable>
+if (a == 0 || b == 0) {
+  return 0;
+}
+result = gf256_log_table[a] + gf256_log_table[b];
+			  </code></pre>
+			</td>
 		  </tr>
 		  <tr>
 			<td>Improvement Approach 3</td>
-			<td>Further eliminates the conditional branches by augmenting both two tables.</td>
+			<td>
+			  Further eliminates the conditional branches by augmenting both two tables.
+			  <pre><code class="cpp" data-trim contenteditable>
+result = gf256_log_table[a] + gf256_log_table[b];
+			  </code></pre>
+			</td>
 		  </tr>
 		</table>
 		<aside class="notes">
@@ -482,6 +543,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-3.png" width="80%" height="80%" alt="Roadmap">
+		</aside>
 		<p>
 		In GPU implementation, where to store the tables and how to initialize them will affect the performance.
 		</p>
@@ -504,6 +568,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<aside style="position: absolute; top: 480px; right: -250px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="45%" height="45%" alt="Roadmap">
+		</aside>
 		<p>
 		What we have implemented:
 		</p>
@@ -517,6 +584,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>Further Improvement of the Log&exp Table-based Method</h4>
+		<aside style="position: absolute; top: 250px; right: -750px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="30%" height="30%" alt="Roadmap">
+		</aside>
 		<p>
 		<small>encoding a 1GB file with $k = 4$ and $n = 6$.</small>
 		</p>
@@ -531,16 +601,26 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	<section>
 	  <section>
 		<h2>Accelerating Matrix Multiplication</h2>
+		<aside style="position: absolute; top: 200px; right: 0px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="60%" height="60%" alt="Roadmap">
+		</aside>
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
+		  我们先来看最一般的做法。
 		  如图所示，要计算某行某列（红色方格）的结果，需要矩阵A红色的row和矩阵B红色的column。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/without-tiling-1.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  接下来，我们拿矩阵A红色的row中第一个element和矩阵B红色的column中第一个element相乘得到一个结果。
@@ -548,6 +628,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/without-tiling-2.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  再拿第二个element相乘，其结果与上一个结果相加。
@@ -555,6 +638,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/without-tiling-3.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  以此类推，计算出矩阵C中红色方格的值。
@@ -562,23 +648,38 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>Problems of Naive Implementation</h3>
+		<aside style="position: absolute; top: 100px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/without-tiling.png" width="40%" height="40%" alt="without tiling">
 		<ul>
 		  <li>a lot of global memory (off-chip) transactions: each takes 400 - 800 clock cycles.</li>
 		  <li>memory access in column major → poor temporal locality and high cache missrate.</li>
 		</ul>
+		<aside class="notes">
+		  至于这种最一般的做法不好的原因，一方面是因为矩阵的elements（也就是图中绿色的小方格）是存在GPU的global memory之中的，而这种做法需要大量access这些elements，因而也造成了大量的global memory transactions。之前我们提过，global memory其实是off-chip的DRAM，access它的latency是400-800cycles，是比较慢的。
+		  另一方面，这种做法在access矩阵B的elements是以column major的方式来access的，这种方式的locality很差，会导致较高的cache missrate。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Square-Tiling Algorithm</h3>
+		<aside style="position: absolute; top: 100px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
 		<aside class="notes">
-		  如图，左边与上边被虚线框起来的黄色正方形称为tile。
-		  tile中的elements会从global memory中被load进shared memory，之后在计算中就直接在shared memory中进行access。
-		  正如之前所讲的，shared memory是一层programmable cache，latency大概在20-40个cycles（实测值约48）。
+		  最常被用来改善上述问题的是tiling algorithm，也有些资料把它叫做blocking algorithm。
+		  如图，黄色正方形被称为tile，因此我们这里也称这种algorithm为square-tiling algorithm。
+		  左边与上边被虚线框起来的tile表明，tile中的elements会从global memory中被load进shared memory，之后在计算中就直接在shared memory中进行access。
+		  正如之前所讲的，access shared memory的latency要比access global memory的latency低得多。
+		  tiling algorithm用shared memory作为memory access的cache，既可以改善locality，又可以reuse cache中的elements，从而降低global memory transactions的数量。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Problems of Square-Tiling Algorithm</h3>
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
 		<p>not suitable for general input cases of Reed-Solomon Codes: <br>a small matrix multiple a huge matrix</p>
 		<ul>
 		  <li>encoding--A: $(n - k) \times k$, B: $k \times CS$.</li>
@@ -590,10 +691,20 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li>$k$: native chunk number (1-100)</li>
 		  <li>$CS$: chunk size (more than 10,000,000)</li>
 		</ul>
+		<aside class="notes">
+		  但是，square-tiling algorithm应对的一般是矩阵A和B的大小接近的情况，对于Reed-Solomon codes实际编解码的情况并不适用。
+		  在Reed-Solomon codes实际被使用的cases中，chunk的数量一般很少大过三位数（二位数），而实际的input file又是mega甚至giga这种级别的，使得chunk的大小一般大于百万的数量级。
+		  无论是encoding和decoding，矩阵的乘法都是一个很小的矩阵A乘以一个扁长的大矩阵B的情形。
+		  为了能使这种特殊的矩阵乘法有较好的performance，我们需要generalize square-tiling algorithm以适应实际情况。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Generalized Tiling Algorithm</h3>
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
+		<h4>How to Determine the Parameter of Tiles</h4>
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
@@ -857,12 +968,16 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		encoding under $k = 4, n = 6$ settings.
 		</p>
 		<p>
-		The input file size is scaled from 1000 MB to 2000 MB, and the CUDA stream number is increased from one to four.
+		The input file size is scaled from 1000 MB to 1800 MB.
+		<!--
+		 and the CUDA stream number is increased from one to four.
+		-->
 		</p>
 		<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
-		<p class="fragment">
-		using CUDA streaming can improve the performance by more than 29%.
-		</p>
+		<ul>
+		  <li class="fragment">Using CUDA streaming can improve the performance by more than 29%.</li>
+		  <li class="fragment">data size ↑ → data transfer overhead ↑ → CUDA streaming improvement ↑.</li>
+		</ul>
 	  </section>
 	  <section>
 		<h4>Using CUDA Streams</h4>
