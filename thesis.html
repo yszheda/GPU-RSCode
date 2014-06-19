@@ -474,9 +474,10 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
-		<aside class="sidebar">
+		<aside style="position: absolute; top: 400px; right: -400px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="80%" height="80%" alt="Roadmap">
 		</aside>
+		<p>baseline:</p>
 		<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_mul(uint8_t a, uint8_t b)
 {
@@ -537,8 +538,8 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<aside class="notes">
 		  我们survey时看到，一些paper提出了这三种优化方法。
 		  这些方法优化的目标是之前我们所提到的MOD和branches。
-		  前两种优化主要是针对MOD这一种耗时的operation，第一种是把它替换成等价的operations，第二种是通过扩充table的内容来去掉MOD。
-		  第三种优化除了去掉MOD以外，还去掉了branches，它的方式也是对table的内容进行扩充。
+		  前两种优化主要是针对MOD这一种耗时的operation，第一种approach是把它替换成等价的operations，第二种approach则是通过扩充table的内容来去掉MOD。
+		  第三种approach除了去掉MOD以外，还去掉了branches，它的方式也是对table的内容进行扩充。
 		</aside>
 	  </section>
 	  <section>
@@ -580,6 +581,12 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li>Store two tables in the off-chip memory and then load into the shared memory parallely at the beginning of each kernel function.</li>
 		</ul>
 		<aside class="notes">
+		  前面提到还有如何initialize tables的问题：
+		  对于tables存放在cMem的情况，只需要在compile-time填好table即可。
+		  对于tables存放在sMem的情况，由于sMem在L1 cache这一层，所以没办法在compile-time指定它存的内容。
+		  我们implement了两种方式：
+		  一种是在run-time initialize，但由于initialization有dependency，无法被平行（parallelize）。
+		  另一种则是先把tables存在off-chip memory，然后再把它们load到sMem，这种方式就可以被平行。
 		</aside>
 	  </section>
 	  <section>
@@ -592,9 +599,21 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		</p>
 		<img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="60%" height="60%" alt="Log&exp improvement techniques">
 		<ul>
-		  <li>The elimination of conditional branches improves the performance, for it removes warp diverge.</li>
+		  <li>The elimination of conditional branches improves the performance.</li>
+		  <!-- , for it removes warp diverge.</li> -->
 		  <li>Accessing the tables in the constant memory is more time-consuming.</li>
 		</ul>
+		<aside class="notes">
+		  在下面的实验中，我们来比较以上介绍这些further improvement的技巧。
+		  在实验中，我们在k=4,n=6的settings下去encode一个1GB的file。
+		  首先我们来看三种优化方法（approach）与baseline的比较（X轴的四项）：
+		  前两种approaches由于只把MOD拿掉，所以它们的performance比较接近；而最后一种approach还优化掉了branches，所以performance最好。
+		  接下来我们来比较三种table存放与initialization方式（蓝色、绿色和红色的bar）：
+		  由于cMem无法保证每次access都在cache中，所以把tables存在cMem的performance不如sMem。
+		  相同的原因也导致了load parallely在table size较小的情况下performance低于initialize serially，因为它也需要access off-chip memory。
+		  前面我们提到，（X轴的）后两种approach是需要扩充table的，X轴往右，table size就越大。
+		  随着table size的变大，sMem的两种方式的差距也在减小，最后load parallely的performance反超initialize serially，所以最后我们选了最右边红色bar的这种方式。
+		</aside>
 	  </section>
 	</section>
 
@@ -603,6 +622,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<h2>Accelerating Matrix Multiplication</h2>
 		<aside style="position: absolute; top: 200px; right: 0px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="60%" height="60%" alt="Roadmap">
+		</aside>
+		<aside class="notes">
+		  下面的session我们来介绍矩阵乘法。
 		</aside>
 	  </section>
 	  <section>
@@ -657,7 +679,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li>memory access in column major → poor temporal locality and high cache missrate.</li>
 		</ul>
 		<aside class="notes">
-		  至于这种最一般的做法不好的原因，一方面是因为矩阵的elements（也就是图中绿色的小方格）是存在GPU的global memory之中的，而这种做法需要大量access这些elements，因而也造成了大量的global memory transactions。之前我们提过，global memory其实是off-chip的DRAM，access它的latency是400-800cycles，是比较慢的。
+		  这种最一般的做法不好的原因，一方面是因为矩阵的elements（也就是图中绿色的小方格）是存在GPU的global memory之中的，而这种做法需要大量access这些elements，因而也造成了大量的global memory transactions。之前我们提过，global memory其实是off-chip的DRAM，access它的latency是400-800cycles，是比较慢的。
 		  另一方面，这种做法在access矩阵B的elements是以column major的方式来access的，这种方式的locality很差，会导致较高的cache missrate。
 		</aside>
 	  </section>
@@ -705,28 +727,89 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		</aside>
 		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<ul>
+		  <li>tileDepth</li>
+		  <li>tileWidthRow</li>
+		  <li>tileWidthCol</li>
+		</ul>
+		<aside class="notes">
+		  我们对square-tiling algorithm做了如图所示的generalize。
+		  接下来我们需要确定合适的tile形状，这个问题等价于如何去确定图中的三个参数：
+		  其中tileDepth是切矩阵A的column与矩阵B的row的；
+		  tileWidthRow是切矩阵A的row；
+		  tileWidthCol是切矩阵B的column。
+		</aside>
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<ul>
-		  <li class="fragment">set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		  <li>set tileDepth to $A.width$ ($k$) → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		</ul>
+		<img src="./images/matrix-multiplication/tiling-tileDepth-2.png" width="80%" height="50%" alt="generalized tiling">
+		<aside class="notes">
+		  首先我们观察到，把tileDepth设满是一个较好的选择。因为它所切的那条边是native data chunk的数目k，一般都很小，不会导致sMem的大小过大。
+		  其次，这种做法可以减少access矩阵A、B所需要的loop。
+		  (next)
+		  像原来的大小就需要两次iterations。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<ul>
+		  <li>set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		</ul>
+		<img src="./images/matrix-multiplication/tiling-tileDepth-0.png" width="80%" height="50%" alt="generalized tiling">
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<ul>
+		  <li>set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		</ul>
+		<img src="./images/matrix-multiplication/tiling-tileDepth-1.png" width="80%" height="50%" alt="generalized tiling">
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<img src="./images/matrix-multiplication/tiling-tileWidth.png" width="80%" height="50%" alt="generalized tiling">
+		<ul>
 		  <!--
 		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
 			-->
 		  <li class="fragment">$\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ is equal to the CUDA block size (number of threads in a CUDA block) → find the best CUDA block size by tuning occupancy.</li>
 		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
 		</ul>
+		<aside class="notes">
+		  剩下的还有两个参数，它们也是矩阵C中tile的长和宽。
+		  由于每个CUDA block的thread负责算矩阵C的tile（黄色实线矩形）中的一个element，所以thread的数目（CUDA中称为block size）其实就是矩阵C中tile的面积。
+		  而CUDA block size可以通过tuning得到，所以剩下两个参数的乘积我们也可以确定下来。
+		  接下来就是如何进一步确定它们的值。
+		</aside>
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<aside style="position: absolute; top: 0px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<img src="./images/matrix-multiplication/tiling-tileWidth.png" width="40%" height="20%" alt="generalized tiling">
 		<p>
 		Define the aspect ratio $AR$ of the tile in the result matrix as:
 		$$
 		AR = \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} }
 		$$
 		</p>
-		<p class="fragment">three strategies:</p>
-		<table class="fragment">
+		<p>three strategies:</p>
+		<table>
 		  <tr>
 			<td>Min $AR$</td>
 			<td>minimize tileWidthRow, <br>maximize tileWidthCol</td>
@@ -740,12 +823,20 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			<td>maximize tileWidthRow, <br>minimize tileWidthCol</td>
 		  </tr>
 		</table>
+		<aside class="notes">
+		  为此，我们提出了三种strategies。
+		  我们首先定义这两个参数的比值，也就是矩阵C的tile（黄色实线矩形）的长宽比为AR。
+		  Min AR是用更长的边去切矩阵B，Max AR是用更长的边去切矩阵A。
+		</aside>
 	  </section>
 	  <section>
 		<!--
 		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
 		-->
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<p>
 		use the following testcases for encoding:
 		</p>
@@ -847,26 +938,50 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  </li>
 		</ul>
 		-->
+		<aside class="notes">
+		  我们通过实验来决定选择哪一种strategy。以下我们分别选择了七组有代表性的testcases来说明我们的结论。
+		</aside>
 	  </section>
 	  <section>
 		<!--
 		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
 		-->
 		<h4>How to Determine the Parameter of Tiles</h4>
-		<img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
+		<aside style="position: absolute; top: 100px; right: -880px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		<table>
+		  <tr>
+			<td><img src="./images/matrix-multiplication/tiling-tileWidth.png" width="200%" height="60%" alt="generalized tiling"></td>
+			<td><img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" alt="tiling strategies"></td>
+		  </tr>
+		</table>
 		<ul>
 		  <li>Generally, the "Min $AR$" strategy has the least number of conditional branches, while the "Max $AR$" has the most. The overhead of branches is significant when encoding a large file into a large number of code chunks.</li>
 		  <li>The ``AR=1'' strategy has significant performance degradation when the number of code chunks is smaller than tileWidthRow (wasting cache space, extra boundary checking).</li>
 		</ul>
+		<!--
 		<p class="fragment">
 		Use the "Min $AR$" strategy.
 		</p>
+		-->
+		<aside class="notes">
+		  这里需要说明的是，由于矩阵B的column数目（chunk size）一般都很大，被tileWidthCol切完的份数仍远大于CUDA的grid size，所以每个thread需要多次iterations才能处理完矩阵B的所有elements。
+		  Min AR的切法由于优先用长的边来切矩阵B的column，所以它需要的iterations数量少。而作为与之相反的Max AR，则需要最多的iterations数量，这部分overhead在大file和code chunk数目多的情况下尤其明显。
+		  而最后一个testcase反应了AR=1这种策略performance很差的典型情况。这种情况是code chunk的数目很少，使A的row的数目小于要切割它的tileWidthRow。此时，这种策略用了一个比矩阵A还大的tile来cache矩阵A，不仅浪费了sMem空间，而且还需要额外的boundary checking，从而导致了严重的performance degradation。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
+		<aside style="position: absolute; top: 300px; right: -380px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
 		<p>
 		When each chunk can be word-aligned, we can further improve the tiling algorithm.
 		</p>
+		<aside class="notes">
+		  当file所切出来的chunk可以被word-aligned时，我们还可以对tiling algorithm做进一步的优化。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Observation 1: Global Memory Transactions</h4>
