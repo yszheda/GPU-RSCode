@@ -324,9 +324,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h2>Overview of Our Acceleration Targets</h2>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-0.png" width="100%" height="100%" alt="Roadmap">
 		</aside>
+		-->
 		<ul>
 		  <li>Accelerating arithmetic over Galois Field.</li>
 		  <li>Accelerating matrix multiplication.</li>
@@ -341,18 +343,23 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	<section>
 	  <section>
 		<h2>Accelerating Arithmetic over Galois Field</h2>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="100%" height="100%" alt="Roadmap">
 		</aside>
+		-->
+		<img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="100%" height="100%" alt="Roadmap">
 		<aside class="notes">
 		  首先介绍如何加速Galois Field的运算。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Brief Introduction of Galois Field</h3>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="90%" height="90%" alt="Roadmap">
 		</aside>
+		-->
 		<p>GF($2^w$) contains $2^w$ polynomials. For each polynomial, its degree is at most $w−1$ and its coefficient is in {0, 1}.</p>
 		<p align="left">For GF($2^8$), every element can be one-to-one mapped into a byte, and polynomial operations in GF($2^8$) is isomorphic to operations on bytes:</p>
 		<ul>
@@ -378,13 +385,16 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h3>GPU Accelerating Options for Multiplication</h3>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
 		</aside>
+		-->
 		<ul>
 		  <li><em>loop-based</em> method</li>
 		  <li>a set of <em>table-based</em> methods</li>
 		</ul>
+		<img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="100%" height="100%" alt="Roadmap">
 		<aside class="notes">
 		  而针对Galois Field乘法的加速方法主要有两大类，一种是loop-based，另一类是一系列的table-based方法。
 		  以下我们将探讨在GPU中应当选择哪一种方法。
@@ -392,9 +402,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>Loop-based Method</h4>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
 		</aside>
+		-->
 		<ul>
 		  <li>compute directly: cost a loop of at most eight iterations to multiply two elements in GF($2^8$).</li>
 		  <li>computation bound</li>
@@ -408,9 +420,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>Table-based Methods</h4>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="50%" height="50%" alt="Roadmap">
 		</aside>
+		-->
 		<table>
 		  <tr>
 			<td></td>
@@ -450,9 +464,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 	  </section>
 	  <section>
 		<h4>GPU Implementation: Loop-based or Table-based?</h4>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
 		<ul>
 		  <li>The loop-based method is able to achieve the maximum bandwidth even when the chunk size is small.</li>
@@ -474,9 +490,11 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
 		<aside style="position: absolute; top: 400px; right: -400px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="80%" height="80%" alt="Roadmap">
 		</aside>
+		-->
 		<p>baseline:</p>
 		<pre><code class="cpp" data-trim contenteditable>
 uint8_t gf256_mul(uint8_t a, uint8_t b)
@@ -489,6 +507,7 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
   return gf256_exp_table[result];
 }
 		</code></pre>
+		<img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="80%" height="80%" alt="Roadmap">
 		<aside class="notes">
 		  决定了GPU实作采用log&exp table-based方法之后，我们再继续对这一方法进行优化。
 		  前面提到log&exp table-based方法含有branches和time-consuming的MOD运算。
@@ -496,9 +515,11 @@ uint8_t gf256_mul(uint8_t a, uint8_t b)
 	  </section>
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="50%" height="50%" alt="Roadmap">
 		</aside>
+		-->
 		<table>
 		  <tr>
 			<td>Improvement Approach 1</td>
@@ -544,12 +565,21 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-3.png" width="80%" height="80%" alt="Roadmap">
 		</aside>
+		-->
 		<p>
 		In GPU implementation, where to store the tables and how to initialize them will affect the performance.
 		</p>
+		<img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="80%" height="80%" alt="Roadmap">
+		<aside class="notes">
+		  在GPU的实作中，还有一个新的问题，就是如何存放tables，还有如何initialize tables。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of the Log&exp Table-based Method</h3>
 		<img src="./images/memory-spaces-on-cuda-device.png" width="50%" height="50%" alt="Loop-Based vs Table-Based">
 		<p class="fragment">
 		Appropriate GPU memory:
@@ -559,7 +589,6 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li>shared memory: on-chip memory which has the smallest access latency except the register file.</li>
 		</ul>
 		<aside class="notes">
-		  在GPU的实作中，还有一个新的问题，就是如何存放tables，还有如何initialize tables。
 		  我们先来看tables的存放。这张图给出了GPU各种memory space。
 		  其中左边深蓝色的方框是DRAM，代表这块memory是off-chip的，latency大概是400-800个clock cycles。
 		  在off-chip memory中，我们考虑采用constant memory，因为它的access会被cache在constant cache中。
@@ -569,9 +598,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
 		<aside style="position: absolute; top: 480px; right: -250px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="45%" height="45%" alt="Roadmap">
 		</aside>
+		-->
 		<p>
 		What we have implemented:
 		</p>
@@ -591,9 +622,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h4>Further Improvement of the Log&exp Table-based Method</h4>
+		<!--
 		<aside style="position: absolute; top: 250px; right: -750px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="30%" height="30%" alt="Roadmap">
 		</aside>
+		-->
 		<p>
 		<small>encoding a 1GB file with $k = 4$ and $n = 6$.</small>
 		</p>
@@ -620,18 +653,23 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	<section>
 	  <section>
 		<h2>Accelerating Matrix Multiplication</h2>
+		<!--
 		<aside style="position: absolute; top: 200px; right: 0px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="60%" height="60%" alt="Roadmap">
 		</aside>
+		-->
+		<img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="100%" height="100%" alt="Roadmap">
 		<aside class="notes">
 		  下面的session我们来介绍矩阵乘法。
 		</aside>
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  我们先来看最一般的做法。
@@ -640,9 +678,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/without-tiling-1.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  接下来，我们拿矩阵A红色的row中第一个element和矩阵B红色的column中第一个element相乘得到一个结果。
@@ -650,9 +690,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/without-tiling-2.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  再拿第二个element相乘，其结果与上一个结果相加。
@@ -660,9 +702,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Naive Implementation</h3>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/without-tiling-3.png" width="60%" height="60%" alt="without tiling">
 		<aside class="notes">
 		  以此类推，计算出矩阵C中红色方格的值。
@@ -670,9 +714,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Problems of Naive Implementation</h3>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/without-tiling.png" width="40%" height="40%" alt="without tiling">
 		<ul>
 		  <li>a lot of global memory (off-chip) transactions: each takes 400 - 800 clock cycles.</li>
@@ -685,9 +731,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Square-Tiling Algorithm</h3>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
 		<aside class="notes">
 		  最常被用来改善上述问题的是tiling algorithm，也有些资料把它叫做blocking algorithm。
@@ -699,9 +747,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Problems of Square-Tiling Algorithm</h3>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -800px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
 		</aside>
+		-->
 		<p>not suitable for general input cases of Reed-Solomon Codes: <br>a small matrix multiple a huge matrix</p>
 		<ul>
 		  <li>encoding--A: $(n - k) \times k$, B: $k \times CS$.</li>
@@ -713,6 +763,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li>$k$: native chunk number (1-100)</li>
 		  <li>$CS$: chunk size (more than 10,000,000)</li>
 		</ul>
+		<img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="60%" height="60%" alt="Roadmap">
 		<aside class="notes">
 		  但是，square-tiling algorithm应对的一般是矩阵A和B的大小接近的情况，对于Reed-Solomon codes实际编解码的情况并不适用。
 		  在Reed-Solomon codes实际被使用的cases中，chunk的数量一般很少大过三位数（二位数），而实际的input file又是mega甚至giga这种级别的，使得chunk的大小一般大于百万的数量级。
@@ -722,9 +773,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Generalized Tiling Algorithm</h3>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
 		<h4>How to Determine the Parameter of Tiles</h4>
 		<ul>
@@ -742,9 +795,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<ul>
 		  <li>set tileDepth to $A.width$ ($k$) → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
 		</ul>
@@ -758,9 +813,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<ul>
 		  <li>set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
 		</ul>
@@ -768,9 +825,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<ul>
 		  <li>set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
 		</ul>
@@ -778,9 +837,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/tiling-tileWidth.png" width="80%" height="50%" alt="generalized tiling">
 		<ul>
 		  <!--
@@ -798,9 +859,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 0px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/tiling-tileWidth.png" width="40%" height="20%" alt="generalized tiling">
 		<p>
 		Define the aspect ratio $AR$ of the tile in the result matrix as:
@@ -834,9 +897,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
 		-->
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 200px; right: -850px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<p>
 		use the following testcases for encoding:
 		</p>
@@ -947,9 +1012,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
 		-->
 		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -880px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<table>
 		  <tr>
 			<td><img src="./images/matrix-multiplication/tiling-tileWidth.png" width="200%" height="60%" alt="generalized tiling"></td>
@@ -973,53 +1040,150 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
+		<!--
 		<aside style="position: absolute; top: 300px; right: -380px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<p>
 		When each chunk can be word-aligned, we can further improve the tiling algorithm.
 		</p>
+		<img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="60%" height="60%" alt="Roadmap">
 		<aside class="notes">
 		  当file所切出来的chunk可以被word-aligned时，我们还可以对tiling algorithm做进一步的优化。
 		</aside>
 	  </section>
+	  <section>
+		<h4>Observation 1: Byte-length Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-ALU-1.png" width="80%" height="50%" alt="tiling alignment">
+		<ul>
+		  <li><del>Multiplication: table look-ups → memory accesses</del></li>
+		  <li>Addition: 8-bit XORs -> ALU operations
+		  <ul>
+			<li>Each ALU operation: <br>operand1 (8-bit) XOR operand2 (8-bit) = result (8-bit)</li>
+			<li>GPU Execution Units: 32-bit</li>
+		  </ul>
+		  </li>
+		</ul>
+		<aside class="notes">
+		  我们的第一个observation着重于对elements所执行的operations。
+		  首先，乘法的部分基本是table look-up，属于memory accesses，这里不予考虑。
+		  而加法的部分实际上是8-bit的XOR。
+		  在GPU中，EU的操作数和结果的registers是32-bit的。
+		  这表明原先的做法，每次的ALU operations都只占用了registers空间的四分之一来做运算，增加了ALU operations的数目。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align.png" width="80%" height="50%" alt="tiling alignment">
+		<aside class="notes">
+		  我们在survey时看到，一些采用loop-based的paper为了解决这一问题，提出了byte-by-word矩阵乘法的solution。
+		  我们针对table-based也implement了byte-by-word的矩阵乘法。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-1.png" width="80%" height="50%" alt="tiling alignment">
+		<aside class="notes">
+		  我们的做法如图。
+		  首先，之前提过，乘法主要是memory accesses，与这部分ALU operations的优化无关，所以这里照旧是byte和byte相乘。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-2.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-3.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-4.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-5.png" width="80%" height="50%" alt="observation 2">
+		<aside class="notes">
+		  乘积的四个byte被pack到一个32-bit的register中，再与之前32-bit的结果做加法。这就保证了每次ALU的registers被充分使用。
+		</aside>
+	  </section>
 	  <!--
 	  <section>
-		<h4>Observation 1: Global Memory Transactions</h4>
+		<h4>Observation 2: Global Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-load-1.png" width="80%" height="50%" alt="observation 1">
 	  </section>
 	  <section>
-		<h4>Observation 1: Global Memory Transactions</h4>
+		<h4>Observation 2: Global Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-load-2.png" width="80%" height="50%" alt="observation 1">
 	  </section>
 		-->
 	  <section>
-		<h4>Observation 1: Global Memory Transactions</h4>
+		<h4>Observation 2: Global Memory Transactions</h4>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -840px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/tiling-load.png" width="80%" height="50%" alt="observation 1">
 		<p>a lot of 8-bit global memory transactions!</p>
 		<aside class="notes">
-		  我们的第一个observation是：之前的做法在把矩阵B黄色矩形的elements从gMem load到sMem的过程中，是一个一个byte同时load进来的。
+		  我们的第二个observation是：之前的做法在把矩阵B黄色矩形的elements从gMem load到sMem的过程中，是一个一个byte同时load进来的。
 		  而8-bit是gMem transactions的最低单位，我们应该想办法让它每次load更多的bit，从而减少transactions的数量。 
 		</aside>
 	  </section>
 	  <!--
 	  <section>
-		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
+		<h4>Improvement Technique 2: Packing Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-align-load-1.png" width="80%" height="50%" alt="observation 1">
 	  </section>
 	  <section>
-		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
+		<h4>Improvement Technique 2: Packing Memory Transactions</h4>
 		<img src="./images/matrix-multiplication/tiling-align-load-2.png" width="80%" height="50%" alt="observation 1">
 	  </section>
 		-->
 	  <section>
-		<h4>Improvement Technique 1: Packing Memory Transactions</h4>
+		<h4>Improvement Technique 2: Packing Memory Transactions</h4>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -840px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/matrix-multiplication/tiling-align-load.png" width="80%" height="50%" alt="observation 1">
 		<p>pack 8-bit global memory transactions into 32-bit transactions → reduce global memory load and store.</p>
 		<aside class="notes">
@@ -1029,101 +1193,31 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		</aside>
 	  </section>
 	  <section>
-		<h4>Observation 2: Byte-length Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-ALU-1.png" width="80%" height="50%" alt="tiling alignment">
-		<ul>
-		  <li><del>Multiplication: table look-ups → memory accesses</del></li>
-			<li>Addition: 8-bit XORs -> ALU operations
-			<ul>
-			  <li>Each ALU operation: <br>operand1 (8-bit) XOR operand2 (8-bit) = result (8-bit)</li>
-			  <li>GPU Execution Units: 32-bit</li>
-			  </ul>
-			</li>
-		</ul>
-		<aside class="notes">
-		  我们的第二个observation着重于对elements所执行的operations。
-		  首先，乘法的部分基本是table look-up，属于memory accesses，这里不予考虑。
-		  而加法的部分实际上是8-bit的XOR。
-		  在GPU中，EU的操作数和结果的registers是32-bit的。
-		  这表明原先的做法，每次的ALU operations都只占用了registers空间的四分之一来做运算，增加了ALU operations的数目。
-		</aside>
-	  </section>
-	  <section>
-		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-align.png" width="80%" height="50%" alt="tiling alignment">
-		<aside class="notes">
-		  我们在survey时看到，一些采用loop-based的paper为了解决这一问题，提出了byte-by-word矩阵乘法的solution。
-		  我们针对table-based也implement了byte-by-word的矩阵乘法。
-		</aside>
-	  </section>
-	  <section>
-		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-align-1.png" width="80%" height="50%" alt="tiling alignment">
-		<aside class="notes">
-		  我们的做法如图。
-		  首先，之前提过，乘法主要是memory accesses，与这部分ALU operations的优化无关，所以这里照旧是byte和byte相乘。
-		</aside>
-	  </section>
-	  <section>
-		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-align-2.png" width="80%" height="50%" alt="tiling alignment">
-	  </section>
-	  <section>
-		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-align-3.png" width="80%" height="50%" alt="tiling alignment">
-	  </section>
-	  <section>
-		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-align-4.png" width="80%" height="50%" alt="tiling alignment">
-	  </section>
-	  <section>
-		<h4>Improvement Technique 2: Byte-by-word Matrix Multiplication</h4>
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		<img src="./images/matrix-multiplication/tiling-align-5.png" width="80%" height="50%" alt="observation 2">
-		<aside class="notes">
-		  乘积的四个byte被pack到一个32-bit的register中，再与之前32-bit的结果做加法。这就保证了每次ALU的registers被充分使用。
-		</aside>
-	  </section>
-	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -840px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/exp/tiling strategies/align/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling alignment">
 		<p>performance improvement: more than 38%</p>
 	  </section>
 	  <section>
 		<h4>Profiler Evaluation: Global Memory Load Transactions</h4>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -840px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/exp/tiling strategies/align/global-load.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
 	  <section>
 		<h4>Profiler Evaluation: ALU Operations</h4>
+		<!--
 		<aside style="position: absolute; top: 100px; right: -840px;">
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
+		-->
 		<img src="./images/exp/tiling strategies/align/alu-op.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
 	</section>
