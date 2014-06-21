@@ -1,6 +1,7 @@
 *~
 .directory
 *.swp
+*.exe
 .DS_Store
 .svn
 log/*.log
