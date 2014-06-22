@@ -905,70 +905,92 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<p>
 		use the following testcases for encoding:
 		</p>
-		<small>
-		  <table>
-			<thead>
-			  <tr>
-				<th>testcase</th>
-				<th>$k$</th>
-				<th>$n$</th>
-				<th>chunk size (MB)</th>
-				<th>Description</th>
-			  </tr>
-			</thead>
-			<tbody>
+		<table>
+		  <thead>
 			<tr>
-			  <td>1</td>
-			  <td>2</td>
-			  <td>130</td>
-			  <td>1</td>
+			  <th rowspan="2">testcase</th>
+			  <th rowspan="2">$k$</th>
+			  <th rowspan="2">$n$</th>
+			  <th rowspan="2">chunk size (MB)</th>
+			  <th colspan="2">Description</th>
+			</tr>
+			<tr>
+			  <th>file size</th>
+			  <th>code chunk number</th>
+			</tr>
+		  </thead>
+		  <tbody>
+		  <tr>
+			<td>1</td>
+			<td>2</td>
+			<td>130</td>
+			<td>1</td>
+			<!--
 			  <td>Small file, large code chunk number</td>
-			</tr>
-			<tr>
-			  <td>2</td>
-			  <td>4</td>
-			  <td>150</td>
-			  <td>1</td>
+				-->
+			<td rowspan="3">small</td>
+			<td rowspan="3">large</td>
+		  </tr>
+		  <tr>
+			<td>2</td>
+			<td>4</td>
+			<td>150</td>
+			<td>1</td>
+			<!--
 			  <td>Small file, large code chunk number</td>
-			</tr>
-			<tr>
-			  <td>3</td>
-			  <td>4</td>
-			  <td>200</td>
-			  <td>1</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>3</td>
+			<td>4</td>
+			<td>200</td>
+			<td>1</td>
+			<!--
 			  <td>Small file, large code chunk number</td>
-			</tr>
-			<tr>
-			  <td>4</td>
-			  <td>2</td>
-			  <td>130</td>
-			  <td>10</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>4</td>
+			<td>2</td>
+			<td>130</td>
+			<td>10</td>
+			<!--
 			  <td>Big file, large code chunk number</td>
-			</tr>
-			<tr>
-			  <td>5</td>
-			  <td>4</td>
-			  <td>150</td>
-			  <td>10</td>
+				-->
+			<td rowspan="3">large</td>
+			<td rowspan="3">large</td>
+		  </tr>
+		  <tr>
+			<td>5</td>
+			<td>4</td>
+			<td>150</td>
+			<td>10</td>
+			<!--
 			  <td>Big file, large code chunk number</td>
-			</tr>
-			<tr>
-			  <td>6</td>
-			  <td>4</td>
-			  <td>200</td>
-			  <td>10</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>6</td>
+			<td>4</td>
+			<td>200</td>
+			<td>10</td>
+			<!--
 			  <td>Big file, large code chunk number</td>
-			</tr>
-			<tr>
-			  <td>7</td>
-			  <td>4</td>
-			  <td>6</td>
-			  <td>256</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>7</td>
+			<td>4</td>
+			<td>6</td>
+			<td>256</td>
+			<!--
 			  <td>Big file, small code chunk number</td>
-			</tr>
-			</tbody>
-		  </table>
-		</small>
+				-->
+			<td>large</td>
+			<td>small</td>
+		  </tr>
+		  </tbody>
+		</table>
 		<!--
 		<ul>
 		  <li>
@@ -1005,6 +1027,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		-->
 		<aside class="notes">
 		  我们通过实验来决定选择哪一种strategy。以下我们分别选择了七组有代表性的testcases来说明我们的结论。
+		  在此说明，这里的small和large是相较而言的，整体的settings仍然符合Reed-Solomon Codes一般应用的case，file size仍是属于比较大而code chunk number比较小。
 		</aside>
 	  </section>
 	  <section>
@@ -1191,6 +1214,48 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  如图所示，load相同数量的elements，用这种方法所需要的transactions明显降低。
 		  同样的techniques也能应用在global memory store上。
 		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of Tiling Algorithm</h3>
+		$k = 4$, $n = 200$, chunk size = 200 MB
+		<table>
+		  <tr>
+			<td></td>
+			<td>Original</td>
+			<td>Word-alignment</td>
+			<td>Improvement</td>
+		  </tr>
+		  <tr>
+			<td>Effective bandwidth (MB/s)</td>
+			<td>1119.419693</td>
+			<td>1591.051924</td>
+			<td></td>
+		  </tr>
+		  <tr>
+			<td>ALU Operations</td>
+			<td>12331000000</td>
+			<td>3116531712</td>
+			<td></td>
+		  </tr>
+		  <tr>
+			<td>Global Memory Load Transactions</td>
+			<td>516963328</td>
+			<td>131611648</td>
+			<td></td>
+		  </tr>
+		  <tr>
+			<td>Global Memory Store Transactions</td>
+			<td>64225280</td>
+			<td>16056320</td>
+			<td></td>
+		  </tr>
+		  <tr>
+			<td>Number of Branches</td>
+			<td>6685685440</td>
+			<td>2703981504</td>
+			<td></td>
+		  </tr>
+		</table>
 	  </section>
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
