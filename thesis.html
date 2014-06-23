@@ -328,12 +328,13 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<aside class="sidebar">
 		  <img src="./images/dot-graph/roadmap/roadmap-0.png" width="100%" height="100%" alt="Roadmap">
 		</aside>
-		-->
 		<ul>
 		  <li>Accelerating arithmetic over Galois Field.</li>
 		  <li>Accelerating matrix multiplication.</li>
 		  <li>Reducing data transfer overhead.</li>
 		</ul>
+		-->
+		<img src="./images/dot-graph/roadmap/roadmap-total.png" width="100%" height="100%" alt="Roadmap">
 		<aside class="notes">
 		  以上就是我们用GPU加速Reed-Solomon codes编解码的三大方面，下面的sessions将一一针对这些方面进行介绍。
 		</aside>
@@ -923,7 +924,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <tr>
 			<td>1</td>
 			<td>2</td>
-			<td>130</td>
+			<td>200</td>
 			<td>1</td>
 			<!--
 			  <td>Small file, large code chunk number</td>
@@ -952,7 +953,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <tr>
 			<td>4</td>
 			<td>2</td>
-			<td>130</td>
+			<td>200</td>
 			<td>10</td>
 			<!--
 			  <td>Big file, large code chunk number</td>
@@ -986,8 +987,14 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			<!--
 			  <td>Big file, small code chunk number</td>
 				-->
-			<td>large</td>
-			<td>small</td>
+			<td rowspan="2">large</td>
+			<td rowspan="2">small</td>
+		  </tr>
+		  <tr>
+			<td>8</td>
+			<td>8</td>
+			<td>16</td>
+			<td>128</td>
 		  </tr>
 		  </tbody>
 		</table>
@@ -1040,15 +1047,19 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
 		</aside>
 		-->
+		<!--
 		<table>
 		  <tr>
 			<td><img src="./images/matrix-multiplication/tiling-tileWidth.png" width="200%" height="60%" alt="generalized tiling"></td>
 			<td><img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" alt="tiling strategies"></td>
 		  </tr>
 		</table>
+		-->
+		<img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling strategies">
 		<ul>
-		  <li>Generally, the "Min $AR$" strategy has the least number of conditional branches, while the "Max $AR$" has the most. The overhead of branches is significant when encoding a large file into a large number of code chunks.</li>
-		  <li>The ``AR=1'' strategy has significant performance degradation when the number of code chunks is smaller than tileWidthRow (wasting cache space, extra boundary checking).</li>
+		  <li>The first six testcases, especially the 4th-6th ones, represent the worse cases for the strategy "Max $AR$".</li>
+		  <li>The last two testcases represent the worse cases for the strategy "$AR = 1$".</li>
+		  <li>Overall, the strategy "Min $AR$" is the best.</li>
 		</ul>
 		<!--
 		<p class="fragment">
@@ -1056,9 +1067,38 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		</p>
 		-->
 		<aside class="notes">
-		  这里需要说明的是，由于矩阵B的column数目（chunk size）一般都很大，被tileWidthCol切完的份数仍远大于CUDA的grid size，所以每个thread需要多次iterations才能处理完矩阵B的所有elements。
-		  Min AR的切法由于优先用长的边来切矩阵B的column，所以它需要的iterations数量少。而作为与之相反的Max AR，则需要最多的iterations数量，这部分overhead在大file和code chunk数目多的情况下尤其明显。
-		  而最后一个testcase反应了AR=1这种策略performance很差的典型情况。这种情况是code chunk的数目很少，使A的row的数目小于要切割它的tileWidthRow。此时，这种策略用了一个比矩阵A还大的tile来cache矩阵A，不仅浪费了sMem空间，而且还需要额外的boundary checking，从而导致了严重的performance degradation。
+		  如图所示，纵轴是effective bandwidth与最佳strategy的bandwidth的比值。
+		  可以看到，尽管"Min AR"performance并非总是最好的，但与最佳strategy的差距很小，overall仍优于其他两种strategies。
+		  在前六个testcases中，"Max AR"performance最差，尤其是第4-6个testcases，"Max AR"的performance甚至没有最佳strategy的一半。
+		  在最后两个testcases中，"AR=1"performance最差。
+		  而这些testcases正好代表了后两种strategies会有performance degradation的情形，以下将进一步说明。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<table>
+		  <tr>
+			<td><img src="./images/matrix-multiplication/tiling-tileWidth.png" width="200%" height="60%" alt="generalized tiling"></td>
+			<td><img src="./images/exp/tiling strategies/testcases-V3/branchNum.png" alt="number of branches"></td>
+		  </tr>
+		</table>
+		<ul>
+		  <li>Generally, the "Min $AR$" strategy has the least number of conditional branches, while the "Max $AR$" has the most. The overhead of branches is significant when encoding a large file into a large number of code chunks.</li>
+		</ul>
+		<aside class="notes">
+		  如左图所示，由于矩阵B的column数目（chunk size）一般都很大，被tileWidthCol切完的份数仍远大于CUDA的grid size，所以每个thread需要多次iterations才能处理完矩阵B的所有elements。
+		  Min AR的切法由于优先用长的边来切矩阵B的column，所以它需要的iterations数量少。而作为与之相反的Max AR，则需要最多的iterations数量，这部分overhead在大file和code chunk数目相对多（第4-6的testcases）的情况下尤其明显。
+		  我们又用nvprof这个profiler来测这两种strategies分别执行了多少个branches，结果如右图所示，"Max AR"的数目远高于"Min AR"，在file较大时更加明显，这与我们的分析是吻合的。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<img src="./images/matrix-multiplication/tiling-tileWidth(AR=1).png" width="80%" height="40%" alt="AR=1">
+		<ul>
+		  <li>The "$AR=1$" strategy has significant performance degradation when the number of code chunks is smaller than tileWidthRow (wasting cache space, extra boundary checking).</li>
+		</ul>
+		<aside class="notes">
+		  而最后两个testcase反应了AR=1这种策略performance很差的典型情况。这种情况是code chunk的数目很少，使A的row的数目小于要切割它的tileWidthRow。此时，这种策略用了一个比矩阵A还大的tile来cache矩阵A，不仅浪费了sMem空间，而且还需要额外的boundary checking，从而导致了严重的performance degradation。
 		</aside>
 	  </section>
 	  <section>
@@ -1217,7 +1257,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
-		$k = 4$, $n = 200$, chunk size = 200 MB
+		<p>e.g. $k = 4$, $n = 200$, chunk size = 200 MB</p>
 		<table>
 		  <tr>
 			<td></td>
@@ -1229,67 +1269,58 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			<td>Effective bandwidth (MB/s)</td>
 			<td>1119.419693</td>
 			<td>1591.051924</td>
-			<td></td>
+			<td>42.13%</td>
 		  </tr>
 		  <tr>
-			<td>ALU Operations</td>
+			<td><em>ALU Operations</em></td>
 			<td>12331000000</td>
 			<td>3116531712</td>
-			<td></td>
+			<td>74.73%</td>
 		  </tr>
 		  <tr>
-			<td>Global Memory Load Transactions</td>
+			<td><em>Global Memory Load Transactions</em></td>
 			<td>516963328</td>
 			<td>131611648</td>
-			<td></td>
+			<td>74.54%</td>
 		  </tr>
 		  <tr>
 			<td>Global Memory Store Transactions</td>
 			<td>64225280</td>
 			<td>16056320</td>
-			<td></td>
+			<td>75%</td>
 		  </tr>
 		  <tr>
 			<td>Number of Branches</td>
 			<td>6685685440</td>
 			<td>2703981504</td>
-			<td></td>
+			<td>59.56%</td>
 		  </tr>
 		</table>
+		<aside class="notes">
+		  其他七个testcases也有类似的improvement，这里就不重复show结果了。
+		</aside>
 	  </section>
+	  <!--
 	  <section>
 		<h3>Further Improvement of Tiling Algorithm</h3>
-		<!--
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		-->
 		<img src="./images/exp/tiling strategies/align/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling alignment">
 		<p>performance improvement: more than 38%</p>
 	  </section>
 	  <section>
 		<h4>Profiler Evaluation: Global Memory Load Transactions</h4>
-		<!--
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		-->
 		<img src="./images/exp/tiling strategies/align/global-load.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
 	  <section>
 		<h4>Profiler Evaluation: ALU Operations</h4>
-		<!--
-		<aside style="position: absolute; top: 100px; right: -840px;">
-		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
-		</aside>
-		-->
 		<img src="./images/exp/tiling strategies/align/alu-op.png" width="60%" height="60%" alt="tiling alignment">
 	  </section>
+		-->
 	</section>
 
 	<section>
 	  <section>
 		<h2>Reducing Data Transfer Overhead</h2>
+		<img src="./images/dot-graph/roadmap/roadmap-comm-0.png" width="80%" height="80%" alt="Roadmap">
 	  </section>
 	  <!--
 	  <section>
@@ -1302,11 +1333,13 @@ result = gf256_log_table[a] + gf256_log_table[b];
 -->
 	  <section>
 		<h3>Using CUDA Streams</h3>
-		<p>
-		CUDA streams are used for further overlapping data transfers with computation.
-		</p>
+		<img src="./images/dot-graph/roadmap/roadmap-comm-1.png" width="80%" height="80%" alt="Roadmap">
+	  </section>
+	  <section>
+		<h3>Using CUDA Streams</h3>
+		<p>CUDA streams are used for further overlapping data transfers with computation.</p>
 		<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
-		<br> Sequential vs. Concurrent copy and execute
+		<p>Sequential vs. Concurrent copy and execute</p>
 	  </section>
 	  <section>
 		<h4>Using CUDA Streams</h4>
@@ -1322,7 +1355,8 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
 		<ul>
 		  <li class="fragment">Using CUDA streaming can improve the performance by more than 29%.</li>
-		  <li class="fragment">data size ↑ → data transfer overhead ↑ → CUDA streaming improvement ↑.</li>
+		  <!--<li class="fragment">data size ↑ → data transfer overhead ↑ → CUDA streaming improvement ↑.</li>-->
+		  <li class="fragment">As the data size increases, the data transfer overhead increases, and the improvement of CUDA streaming is more significant.</li>
 		</ul>
 	  </section>
 	  <section>
@@ -1404,6 +1438,14 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li class="fragment">We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
 		  <li class="fragment">We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
 		  <li class="fragment">We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
+		</ul>
+	  </section>
+
+	  <section>
+		<h2>Future Works</h2>
+		<ul>
+		  <li>Better corporation of CPU and GPU.</li>
+		  <li>Heuristic strategies for deciding the best CUDA stream number.</li>
 		</ul>
 	  </section>
 
