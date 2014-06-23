@@ -1,0 +1,92 @@
+digraph roadmap
+{
+  rankdir = LR;
+  node[shape=box];
+  root
+	[
+	label="Acceleration"
+	shape=folder
+	]
+	galois
+	[
+	label="Accelerating arithmetic \nover Galois Field";
+  ]
+	LBvsTB
+	[
+	label="loop-based\nvs.\ntable-based?";
+  ]
+	MOD
+	[
+	label="removing MOD";
+  ]
+	branch
+	[
+	label="removing branches";
+  ]
+	cMemvssMem
+	[
+	//	label="cMem\nvs.\nsMem";
+	label="where to store\nthe tables?";
+  ]
+	initTables
+	[
+	label="how to initialize\nthe tables?";
+  ]
+	mm
+	[
+	label="Accelerating matrix multiplication";
+  ]
+	generalTiling
+	[
+	label="generalized tiling";
+  ]
+	align
+	[
+	label="word alignment";
+  ]
+	comm
+	[
+	label="Reducing data transfer overhead"
+	]
+	streaming
+	[
+	label="CUDA streaming"
+	]
+	computation
+	[
+	label="Computation"
+	shape=folder
+	]
+	memory
+	[
+	label="Memory"
+	shape=folder
+	]
+	communication
+	[
+	label="Communication"
+	shape=folder
+	]
+	root -> galois;
+  galois -> LBvsTB;
+  LBvsTB -> computation;
+  LBvsTB -> memory;
+  galois -> MOD;
+  MOD -> computation;
+  galois -> branch;
+  branch -> computation;
+  galois -> cMemvssMem;
+  cMemvssMem -> memory;
+  galois -> initTables;
+  initTables -> computation;
+  initTables -> memory;
+  root -> mm;
+  mm -> generalTiling;
+  generalTiling -> memory;
+  mm -> align;
+  align -> computation;
+  align -> memory;
+  root -> comm;
+  comm -> streaming;
+  streaming -> communication;
+}
