@@ -102,15 +102,15 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<ul>
 		  <li>
 		  signals from deep space satellites
-			  <img src="./images/satellites.jpg" width="30%" height="30%" alt="signals from deep space satellites">
+		  <img src="./images/satellites.jpg" width="30%" height="30%" alt="signals from deep space satellites">
 		  </li>
 		  <li>
 		  reliable multimedia multicasting
-			  <img src="./images/multimedia-multicasting.jpg" alt="reliable multimedia multicasting">
+		  <img src="./images/multimedia-multicasting.jpg" alt="reliable multimedia multicasting">
 		  </li>
 		  <li>
 		  <em>reliable storage systems</em>
-			  <img src="./images/storage-systems.jpg" alt="reliable storage systems">
+		  <img src="./images/storage-systems.jpg" alt="reliable storage systems">
 		  </li>
 		</ul>
 		<!--
@@ -307,7 +307,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<p>Computation bottleneck: matrix multiplication.</p>
 		\begin{array}{rl}
 		& C = A \cdot B \\
-		\equiv & ( c_{j} = \sum_{i = 1}^{k} a_{i,j} \times b_{i} ) 
+		\equiv & ( c_{j} = \sum_{i = 1}^{k} a_{i,j} \times b_{i, j} ) 
 		\end{array}
 		<p>Addition and multiplication are defined as arithmetic over Galois Field GF($2^8$).</p>
 		<p class="fragment">Acceleration targets for computation:</p>
@@ -1456,7 +1456,157 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		  <img src="./images/exp/step-perf/stepBreakdown-0.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		</section>
+		<section>
+		  <h3>Overall Performance Evaluation</h3>
+		  <h4>Step-by-step Improvement</h4>
+		  <small>
+			<table>
+			  <tr>
+				<td rowspan="2"></td>
+				<td colspan="2">Step Speedup</td>
+				<td colspan="2">Cumulative Speedup</td>
+			  </tr>
+			  <tr>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+			  </tr>
+			  <tr>
+				<td>optimize tiling algorithm</td>
+				<td>1.469 x</td>
+				<td>0</td>
+				<td>1.469 x</td>
+				<td>0</td>
+			  </tr>
+			</table>
+		  </small>
+		  <img src="./images/exp/step-perf/stepBreakdown-1.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		</section>
+		<section>
+		  <h3>Overall Performance Evaluation</h3>
+		  <h4>Step-by-step Improvement</h4>
+		  <small>
+			<table>
+			  <tr>
+				<td rowspan="2"></td>
+				<td colspan="2">Step Speedup</td>
+				<td colspan="2">Cumulative Speedup</td>
+			  </tr>
+			  <tr>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+			  </tr>
+			  <tr>
+				<td>optimize tiling algorithm</td>
+				<td>1.469 x</td>
+				<td>0</td>
+				<td>1.469 x</td>
+				<td>0</td>
+			  </tr>
+			  <tr>
+				<td>optimize log&exp table-based method</td>
+				<td>1.502 x</td>
+				<td>0</td>
+				<td>2.206 x</td>
+				<td>0</td>
+			  </tr>
+			</table>
+		  </small>
+		  <img src="./images/exp/step-perf/stepBreakdown-2.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		</section>
+		<section>
+		  <h3>Overall Performance Evaluation</h3>
+		  <h4>Step-by-step Improvement</h4>
+		  <small>
+			<table>
+			  <tr>
+				<td rowspan="2"></td>
+				<td colspan="2">Step Speedup</td>
+				<td colspan="2">Cumulative Speedup</td>
+			  </tr>
+			  <tr>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+			  </tr>
+			  <tr>
+				<td>optimize tiling algorithm</td>
+				<td>1.469 x</td>
+				<td>0</td>
+				<td>1.469 x</td>
+				<td>0</td>
+			  </tr>
+			  <tr>
+				<td>optimize log&exp table-based method</td>
+				<td>1.502 x</td>
+				<td>0</td>
+				<td>2.206 x</td>
+				<td>0</td>
+			  </tr>
+			  <tr>
+				<td>use CUDA streams</td>
+				<td>0.862 x</td>
+				<td>18.452 x</td>
+				<td>1.902 x</td>
+				<td>18.452 x</td>
+			  </tr>
+			</table>
+		  </small>
+		  <img src="./images/exp/step-perf/stepBreakdown-3.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		</section>
+		<section>
+		  <h3>Overall Performance Evaluation</h3>
+		  <h4>Step-by-step Improvement</h4>
+		  <small>
+			<table>
+			  <tr>
+				<td rowspan="2"></td>
+				<td colspan="2">Step Speedup</td>
+				<td colspan="2">Cumulative Speedup</td>
+			  </tr>
+			  <tr>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+				<td>Kernel Execution</td>
+				<td>Non-overlapped Data Transfer</td>
+			  </tr>
+			  <tr>
+				<td>optimize tiling algorithm</td>
+				<td>1.469 x</td>
+				<td>0</td>
+				<td>1.469 x</td>
+				<td>0</td>
+			  </tr>
+			  <tr>
+				<td>optimize log&exp table-based method</td>
+				<td>1.502 x</td>
+				<td>0</td>
+				<td>2.206 x</td>
+				<td>0</td>
+			  </tr>
+			  <tr>
+				<td>use CUDA streams</td>
+				<td>0.862 x</td>
+				<td>18.452 x</td>
+				<td>1.902 x</td>
+				<td>18.452 x</td>
+			  </tr>
+			  <tr>
+				<td>parallel in 2GPUs</td>
+				<td>2.030 x</td>
+				<td>2.857 x</td>
+				<td>3.861 x</td>
+				<td>52.718 x</td>
+			  </tr>
+			</table>
+		  </small>
+		  <img src="./images/exp/step-perf/stepBreakdown-4.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>

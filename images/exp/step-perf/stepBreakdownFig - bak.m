@@ -1,6 +1,6 @@
 bar(stepBreakdown, 'stack');
 % set(gca,'XTickLabel',{'optimized CPU implementation', 'GPU baseline implementation', 'optimize tiling algorithm', 'optimize log&exp table-based method', 'use pinned host memory', 'use CUDA streams', 'parallel in 2GPUs'});
-set(gca,'XTickLabel',{'GPU baseline implementation', 'optimize tiling algorithm', 'optimize log&exp table-based method', 'use CUDA streams', 'parallel in 2GPUs'});
+set(gca,'XTickLabel',{'optimized CPU implementation', 'GPU baseline implementation', 'optimize tiling algorithm', 'optimize log&exp table-based method', 'use CUDA streams', 'parallel in 2GPUs'});
 legend('kernel execution', 'non-overlapped data transfer', 'Location', 'Best');
 ylabel('time (ms)');
 rotateticklabel(gca,-30);
