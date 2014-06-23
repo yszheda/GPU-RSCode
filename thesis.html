@@ -53,7 +53,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
   <!-- Any section element inside of this container is displayed as a slide -->
   <div class="slides">
 	<section>
-	  <h2>Accelerate Reed-Solomon Codes on GPUs</h2>
+	  <h2>Accelerate Reed-Solomon Erasure Codes on GPUs</h2>
 	  <br>
 	  <h3>
 		Student: <a href="http://yszheda.github.io">Shuai Yuan</a>, 
@@ -97,7 +97,43 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</aside>
 	  </section>
 	  <section>
-		<h3>Why Redundancy?</h3>
+		<h3>Erasure Codes</h3>
+		<p>A <em>redundancy</em> solution for <em>fault-tolerance</em>, widely used in:</p>
+		<ul>
+		  <li>
+		  signals from deep space satellites
+			  <img src="./images/satellites.jpg" width="30%" height="30%" alt="signals from deep space satellites">
+		  </li>
+		  <li>
+		  reliable multimedia multicasting
+			  <img src="./images/multimedia-multicasting.jpg" alt="reliable multimedia multicasting">
+		  </li>
+		  <li>
+		  <em>reliable storage systems</em>
+			  <img src="./images/storage-systems.jpg" alt="reliable storage systems">
+		  </li>
+		</ul>
+		<!--
+		<table>
+		  <tr align="center">
+			<td>
+			</td>
+			<td>
+			</td>
+			<td>
+			</td>
+		  </tr>
+		</table>
+		-->
+		<aside class="notes">
+		  erasure codes是一种redundancy solution，用来保证系统的fault tolerance。
+		  它被广泛应用于卫星通讯、reliable multimedia multicasting(可信赖多媒体广播系统)、reliable storage system（可信赖储存系统）等领域当中。
+		  由于cloud computation的兴起，erasure codes在cloud storage systems中的应用也越来越受重视。
+		  以下，我们就从cloud storage systems出发做一个case study。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Cloud Storage Systems: Why Redundancy?</h3>
 		<ul>
 		  <li>
 		  Cloud storage vendors claim to provide highly <em>available</em> and <em>reliable</em> services in their SLA (Service-Level Agreement) with the customers.
@@ -123,7 +159,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</aside>
 	  </section>
 	  <section>
-		<h3>Why Redundancy?</h3>
+		<h3>Cloud Storage Systems: Why Redundancy?</h3>
 		<ul>
 		  <li>
 		  The simplest and straightforward redundancy solution is <em>replication</em> of the data in multiple storage nodes.
@@ -139,7 +175,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</aside>
 	  </section>
 	  <section>
-		<h3>Why Erasure Codes?</h3>
+		<h3>Cloud Storage Systems: Why Erasure Codes?</h3>
 		<ul>
 		  <li>
 		  Problem of replication: <em>large storage overhead</em>.
@@ -154,7 +190,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</aside>
 	  </section>
 	  <section>
-		<h3>Why Erasure Codes?</h3>
+		<h3>Cloud Storage Systems: Why Erasure Codes?</h3>
 		<p>
 		$(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
 		<ul>
@@ -201,7 +237,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</aside>
 	  </section>
 	  <section>
-		<h3>Why Reed-Solomon Codes?</h3>
+		<h3>Cloud Storage Systems: Why Reed-Solomon Codes?</h3>
 		<ul>
 		  <li>
 		  Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
