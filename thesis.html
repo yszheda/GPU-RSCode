@@ -307,7 +307,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<p>Computation bottleneck: matrix multiplication.</p>
 		\begin{array}{rl}
 		& C = A \cdot B \\
-		\equiv & ( c_{j} = \sum_{i = 1}^{k} a_{i,j} \times b_{i, j} ) 
+		\equiv & ( c_{j} = \sum_{i = 1}^{k} a_{i,j} \times b_{i} ) 
 		\end{array}
 		<p>Addition and multiplication are defined as arithmetic over Galois Field GF($2^8$).</p>
 		<p class="fragment">Acceleration targets for computation:</p>
@@ -1570,6 +1570,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
+		  <img src="./images/exp/step-perf/stepBreakdown-1.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <small>
 			<table>
 			  <tr>
@@ -1592,7 +1593,6 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			  </tr>
 			</table>
 		  </small>
-		  <img src="./images/exp/step-perf/stepBreakdown-1.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <aside class="notes">
 			接下来我们apply改善矩阵乘法的tiling algorithm，发现computation有1.469的speedup。
 		  </aside>
@@ -1600,6 +1600,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
+		  <img src="./images/exp/step-perf/stepBreakdown-2.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <small>
 			<table>
 			  <tr>
@@ -1629,7 +1630,6 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			  </tr>
 			</table>
 		  </small>
-		  <img src="./images/exp/step-perf/stepBreakdown-2.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <aside class="notes">
 			接下来我们继续apply针对log&exp table-based方法的优化，computation又得到了1.502倍的performance提升。 
 		  </aside>
@@ -1637,6 +1637,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
+		  <img src="./images/exp/step-perf/stepBreakdown-3.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <small>
 			<table>
 			  <tr>
@@ -1673,7 +1674,6 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			  </tr>
 			</table>
 		  </small>
-		  <img src="./images/exp/step-perf/stepBreakdown-3.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <aside class="notes">
 			下面apply CUDA streaming，虽然computation变差了，但是data transfer由于大部分被overlap，这部分overhead有18.452倍的改善。
 		  </aside>
@@ -1681,6 +1681,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
+		  <img src="./images/exp/step-perf/stepBreakdown-4.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <small>
 			<table>
 			  <tr>
@@ -1724,7 +1725,6 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			  </tr>
 			</table>
 		  </small>
-		  <img src="./images/exp/step-perf/stepBreakdown-4.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <aside class="notes">
 			最后我们还在2张GPU卡做parallelize，结果表明我们的program有比较好的scalability。
 		  </aside>
