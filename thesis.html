@@ -372,7 +372,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		-->
 		<img src="./images/dot-graph/roadmap/roadmap-total.png" width="100%" height="100%" alt="Roadmap">
 		<aside class="notes">
-		  以上就是我们用GPU加速Reed-Solomon codes编解码的三大方面，下面的sessions将一一针对这些方面进行介绍。
+		  以上就是我们用GPU加速Reed-Solomon codes编解码的三大方面。
+		  这三大方面又分为多种techniques，这些techniques既有加速computation、改善memory access，也有减少CPU与GPU之间communication overhead的。
+		  下面的sessions将一一进行介绍。
 		</aside>
 	  </section>
 	</section>
@@ -510,6 +512,9 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 			<td>$\ldots$</td>
 		  </tr>
 		</table>
+		<aside class="notes">
+		  相较于loop-based，table-based由于采用先计算完结果再查表的方式，因此computation cost大为降低。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Table-based Methods</h4>
@@ -549,7 +554,6 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		Use log&exp table-based method in our GPU implementation.
 		</p>
 		<aside class="notes">
-		  相较于loop-based，table-based由于采用先计算完结果再查表的方式，因此computation cost大为降低。
 		  table-based方法主要分为三种，从左到右，所需要的空间依次减少，而computation cost却也依次增加（例如最右边的log&exp table方法，需要MOD运算和conditional branches作为判断条件，cost比较高）。
 		  (next)
 		  在GPU的实作中，我们需要table的size越小越好，以便能装入cache中。在这里，log&exp table方法是最合适的。
@@ -1389,7 +1393,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  </tr>
 		</table>
 		<aside class="notes">
-		  其他七个testcases也有类似的improvement，这里就不重复show结果了。
+		  我们选了之前8个testcases中的一个。
+		  其他七个testcases由于结果相似，这里就不重复show了。
+		  可以看到，采用word-alignment的技巧后，performance提升了42.13%。
+		  我们又进一步通过nvprof来profile我们的program，结果发现以下四个performance metrics都有不同程度的改善。
+		  其中就有我们之前提到的ALU Operations和gMem Load Transactions，这就证明了我们之前的论述。
 		</aside>
 	  </section>
 	  <!--
@@ -1413,6 +1421,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  <section>
 		<h2>Reducing Data Transfer Overhead</h2>
 		<img src="./images/dot-graph/roadmap/roadmap-comm-0.png" width="80%" height="80%" alt="Roadmap">
+		<aside class="notes">
+		  下面的session我们来介绍如何减少data transfer的overhead。
+		</aside>
 	  </section>
 	  <!--
 	  <section>
@@ -1426,12 +1437,19 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  <section>
 		<h3>Using CUDA Streams</h3>
 		<img src="./images/dot-graph/roadmap/roadmap-comm-1.png" width="80%" height="80%" alt="Roadmap">
+		<aside class="notes">
+		  我们采用了CUDA Streaming。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Using CUDA Streams</h3>
 		<p>CUDA streams are used for further overlapping data transfers with computation.</p>
 		<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
 		<p>Sequential vs. Concurrent copy and execute</p>
+		<aside class="notes">
+		  如图所示，虽然在同一个stream中，data transfer与kernel execution是被sequential执行的，但是不同stream的operations可以被parallel执行。
+		  这使得CUDA streams可以overlap data transfers和kernel execution，降低overhead。
+		</aside>
 	  </section>
 	  <section>
 		<h4>Using CUDA Streams</h4>
@@ -1446,10 +1464,16 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		</p>
 		<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="60%" height="60%" alt="streaming speedup">
 		<ul>
-		  <li class="fragment">Using CUDA streaming can improve the performance by more than 29%.</li>
+		  <li>Using CUDA streaming can improve the performance by more than 29%.</li>
 		  <!--<li class="fragment">data size ↑ → data transfer overhead ↑ → CUDA streaming improvement ↑.</li>-->
-		  <li class="fragment">As the data size increases, the data transfer overhead increases, and the improvement of CUDA streaming is more significant.</li>
+		  <li>As the file size increases, the data transfer overhead increases, and the improvement of CUDA streaming is more significant.</li>
 		</ul>
+		<aside class="notes">
+		  我们先通过一个实验来看采用CUDA streaming的效果。
+		  在我们的实验中，我们采用k=4,n=6的Reed-Solomon Code来encode一些file，input file的size从1000MB scale到1800MB。
+		  实验结果表明，streaming有超过29%的improvement。
+		  而且，随着file size变大，data transfer所占用的时间也变多，这时候采用streaming就会有更好的improvement。 
+		</aside>
 	  </section>
 	  <section>
 		<h4>Using CUDA Streams</h4>
@@ -1457,9 +1481,17 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		encoding a 2000 MB file under $k = 4, n = 6$ settings.
 		</p>
 		<img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
-		<p class="fragment">
+		<p>
 		The kernel execution time is increasing with the growth of the CUDA stream number. → The overhead of kernel execution will exceed the time saving of data transfer at some point.
 		</p>
+		<aside class="notes">
+		  接下来我们来看CUDA stream number对performance的影响。
+		  我们用k=4,n=6的RS去encode一个2000MB的file。
+		  实验结果中，绿色的线——也就是kernel execution time——的变化很有规律：它会随着stream num的增加而增加。
+		  这表明，当stream num大到某一程度之后，kernel execution time多出的部分会盖过data transfer被overlape的部分，此时继续增大stream num就不再有好处。
+		  然而，虽然non-overlapped data transfer time总体是下降的，但仍有不规则的波动。
+		  这也使得如何找到best stream num的问题没那么straightforward，这也是未来我们可以继续研究的issue。
+		</aside>
 	  </section>
 	</section>
 
@@ -1469,6 +1501,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 	  </section>
 	  <section>
 		<h3>Experiment Setup</h3>
+		<aside class="notes">
+		  下面介绍实验的部分。
+		</aside>
 	  </section>
 	  <section>
 		<h3>Experiment Setup</h3>
@@ -1494,6 +1529,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			</li>
 			<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
 		  </ul>
+		  <aside class="notes">
+			我们用的机器是一台CentOS-6的server，kernel版本是2.6.32。
+			我们用的CPU是Intel Xeon E5-2670，它有10个cores。
+			我们用的GPU是Tesla K20X，它有2688个CUDA cores，BW是243GB/s，有两个copy engines，表明支持data copy和kernel execution同时执行。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Experiment Setup</h3>
@@ -1502,17 +1542,30 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			<li>Most of our experimental results reflect the average of 100 runs.</li>
 			<li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
 		  </ul>
+		  <aside class="notes">
+			实验中，我们的files都是random产生的。
+			所有数据都是跑完100次实验的平均值。
+			由于encoding和decoding都是矩阵乘法，结果也相似，所以我们只show encoding的结果。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <p>
 		  We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
 		  </p>
+		  <aside class="notes">
+			我们通过一个实验来看应用了之前的techniques之后的overall performance如何。
+			我们采用k=4,n=6的RS去encode一个1600MB的file。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>Step-by-step Improvement</h4>
 		  <img src="./images/exp/step-perf/stepBreakdown-0.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		  <aside class="notes">
+			首先我们来看step-by-step的improvement。
+			这是baseline的breakdown结果。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
@@ -1540,6 +1593,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			</table>
 		  </small>
 		  <img src="./images/exp/step-perf/stepBreakdown-1.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		  <aside class="notes">
+			接下来我们apply改善矩阵乘法的tiling algorithm，发现computation有1.469的speedup。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
@@ -1574,6 +1630,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			</table>
 		  </small>
 		  <img src="./images/exp/step-perf/stepBreakdown-2.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		  <aside class="notes">
+			接下来我们继续apply针对log&exp table-based方法的优化，computation又得到了1.502倍的performance提升。 
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
@@ -1615,6 +1674,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			</table>
 		  </small>
 		  <img src="./images/exp/step-perf/stepBreakdown-3.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		  <aside class="notes">
+			下面apply CUDA streaming，虽然computation变差了，但是data transfer由于大部分被overlap，这部分overhead有18.452倍的改善。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
@@ -1663,6 +1725,9 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			</table>
 		  </small>
 		  <img src="./images/exp/step-perf/stepBreakdown-4.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		  <aside class="notes">
+			最后我们还在2张GPU卡做parallelize，结果表明我们的program有比较好的scalability。
+		  </aside>
 		</section>
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
@@ -1672,6 +1737,11 @@ result = gf256_log_table[a] + gf256_log_table[b];
 			<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
 			<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
 		  </ul>
+		  <aside class="notes">
+			接下来我们做一个CPU和GPU的performance对比。
+			我们采用的CPU版本是一个open-source library Jerasure。我们采用compiler中优化做得很好的llvm的front-end clang来作为我们的compiler，并使用了-O3的optimization flag。再加上我们CPU的计算能力本身很强，我们认为这个结果一定程度上已经代表了CPU版本的最好表现。
+			在我们的实验中，CPU花了4309.08ms，而我们optimized的GPU版本只需要292.977ms，GPU版本有14.71倍的speedup。
+		  </aside>
 		</section>
 	  </section>
 
