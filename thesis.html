@@ -448,12 +448,68 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <li>compute directly: cost a loop of at most eight iterations to multiply two elements in GF($2^8$).</li>
 		  <li>computation bound</li>
 		</ul>
+		<img src="./images/LB.png" alt="loop-based">
 		<aside class="notes">
 		  loop-based的方法就是直接用同构得到的一系列bitwise operations来做计算。
 		  由于计算两个元素的乘法需要跑完一个loop，故而得名。
 		  在计算GF(2^8)的乘法时，loop-based需要至多多达八次的iterations。
 		  显而易见，它是computation bound的。
 		</aside>
+	  </section>
+	  <section>
+		<h4>Table-based Methods</h4>
+		<p>precompute and store the results in tables</p>
+		<p>e.g. Full Multiplication Table</p>
+		<table>
+		  <tr>
+			<td></td>
+			<td>$\ldots$</td>
+			<td>38</td>
+			<td><em>39</em></td>
+			<td>40</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>$\vdots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>20</td>
+			<td>$\ldots$</td>
+			<td>194</td>
+			<td>214</td>
+			<td>26</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td><em>21</em></td>
+			<td>$\ldots$</td>
+			<td>228</td>
+			<td><em>241</em></td>
+			<td>50</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>22</td>
+			<td>$\ldots$</td>
+			<td>142</td>
+			<td>152</td>
+			<td>74</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>$\vdots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+		  </tr>
+		</table>
 	  </section>
 	  <section>
 		<h4>Table-based Methods</h4>
@@ -1611,6 +1667,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<section>
 		  <h3>Overall Performance Evaluation</h3>
 		  <h4>GPU vs. CPU</h4>
+		  <img src="./images/exp/step-perf/stepBreakdownCPU.png" width="60%" height="60%" alt="Step-by-step Improvement">
 		  <ul>
 			<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
 			<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
