@@ -566,12 +566,39 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
 		</aside>
 		-->
-		<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="60%" height="60%" alt="Loop-Based vs Table-Based">
+		<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="50%" height="50%" alt="Loop-Based vs Table-Based">
 		<ul>
 		  <li>The loop-based method is able to achieve the maximum bandwidth even when the chunk size is small.</li>
 		  <li>The bandwidth of the table-based method can still scale up as the chunk size grows larger.</li>
 		  <li>The maximum bandwidth of the table-based method exceeds that of the loop-based method.</li>
 		</ul>
+		<hr>
+		<small>
+		<sub>
+		  <!--
+		  [1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//Network Computing and Applications, 2006. NCA 2006. Fifth IEEE International Symposium on. IEEE, 2006: 173-180.
+			-->
+		  [1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//NCA 2006.
+		</sub>
+		<br>
+		<sub>
+		  <!--
+		  [2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009, IEEE. IEEE, 2009: 459-467.
+			-->
+		  [2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009.
+		</sub>
+		<br>
+		<sub>
+		  <!--
+		  [3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER), 2011 IEEE International Conference on. IEEE, 2011: 290-298.
+			-->
+		  [3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER) 2011.
+		</sub>
+		<br>
+		<sub>
+		  [4] Chu X, Zhao K. Practical random linear network coding on GPUs[M]//GPU Solutions to Multi-scale Problems in Science and Engineering. Springer Berlin Heidelberg, 2013: 115-130.
+		</sub>
+		</small>
 		<aside class="notes">
 		  下面我们通过一个实验来决定采用loop-based或是table-based。
 		  在我们的实验中，chunk size（也就是切file的一份chunk的大小）从1MB scale到64MB，k从4 scale到16，采用double fault tolerance (code chunks的数目是二)。
