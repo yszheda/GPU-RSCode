@@ -1,0 +1,1901 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+<meta charset="utf-8">
+
+<title>Accelerate Reed-Solomon on GPUs</title>
+
+<meta name="description" content="Accelerate Reed-Solomon on GPUs">
+<meta name="author" content="Shuai YUAN">
+
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<link rel="stylesheet" href="css/reveal.css">
+<link rel="stylesheet" href="css/custom.css">
+<link rel="stylesheet" href="css/theme/serif.css" id="theme">
+
+<!-- For syntax highlighting -->
+<link rel="stylesheet" href="lib/css/zenburn.css">
+
+<!-- For displaying theorems in LaTeX ways, 
+moved to custom.css.
+<link rel="stylesheet" href="css/theorems.css">
+-->
+
+<!-- For printing -->
+<!--
+		<link rel="stylesheet" href="css/print/pdf.css">
+		-->
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+if( window.location.search.match( /print-pdf/gi ) ) {
+  var link = document.createElement( 'link' );
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = 'css/print/pdf.css';
+  document.getElementsByTagName( 'head' )[0].appendChild( link );
+}
+</script>
+<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+</head>
+
+<body>
+
+<div class="reveal">
+
+  <!-- Any section element inside of this container is displayed as a slide -->
+  <div class="slides">
+	<section>
+	  <h2>Accelerate Reed-Solomon Erasure Codes on GPUs</h2>
+	  <img src="./images/nthu-logo.png" width="200" height="200" alt="nthu logo">
+	  <h3>
+		Student: <a href="http://yszheda.github.io">Shuai Yuan</a>, 
+		<br>Advisor: Prof. Jerry Chi-Yuan Chou
+		<br>
+		<a href="lsalab.cs.nthu.edu.tw/home">LSA Lab, NTHU</a>
+	  </h3>
+	  <aside class="notes">
+		各位口试委员、老师、同学，大家好。
+		我是LSA实验室的袁帅，我的指导教授是周志远老师。
+		我的thesis题目是应用GPU加速Reed-Solomon Codes的编解码。
+	  </aside>
+	</section>
+
+	<section>
+	  <h2>Outline</h2>
+	  <ul>
+		<li>Introduction</li>
+		<li>Overview of Our Acceleration Targets</li>
+		<li>Accelerating Operations in Galois Field</li>
+		<li>Accelerating Matrix Multiplication</li>
+		<li>Reducing Data Transfer Overhead</li>
+		<li>Experiment</li>
+		<li>Conclusion</li>
+	  </ul>
+	  <aside class="notes">
+		这是我这次的outline。
+		首先我会介绍这个题目的background和motivation。
+		接下来我会讲述我们要针对哪些方面进行加速。
+		然后对于这里所列出的三个要被加速的目标，我会进一步介绍我们用了哪些方法来优化。
+		最后是实验和conclusion。
+	  </aside>
+	</section>
+
+	<!-- Example of nested vertical slides -->
+	<section>
+	  <section>
+		<h2>Introduction</h2>
+		<aside class="notes">
+		  首先介绍这个题目的background与motivation。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Erasure Codes</h3>
+		<p>A <em>redundancy</em> solution for <em>fault-tolerance</em>, widely used in:</p>
+		<ul>
+		  <li>
+		  signals from deep space satellites
+		  <img src="./images/satellites.jpg" width="200" height="113" alt="signals from deep space satellites">
+		  </li>
+		  <li>
+		  reliable multimedia multicasting
+		  <img src="./images/multimedia-multicasting.jpg" alt="reliable multimedia multicasting">
+		  </li>
+		  <li>
+		  <em>reliable storage systems</em>
+		  <img src="./images/storage-systems.jpg" alt="reliable storage systems">
+		  </li>
+		</ul>
+		<!--
+		<table>
+		  <tr align="center">
+			<td>
+			</td>
+			<td>
+			</td>
+			<td>
+			</td>
+		  </tr>
+		</table>
+		-->
+		<aside class="notes">
+		  erasure codes是一种redundancy solution，用来保证系统的fault tolerance。
+		  它被广泛应用于卫星通讯、reliable multimedia multicasting(可信赖多媒体广播系统)、reliable storage system（可信赖储存系统）等领域当中。
+		  由于cloud computation的兴起，erasure codes在cloud storage systems中的应用也越来越受重视。
+		  以下，我们就从cloud storage systems出发做一个case study。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Cloud Storage Systems: Why Redundancy?</h3>
+		<ul>
+		  <li>
+		  Cloud storage vendors claim to provide highly <em>available</em> and <em>reliable</em> services in their SLA (Service-Level Agreement) with the customers.
+		  Both availability and reliability imply strict <em>fault tolerance</em> requirements for cloud storage system.
+		  </li>
+		  <li>
+		  However, as the scale of storage system grows larger and larger, the probability of failure becomes significant:
+		  <!--
+		  <br>
+		  If the MTTF (Mean Time To Failure) of one storage node is $P$, then the MTTF of a system of $n$ storage nodes is $\dfrac{P}{n}$.
+			-->
+		  <br><p>→ SLA violation.</p>
+		  </li>
+		</ul>
+		<p>
+		Therefore, redundancy must be introduced into cloud system.
+		</p>
+		<aside class="notes">
+		  availability和stability是cloud storage vendor与客户之间签署的SLA（Service Level Agreement）中的重要考量。
+		  不管是availability还是stability，都对cloud storage system的fault tolerance容错性提出了严格的要求。
+		  但是，随着cloud storage system的有越来越多的node，发生failure的机率也越来越大。
+		  为了保证不违反SLA，我们需要引入redundancy来保证系统的fault tolerance容错性。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Cloud Storage Systems: Why Redundancy?</h3>
+		<ul>
+		  <li>
+		  The simplest and straightforward redundancy solution is <em>replication</em> of the data in multiple storage nodes.
+		  </li>
+		  <li>
+		  Triple replication solution have been favored in cloud storage systems like the GFS (Google File System) and HDFS (Hadoop Distributed File System).
+		  </li>
+		</ul>
+		<aside class="notes">
+		  最简单的redundancy solution是replication。它把data拷贝若干份，再把这若干份分别分散在不同的storage node中。
+		  假如其中某个storage node发生failure，从其他的node仍可以拿到原来的data。
+		  这种solution也被广泛应用于一些cloud storage system中，例如GFS和HDFS就应用了triple replication（把同一块data存三份）。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Cloud Storage Systems: Why Erasure Codes?</h3>
+		<ul>
+		  <li>
+		  Problem of replication: <em>large storage overhead</em>.
+		  </li>
+		  <li>
+		  Erasure codes can reduce the storage overhead significantly while at the same time maintaining the same level of fault tolerance as replication → a better redundancy solution.
+		  </li>
+		</ul>
+		<aside class="notes">
+		  replication的缺陷是有着很高的storage overhead，也就是需要很多额外的存储空间来存放对data的拷贝。
+		  而erasure codes在保证相同的fault tolerance level的前提下，可以显著降低这一storage overhead，这也使它成为比replication更好的redundancy solution。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Cloud Storage Systems: Why Erasure Codes?</h3>
+		<p>
+		$(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
+		</p>
+		<ul>
+		  <li>File → $k$ equal-size native data chunks.</li>
+		  <li>$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
+		  <li>The native and code chunks are distributed on $n$ different storage nodes.</li>
+		  <li>tolerates the failure of any $(n - k)$ storage nodes.</li>
+		</ul>
+		<p class="fragment">
+		<small>
+		  Example:
+		</small>
+		</p>
+		<table class="fragment">
+		  <tr align="center">
+			<td>
+			  <img src="./images/dot-graph/e-c.png" alt="erasure code">
+			</td>
+			<td>
+			  <img src="./images/dot-graph/replica.png" alt="replication">
+			</td>
+		  </tr>
+		  <tr align="center">
+			<td>
+			  <small>
+				Reed-Solomon Code $(n=4, k=2)$
+			  </small>
+			</td>
+			<td>
+			  <small>
+				Triple Replication
+			  </small>
+			</td>
+		  </tr>
+		</table>
+		<p class="fragment">
+		<small>
+		  Save 50% space!
+		</small>
+		</p>
+		<aside class="notes">
+		  在我们的thesis中，我们所讨论的erasure codes是指(n,k) MDS codes。
+		  这一类codes首先会将file平均分为若干native chunks，native chunks的数目为k。
+		  之后，k个native chunks通过encode生成(n-k)个code chunks。
+		  native chunks和code chunks再被分散到n个不同的storage nodes中。
+		  (n,k) MDS codes可以容许高达(n-k)个任意的storage nodes发生failure。
+		  (next)
+		  下面我们通过一个例子来比较erasure codes和replication。
+		  左边是采用(4,2) MDS code，把file平均分为A、B两个native chunks，再通过encoding生成两个绿色方框所表示的code chunks。
+		  右边是采用triple replication的结果。
+		  (next)
+		  这二者都能容许任意两个storage nodes发生failure，但显然erasure codes更胜一筹，它可以节省50%的额外空间。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Cloud Storage Systems: Why Reed-Solomon Codes?</h3>
+		<ul>
+		  <li>
+		  Reed-Solomon codes $RS(k, n-k)$ are one of the most popular MDS erasure codes.
+		  </li>
+		  <li>
+		  $RS(10, 4)$ is used in HDFS-RAID in Facebook and $RS(6, 3)$ is used in GFS II in Google.
+		  </li>
+		</ul>
+		<aside class="notes">
+		  在MDS erasure codes当中，Reed-Solomon codes是使用最为广泛的code之一，例如Fackbook和Google的cloud storage system就使用了不同setting的Reed-Solomon codes作为它们的redundancy solution。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Shortcomings of Reed-Solomon Codes</h3>
+		<ul>
+		  <li>
+		  <em>extra high computation cost</em> compared to replication: encoding and decoding.
+		  </li>
+		  <li class="fragment">
+		  Our contributions: use GPU to accelerate the Reed-Solomon encoding and decoding.
+		  </li>
+		</ul>
+		<aside class="notes">
+		  然而，Reed-Solomon codes虽然有效地降低了storage overhead，但相比replication却需要encoding与decoding，这也造成了额外的high computation cost。
+		  为了弥补Reed-Solomon codes的这一缺陷，我们采用GPU作为accelerator来加速它的encoding与decoding，这也是我们这篇thesis的主要贡献。
+		</aside>
+	  </section>
+	</section>
+
+	<section>
+	  <section>
+		<h2>Overview of Our Acceleration Targets</h2>
+		<aside class="notes">
+		  下面介绍我们针对哪些方面来对Reed-Solomon codes进行加速。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Reed-Solomon Code Overview</h3>
+		<table>
+		  <tr align="center">
+			<td>
+			  <img src="./images/dot-graph/encode.png" alt="RS encode">
+			</td>
+			<td>
+			  <img src="./images/dot-graph/decode.png" alt="RS decode">
+			</td>
+		  </tr>
+		  <tr align="center">
+			<td>
+			  Reed-Solomon Encoding
+			</td>
+			<td>
+			  Reed-Solomon Decoding
+			</td>
+		  </tr>
+		</table>
+		<aside class="notes">
+		  首先，为了了解Reed-Solomon codes为何有很高的computation cost，我们先来看encoding和decoding的大致过程。
+		  encoding的大致过程如左图：n与k被用来生成encoding matrix，encoding matrix再跟k个data chunks组成的matrix进行矩阵乘法，最后得到(n-k)个code chunks。
+		  decoding的大致过程如右图：首先从k个没有发生failure的storage nodes中得到k个chunks，并生成decoding matrix，decoding matrix再跟k个chunks组成的matrix进行矩阵乘法，最后得到原来的data。
+		  可以看到，无论是encoding还是decoding，其主要过程都是矩阵乘法，而这也正是Reed-Solomon codes的computation bottleneck。
+		</aside>
+	  </section>
+	  <!-- Overview of Three Kinds of Implementation -->
+	  <section>
+		<h3>Acceleration Targets - 1</h3>
+		<p>Computation bottleneck: matrix multiplication.</p>
+		\begin{array}{rl}
+		& C = A \cdot B \\
+		\equiv & ( c_{j} = \sum_{i = 1}^{k} a_{i,j} \times b_{i} ) 
+		\end{array}
+		<p>Addition and multiplication are defined as arithmetic over Galois Field GF($2^8$).</p>
+		<p class="fragment">Acceleration targets for computation:</p>
+		<ul>
+		  <li class="fragment">Arithmetic over Galois Field.</li>
+		  <li class="fragment">Matrix multiplication.</li>
+		</ul>
+		<aside class="notes">
+		  下面让我们来了解矩阵乘法这一computation overhead。
+		  矩阵乘法的一般形式是C=AB，如果把它改写成等价的矩阵元素的形式，我们会发现是由一系列加法和乘法所组成。
+		  在Reed-Solomon codes的encoding和decoding中，这些加法和乘法并非是我们熟知的实数域的加法和乘法，而是Galois Field的加法和乘法。
+		  这个域的四则运算有自己一套法则，它也是造成Reed-Solomon codes的encoding和decoding的computation complexity高的原因之一。
+		  (next)
+		  所以，针对这些特点，我们需要从微观上加速Galois Field的加法和乘法，从宏观上加速矩阵的乘法。
+		</aside>
+	  </section>
+	  <section>
+		<h3>GPU-Accelerated Reed-Solomon Code Overview</h3>
+		<table>
+		  <tr align="center">
+			<td>
+			  <small>Reed-Solomon Encoding in a GPU</small>
+			</td>
+			<td>
+			  <img src="./images/dot-graph/GPUencode.png" alt="RS encode in GPU">
+			</td>
+		  </tr>
+		  <tr align="center">
+			<td>
+			  <small>Reed-Solomon Decoding in a GPU</small>
+			</td>
+			<td>
+			  <img src="./images/dot-graph/GPUdecode.png" alt="RS decode in GPU">
+			</td>
+		  </tr>
+		</table>
+		<aside class="notes">
+		  然而，使用GPU来加速计算本身也会产生一些问题。
+		  从这两张使用GPU来加速Reed-Solomon Codes的encoding与decoding的过程图我们可以看到，由于CPU和GPU有不同的virtual address，使得计算的input和结果需要在二者的memory之间被transfer。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Acceleration Targets - 2</h3>
+		<p>Extra overhead in GPU implementation: data transfers between CPU and GPU.</p>
+		<p class="fragment">Another acceleration targets: reducing data transfer overhead.</p>
+		<aside class="notes">
+		  (next)
+		  因此，我们除了在GPU中加速计算过程之外，还需要减少CPU与GPU之间额外的data transfer overhead。
+		</aside>
+	  </section>
+	  <section>
+		<h2>Overview of Our Acceleration Targets</h2>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-0.png" width="100%" height="100%" alt="Roadmap">
+		</aside>
+		<ul>
+		  <li>Accelerating arithmetic over Galois Field.</li>
+		  <li>Accelerating matrix multiplication.</li>
+		  <li>Reducing data transfer overhead.</li>
+		</ul>
+		-->
+		<img src="./images/dot-graph/roadmap/roadmap-total.png" width="700" height="492" alt="Roadmap">
+		<aside class="notes">
+		  以上就是我们用GPU加速Reed-Solomon codes编解码的三大方面。
+		  这三大方面又分为多种techniques，这些techniques既有加速computation、改善memory access，也有减少CPU与GPU之间communication overhead的。
+		  下面的sessions将一一进行介绍。
+		</aside>
+	  </section>
+	</section>
+
+	<section>
+	  <section>
+		<h2>Accelerating Arithmetic over Galois Field</h2>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="100%" height="100%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="60%" height="40%" alt="Roadmap">
+		<aside class="notes">
+		  首先介绍如何加速Galois Field的运算。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Brief Introduction of Galois Field</h3>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-0.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
+		-->
+		<p>GF($2^w$) contains $2^w$ polynomials. For each polynomial, its degree is at most $w−1$ and its coefficient is in {0, 1}.</p>
+		<p align="left">For GF($2^8$), every element can be one-to-one mapped into a byte, and polynomial operations in GF($2^8$) is isomorphic to operations on bytes:</p>
+		<ul>
+		  <li>Addition: isomorphic to bitwise XOR → inexpensive.</li>
+		  <li>
+		  Multiplication: isomorphic to bitwise operations → still time-consuming.
+		  <!--
+		  <br>cost a loop of at most eight iterations to multiply two elements in GF($2^8$) → called as <em>loop-based</em> 
+			-->
+		  </li>
+		</ul>
+		<p class="fragment">
+		Therefore, how to accelerate <em>multiplication</em> over GF($2^8$) will be our focus.
+		</p>
+		<aside class="notes">
+		  这里对Galois Field做一个粗略的介绍。
+		  Galois Field其实是多项式域。GF(2^w)表明它有2^w个多项式元素,。每个多项式的次数不超过w-1，系数非0即1。
+		  我们之前所看到的GF(2^8)这个域有一个性质，每个元素可以被一一对应到某个byte，而这个域的运算也可以被同构到针对byte的运算。
+		  其中，加法被同构到bitwise XOR，它的computation cost很低。而乘法所同构到的一系列运算仍然是time-consuming的。
+		  (next)
+		  因此，如何加速乘法运算是我们接下来的重点。
+		</aside>
+	  </section>
+	  <section>
+		<h3>GPU Accelerating Options for Multiplication</h3>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
+		-->
+		<ul>
+		  <li><em>loop-based</em> method</li>
+		  <li>a set of <em>table-based</em> methods</li>
+		</ul>
+		<img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="60%" height="30%" alt="Roadmap">
+		<aside class="notes">
+		  而针对Galois Field乘法的加速方法主要有两大类，一种是loop-based，另一类是一系列的table-based方法。
+		  以下我们将探讨在GPU中应当选择哪一种方法。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Loop-based Method</h4>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
+		-->
+		<ul>
+		  <li>compute directly: cost a loop of at most eight iterations to multiply two elements in GF($2^8$).</li>
+		  <li>computation bound</li>
+		</ul>
+		<img src="./images/LB.png" alt="loop-based">
+		<aside class="notes">
+		  loop-based的方法就是直接用同构得到的一系列bitwise operations来做计算。
+		  由于计算两个元素的乘法需要跑完一个loop，故而得名。
+		  在计算GF(2^8)的乘法时，loop-based需要至多多达八次的iterations。
+		  显而易见，它是computation bound的。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Table-based Methods</h4>
+		<p>precompute and store the results in tables</p>
+		<p>e.g. Full Multiplication Table</p>
+		<table>
+		  <tr>
+			<td></td>
+			<td>$\ldots$</td>
+			<td>38</td>
+			<td><em>39</em></td>
+			<td>40</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>$\vdots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>20</td>
+			<td>$\ldots$</td>
+			<td>194</td>
+			<td>214</td>
+			<td>26</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td><em>21</em></td>
+			<td>$\ldots$</td>
+			<td>228</td>
+			<td><em>241</em></td>
+			<td>50</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>22</td>
+			<td>$\ldots$</td>
+			<td>142</td>
+			<td>152</td>
+			<td>74</td>
+			<td>$\ldots$</td>
+		  </tr>
+		  <tr>
+			<td>$\vdots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+			<td>$\ldots$</td>
+		  </tr>
+		</table>
+		<aside class="notes">
+		  相较于loop-based，table-based由于采用先计算完结果再查表的方式，因此computation cost大为降低。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Table-based Methods</h4>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="50%" height="50%" alt="Roadmap">
+		</aside>
+		-->
+		<table>
+		  <tr>
+			<td></td>
+			<td>Full Multiplication Table</td>
+			<td>"Double Table"/"Left-Right Table"</td>
+			<td>Log&Exp Table</td>
+		  </tr>
+		  <tr>
+			<td>Space Complexity for GF($2^w$)</td>
+			<!--<td>$O(2^w \times 2^w)$</td>-->
+			<td>$O(2 ^ { 2w })$</td>
+			<td>$O(2^{3w/2+1})$</td>
+			<td>$O( 2^{w+1} )$</td>
+		  </tr>
+		  <tr>
+			<td>Computation Complexity</td>
+			<td>one table-lookup</td>
+			<td>2 table-lookup, 2 AND, 1 XOR, and 1 SHIFT</td>
+			<td>3 table-lookup, 1 <em>MOD</em>, 1 ADD, and 2 <em>branches</em></td>
+		  </tr>
+		  <tr class="fragment">
+			<td>Memory space for GF($2^8$)</td>
+			<td>64 KB</td>
+			<td>8 KB</td>
+			<td>512 Bytes</td>
+		  </tr>
+		</table>
+		<p class="fragment">
+		Use log&exp table-based method in our GPU implementation.
+		</p>
+		<aside class="notes">
+		  table-based方法主要分为三种，从左到右，所需要的空间依次减少，而computation cost却也依次增加（例如最右边的log&exp table方法，需要MOD运算和conditional branches作为判断条件，cost比较高）。
+		  (next)
+		  在GPU的实作中，我们需要table的size越小越好，以便能装入cache中。在这里，log&exp table方法是最合适的。
+		</aside>
+	  </section>
+	  <section>
+		<h4>GPU Implementation: Loop-based or Table-based?</h4>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-1.png" width="90%" height="90%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/exp/table-based vs. loop-based/chunk-size-scaling-k1M_64M/encode-BW.png" width="40%" height="40%" alt="Loop-Based vs Table-Based">
+		<ul>
+		  <li>
+		  <small>
+			The loop-based method is able to achieve the maximum bandwidth even when the chunk size is small.
+		  </small>
+		  </li>
+		  <li>
+		  <small>
+			The bandwidth of the table-based method can still scale up as the chunk size grows larger.
+		  </small>
+		  </li>
+		  <li>
+		  <small>
+			The maximum bandwidth of the table-based method exceeds that of the loop-based method.
+		  </small>
+		  </li>
+		</ul>
+		<hr>
+		<small>
+		  <sub>
+			<!--
+		  [1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//Network Computing and Applications, 2006. NCA 2006. Fifth IEEE International Symposium on. IEEE, 2006: 173-180.
+			-->
+			[1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//NCA 2006.
+		  </sub>
+		  <br>
+		  <sub>
+			<!--
+		  [2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009, IEEE. IEEE, 2009: 459-467.
+			-->
+			[2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009.
+		  </sub>
+		  <br>
+		  <sub>
+			<!--
+		  [3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER), 2011 IEEE International Conference on. IEEE, 2011: 290-298.
+			-->
+			[3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER) 2011.
+		  </sub>
+		  <br>
+		  <sub>
+			[4] Chu X, Zhao K. Practical random linear network coding on GPUs[M]//GPU Solutions to Multi-scale Problems in Science and Engineering. Springer Berlin Heidelberg, 2013: 115-130.
+		  </sub>
+		</small>
+		<aside class="notes">
+		  下面我们通过一个实验来决定采用loop-based或是table-based。
+		  在我们的实验中，chunk size（也就是切file的一份chunk的大小）从1MB scale到64MB，k从4 scale到16，采用double fault tolerance (code chunks的数目是二)。
+		  从图中可以看出（较平的三条线是loop-based，其他的是table-based）：
+		  Loop-based在chunk size很小的时候performance优于table-based。
+		  但是table-based的effective bandwidth仍然可以随着chunk size变大继续scale，而loop-based却早已达到它的最高bandwidth。
+		  最后从最大bandwidth来看，table-based要优于loop-based。
+
+		  之前我们survey时看到，一些paper在优化其他一些erasure codes时采用了loop-based。他们的理由是所谓的“memory wall”，也就是processor的computation power成长迅速，而memory的performance成长缓慢，导致这两者的gap越来越大（以每年约50%的速率增大）。所以，与其选择需要memory access的table-based，不如选择computation bound的loop-based方法。
+
+		</aside>
+	  </section>
+
+	  <section>
+		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
+		<aside style="position: absolute; top: 400px; right: -400px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="80%" height="80%" alt="Roadmap">
+		</aside>
+		-->
+		<p>baseline:</p>
+		<pre><code class="cpp" data-trim contenteditable>
+uint8_t gf256_mul(uint8_t a, uint8_t b)
+{
+  int result;
+  if (a == 0 || b == 0) {
+	return 0;
+  }
+  result = (gf256_log_table[a] + gf256_log_table[b]) % (NW-1);
+  return gf256_exp_table[result];
+}
+		</code></pre>
+		<img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="60%" height="30%" alt="Roadmap">
+		<aside class="notes">
+		  决定了GPU实作采用log&exp table-based方法之后，我们再继续对这一方法进行优化。
+		  前面提到log&exp table-based方法含有branches和time-consuming的MOD运算。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-2.png" width="50%" height="50%" alt="Roadmap">
+		</aside>
+		-->
+		<table>
+		  <tr>
+			<td>Improvement Approach 1</td>
+			<td>
+			  Replace the slow modular operations with more efficient operations.
+			  <pre><code class="cpp" data-trim contenteditable>
+if (a == 0 || b == 0) {
+  return 0;
+}
+result = (gf256_log_table[a] + gf256_log_table[b]) & (NW-1)
++ (gf256_log_table[a] + gf256_log_table[b]) >> width;
+			  </code></pre>
+			</td>
+		  </tr>
+		  <tr>
+			<td>Improvement Approach 2</td>
+			<td>
+			  Remove the slow modular operations by augmenting one table.
+			  <pre><code class="cpp" data-trim contenteditable>
+if (a == 0 || b == 0) {
+  return 0;
+}
+result = gf256_log_table[a] + gf256_log_table[b];
+			  </code></pre>
+			</td>
+		  </tr>
+		  <tr>
+			<td>Improvement Approach 3</td>
+			<td>
+			  Further eliminates the conditional branches by augmenting both two tables.
+			  <pre><code class="cpp" data-trim contenteditable>
+result = gf256_log_table[a] + gf256_log_table[b];
+			  </code></pre>
+			</td>
+		  </tr>
+		</table>
+		<aside class="notes">
+		  我们survey时看到，一些paper提出了这三种优化方法。
+		  这些方法优化的目标是之前我们所提到的MOD和branches。
+		  前两种优化主要是针对MOD这一种耗时的operation，第一种approach是把它替换成等价的operations，第二种approach则是通过扩充table的内容来去掉MOD。
+		  第三种approach除了去掉MOD以外，还去掉了branches，它的方式也是对table的内容进行扩充。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
+		<aside class="sidebar">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-3.png" width="80%" height="80%" alt="Roadmap">
+		</aside>
+		-->
+		<p>
+		In GPU implementation, where to store the tables and how to initialize them will affect the performance.
+		</p>
+		<img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="60%" height="40%" alt="Roadmap">
+		<aside class="notes">
+		  在GPU的实作中，还有一个新的问题，就是如何存放tables，还有如何initialize tables。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<img src="./images/memory-spaces-on-cuda-device.png" width="50%" height="30%" alt="Loop-Based vs Table-Based">
+		<p class="fragment">
+		Appropriate GPU memory:
+		</p>
+		<ul class="fragment">
+		  <li>constant memory: off-chip memory whose accesses are usually cached in the constant cache.</li>
+		  <li>shared memory: on-chip memory which has the smallest access latency except the register file.</li>
+		</ul>
+		<aside class="notes">
+		  我们先来看tables的存放。这张图给出了GPU各种memory space。
+		  其中左边深蓝色的方框是DRAM，代表这块memory是off-chip的，latency大概是400-800个clock cycles。
+		  在off-chip memory中，我们考虑采用constant memory，因为它的access会被cache在constant cache中。
+		  而另一个考虑采用的memory是shared memory，它位于右边multiprocessor的黄色方框中，有着仅次于register的latency。
+		  （根据我们跑一些micro-benchmarking的结果，我们的卡是48cycles）。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of the Log&exp Table-based Method</h3>
+		<!--
+		<aside style="position: absolute; top: 480px; right: -250px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="45%" height="45%" alt="Roadmap">
+		</aside>
+		-->
+		<p>
+		What we have implemented:
+		</p>
+		<ul class="fragment">
+		  <li>Store two tables in the constant memory and initialize them at compile time.</li>
+		  <li>Store two tables in the shared memory and run-time initialize them serially at the beginning of each kernel function.</li>
+		  <li>Store two tables in the off-chip memory and then load into the shared memory parallely at the beginning of each kernel function.</li>
+		</ul>
+		<aside class="notes">
+		  前面提到还有如何initialize tables的问题：
+		  对于tables存放在cMem的情况，只需要在compile-time填好table即可。
+		  对于tables存放在sMem的情况，由于sMem在L1 cache这一层，所以没办法在compile-time指定它存的内容。
+		  我们implement了两种方式：
+		  一种是在run-time initialize，但由于initialization有dependency，无法被平行（parallelize）。
+		  另一种则是先把tables存在off-chip memory，然后再把它们load到sMem，这种方式就可以被平行。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Further Improvement of the Log&exp Table-based Method</h4>
+		<!--
+		<aside style="position: absolute; top: 250px; right: -750px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-galois-4.png" width="30%" height="30%" alt="Roadmap">
+		</aside>
+		-->
+		<p>
+		<small>encoding a 1GB file with $k = 4$ and $n = 6$.</small>
+		</p>
+		<img src="./images/exp/log&exp table/high-occupancy/sMem-vs-cMem.png" width="50%" height="50%" alt="Log&exp improvement techniques">
+		<ul>
+		  <li>The elimination of conditional branches improves the performance.</li>
+		  <!-- , for it removes warp diverge.</li> -->
+		  <li>Accessing the tables in the constant memory is more time-consuming.</li>
+		</ul>
+		<aside class="notes">
+		  在下面的实验中，我们来比较以上介绍这些further improvement的技巧。
+		  在实验中，我们在k=4,n=6的settings下去encode一个1GB的file。
+		  首先我们来看三种优化方法（approach）与baseline的比较（X轴的四项）：
+		  前两种approaches由于只把MOD拿掉，所以它们的performance比较接近；而最后一种approach还优化掉了branches，所以performance最好。
+		  接下来我们来比较三种table存放与initialization方式（蓝色、绿色和红色的bar）：
+		  由于cMem无法保证每次access都在cache中，所以把tables存在cMem的performance不如sMem。
+		  相同的原因也导致了load parallely在table size较小的情况下performance低于initialize serially，因为它也需要access off-chip memory。
+		  前面我们提到，（X轴的）后两种approach是需要扩充table的，X轴往右，table size就越大。
+		  随着table size的变大，sMem的两种方式的差距也在减小，最后load parallely的performance反超initialize serially，所以最后我们选了最右边红色bar的这种方式。
+		</aside>
+	  </section>
+	</section>
+
+	<section>
+	  <section>
+		<h2>Accelerating Matrix Multiplication</h2>
+		<!--
+		<aside style="position: absolute; top: 200px; right: 0px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="60%" height="60%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="60%" height="40%" alt="Roadmap">
+		<aside class="notes">
+		  下面的session我们来介绍矩阵乘法。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Naive Implementation</h3>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/without-tiling.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  我们先来看最一般的做法。
+		  如图所示，要计算某行某列（红色方格）的结果，需要矩阵A红色的row和矩阵B红色的column。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Naive Implementation</h3>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/without-tiling-1.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  接下来，我们拿矩阵A红色的row中第一个element和矩阵B红色的column中第一个element相乘得到一个结果。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Naive Implementation</h3>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/without-tiling-2.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  再拿第二个element相乘，其结果与上一个结果相加。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Naive Implementation</h3>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/without-tiling-3.png" width="60%" height="60%" alt="without tiling">
+		<aside class="notes">
+		  以此类推，计算出矩阵C中红色方格的值。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Problems of Naive Implementation</h3>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/without-tiling.png" width="40%" height="40%" alt="without tiling">
+		<ul>
+		  <li>a lot of global memory (off-chip) transactions: each takes 400 - 800 clock cycles.</li>
+		  <li>memory access in column major → poor temporal locality and high cache missrate.</li>
+		</ul>
+		<aside class="notes">
+		  这种最一般的做法不好的原因，一方面是因为矩阵的elements（也就是图中绿色的小方格）是存在GPU的global memory之中的，而这种做法需要大量access这些elements，因而也造成了大量的global memory transactions。之前我们提过，global memory其实是off-chip的DRAM，access它的latency是400-800cycles，是比较慢的。
+		  另一方面，这种做法在access矩阵B的elements是以column major的方式来access的，这种方式的locality很差，会导致较高的cache missrate。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Square-Tiling Algorithm</h3>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/square-tiling.png" width="60%" height="60%" alt="square tiling">
+		<aside class="notes">
+		  最常被用来改善上述问题的是tiling algorithm，也有些资料把它叫做blocking algorithm。
+		  如图，黄色正方形被称为tile，因此我们这里也称这种algorithm为square-tiling algorithm。
+		  左边与上边被虚线框起来的tile表明，tile中的elements会从global memory中被load进shared memory，之后在计算中就直接在shared memory中进行access。
+		  正如之前所讲的，access shared memory的latency要比access global memory的latency低得多。
+		  tiling algorithm用shared memory作为memory access的cache，既可以改善locality，又可以reuse cache中的elements，从而降低global memory transactions的数量。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Problems of Square-Tiling Algorithm</h3>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -800px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-0.png" width="40%" height="40%" alt="Roadmap">
+		</aside>
+		-->
+		<p>not suitable for general input cases of Reed-Solomon Codes: <br>a small matrix multiple a huge matrix</p>
+		<small>
+		  <ul>
+			<li>encoding--A: $(n - k) \times k$, B: $k \times CS$.</li>
+			<li>decoding--A: $k \times k$, B: $k \times CS$.</li>
+		  </ul>
+		  <p>where</p>
+		  <ul>
+			<li>$n$: total chunk number (1-100)</li>
+			<li>$k$: native chunk number (1-100)</li>
+			<li>$CS$: chunk size (more than 10,000,000)</li>
+		  </ul>
+		</small>
+		<img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="60%" height="40%" alt="Roadmap">
+		<aside class="notes">
+		  但是，square-tiling algorithm应对的一般是矩阵A和B的大小接近的情况，对于Reed-Solomon codes实际编解码的情况并不适用。
+		  在Reed-Solomon codes实际被使用的cases中，chunk的数量一般很少大过三位数（二位数），而实际的input file又是mega甚至giga这种级别的，使得chunk的大小一般大于百万的数量级。
+		  无论是encoding和decoding，矩阵的乘法都是一个很小的矩阵A乘以一个扁长的大矩阵B的情形。
+		  为了能使这种特殊的矩阵乘法有较好的performance，我们需要generalize square-tiling algorithm以适应实际情况。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Generalized Tiling Algorithm</h3>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling.png" width="80%" height="50%" alt="generalized tiling">
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<ul>
+		  <li>tileDepth</li>
+		  <li>tileWidthRow</li>
+		  <li>tileWidthCol</li>
+		</ul>
+		<aside class="notes">
+		  我们对square-tiling algorithm做了如图所示的generalize。
+		  接下来我们需要确定合适的tile形状，这个问题等价于如何去确定图中的三个参数：
+		  其中tileDepth是切矩阵A的column与矩阵B的row的；
+		  tileWidthRow是切矩阵A的row；
+		  tileWidthCol是切矩阵B的column。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<ul>
+		  <li>set tileDepth to $A.width$ ($k$) → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		</ul>
+		<img src="./images/matrix-multiplication/tiling-tileDepth-2.png" width="80%" height="50%" alt="generalized tiling">
+		<aside class="notes">
+		  首先我们观察到，把tileDepth设满是一个较好的选择。因为它所切的那条边是native data chunk的数目k，一般都很小，不会导致sMem的大小过大。
+		  其次，这种做法可以减少access矩阵A、B所需要的loop。
+		  (next)
+		  像原来的大小就需要两次iterations。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<ul>
+		  <li>set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		</ul>
+		<img src="./images/matrix-multiplication/tiling-tileDepth-0.png" width="80%" height="50%" alt="generalized tiling">
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<ul>
+		  <li>set tileDepth to $k$ → remove the loop of accessing matrix $A$ and $B$ tile by tile.</li>
+		</ul>
+		<img src="./images/matrix-multiplication/tiling-tileDepth-1.png" width="80%" height="50%" alt="generalized tiling">
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-tileWidth.png" width="80%" height="50%" alt="generalized tiling">
+		<ul>
+		  <!--
+		  <li class="fragment">assign each thread compute one element of the product tile in matrix $C$ → the CUDA block size is equal to $\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ → find the best CUDA block size by tuning occupancy</li>
+			-->
+		  <li class="fragment">$\textrm{tileWidthRow} \times \textrm{tileWidthCol}$ is equal to the CUDA block size (number of threads in a CUDA block) → find the best CUDA block size by tuning occupancy.</li>
+		  <li class="fragment">Finally we need to further determine tileWidthRow and tileWidthCol.</li>
+		</ul>
+		<aside class="notes">
+		  剩下的还有两个参数，它们也是矩阵C中tile的长和宽。
+		  由于每个CUDA block的thread负责算矩阵C的tile（黄色实线矩形）中的一个element，所以thread的数目（CUDA中称为block size）其实就是矩阵C中tile的面积。
+		  而CUDA block size可以通过tuning得到，所以剩下两个参数的乘积我们也可以确定下来。
+		  接下来就是如何进一步确定它们的值。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 0px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-tileWidth.png" width="40%" height="20%" alt="generalized tiling">
+		<p>
+		Define the aspect ratio $AR$ of the tile in the result matrix as:
+		$$
+		AR = \dfrac{ \textrm{tileWidthRow} }{ \textrm{tileWidthCol} }
+		$$
+		</p>
+		<p>three strategies:</p>
+		<table>
+		  <tr>
+			<td>Min $AR$</td>
+			<td>minimize tileWidthRow, <br>maximize tileWidthCol</td>
+		  </tr>
+		  <tr>
+			<td>$AR=1$</td>
+			<td>$\textrm{tileWidthRow} = \textrm{tileWidthCol}$</td>
+		  </tr>
+		  <tr>
+			<td>Max $AR$</td>
+			<td>maximize tileWidthRow, <br>minimize tileWidthCol</td>
+		  </tr>
+		</table>
+		<aside class="notes">
+		  为此，我们提出了三种strategies。
+		  我们首先定义这两个参数的比值，也就是矩阵C的tile（黄色实线矩形）的长宽比为AR。
+		  Min AR是用更长的边去切矩阵B，Max AR是用更长的边去切矩阵A。
+		</aside>
+	  </section>
+	  <section>
+		<!--
+		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
+		-->
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 200px; right: -850px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<p>
+		use the following testcases for encoding:
+		</p>
+		<table>
+		  <thead>
+			<tr>
+			  <th rowspan="2">testcase</th>
+			  <th rowspan="2">$k$</th>
+			  <th rowspan="2">$n$</th>
+			  <th rowspan="2">chunk size (MB)</th>
+			  <th colspan="2">Description</th>
+			</tr>
+			<tr>
+			  <th>file size</th>
+			  <th>code chunk number</th>
+			</tr>
+		  </thead>
+		  <tbody>
+		  <tr>
+			<td>1</td>
+			<td>2</td>
+			<td>200</td>
+			<td>1</td>
+			<!--
+			  <td>Small file, large code chunk number</td>
+				-->
+			<td rowspan="3">small</td>
+			<td rowspan="3">large</td>
+		  </tr>
+		  <tr>
+			<td>2</td>
+			<td>4</td>
+			<td>150</td>
+			<td>1</td>
+			<!--
+			  <td>Small file, large code chunk number</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>3</td>
+			<td>4</td>
+			<td>200</td>
+			<td>1</td>
+			<!--
+			  <td>Small file, large code chunk number</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>4</td>
+			<td>2</td>
+			<td>200</td>
+			<td>10</td>
+			<!--
+			  <td>Big file, large code chunk number</td>
+				-->
+			<td rowspan="3">large</td>
+			<td rowspan="3">large</td>
+		  </tr>
+		  <tr>
+			<td>5</td>
+			<td>4</td>
+			<td>150</td>
+			<td>10</td>
+			<!--
+			  <td>Big file, large code chunk number</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>6</td>
+			<td>4</td>
+			<td>200</td>
+			<td>10</td>
+			<!--
+			  <td>Big file, large code chunk number</td>
+				-->
+		  </tr>
+		  <tr>
+			<td>7</td>
+			<td>4</td>
+			<td>6</td>
+			<td>256</td>
+			<!--
+			  <td>Big file, small code chunk number</td>
+				-->
+			<td rowspan="2">large</td>
+			<td rowspan="2">small</td>
+		  </tr>
+		  <tr>
+			<td>8</td>
+			<td>8</td>
+			<td>16</td>
+			<td>128</td>
+		  </tr>
+		  </tbody>
+		</table>
+		<!--
+		<ul>
+		  <li>
+		  $k = 4$, $n = 6$, chunk size = 256 MB
+		  </li>
+		  <li>
+		  $k = 32$, $n = 64$, chunk size = 16 MB
+		  </li>
+		  <li>
+		  $k = 4$, $n = 132$, chunk size = 3968 Bytes
+		  </li>
+		  <li>
+		  $k = 8$, $n = 10$, chunk size = 64 MB
+		  </li>
+		  <li>
+		  $k = 16$, $n = 18$, chunk size = 16 MB
+		  </li>
+		  <li>
+		  $k = 128$, $n = 130$, chunk size = 2 KB
+		  </li>
+		  <li>
+		  $k = 32$, $n = 34$, chunk size = 8 MB
+		  </li>
+		  <li>
+		  $k = 2$, $n = 4$, chunk size = 4 MB
+		  </li>
+		  <li>
+		  $k = 2$, $n = 4$, chunk size = 1 KB
+		  </li>
+		  <li>
+		  $k = 16$, $n = 20$, chunk size = 16 MB
+		  </li>
+		</ul>
+		-->
+		<aside class="notes">
+		  我们通过实验来决定选择哪一种strategy。以下我们分别选择了七组有代表性的testcases来说明我们的结论。
+		  在此说明，这里的small和large是相较而言的，整体的settings仍然符合Reed-Solomon Codes一般应用的case，file size仍是属于比较大而code chunk number比较小。
+		</aside>
+	  </section>
+	  <section>
+		<!--
+		<h3>Accelerating Matrix Multiplication over Galois Field</h3>
+		-->
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -880px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-1.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<!--
+		<table>
+		  <tr>
+			<td><img src="./images/matrix-multiplication/tiling-tileWidth.png" width="200%" height="60%" alt="generalized tiling"></td>
+			<td><img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" alt="tiling strategies"></td>
+		  </tr>
+		</table>
+		-->
+		<img src="./images/exp/tiling strategies/testcases-V3/2TB-tiling-strategies.png" width="50%" height="50%" alt="tiling strategies">
+		<ul>
+		  <li>The first six testcases, especially the 4th-6th ones, represent the worse cases for the strategy "Max $AR$".</li>
+		  <li>The last two testcases represent the worse cases for the strategy "$AR = 1$".</li>
+		  <li>Overall, the strategy "Min $AR$" is the best.</li>
+		</ul>
+		<!--
+		<p class="fragment">
+		Use the "Min $AR$" strategy.
+		</p>
+		-->
+		<aside class="notes">
+		  如图所示，纵轴是effective bandwidth与最佳strategy的bandwidth的比值。
+		  可以看到，尽管"Min AR"performance并非总是最好的，但与最佳strategy的差距很小，overall仍优于其他两种strategies。
+		  在前六个testcases中，"Max AR"performance最差，尤其是第4-6个testcases，"Max AR"的performance甚至没有最佳strategy的一半。
+		  在最后两个testcases中，"AR=1"performance最差。
+		  而这些testcases正好代表了后两种strategies会有performance degradation的情形，以下将进一步说明。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<table>
+		  <tr>
+			<td><img src="./images/matrix-multiplication/tiling-tileWidth.png" width="200%" height="60%" alt="generalized tiling"></td>
+			<td><img src="./images/exp/tiling strategies/testcases-V3/branchNum.png" alt="number of branches"></td>
+		  </tr>
+		</table>
+		<ul>
+		  <li>Generally, the "Min $AR$" strategy has the least number of conditional branches, while the "Max $AR$" has the most. The overhead of branches is significant when encoding a large file into a large number of code chunks.</li>
+		</ul>
+		<aside class="notes">
+		  如左图所示，由于矩阵B的column数目（chunk size）一般都很大，被tileWidthCol切完的份数仍远大于CUDA的grid size，所以每个thread需要多次iterations才能处理完矩阵B的所有elements。
+		  Min AR的切法由于优先用长的边来切矩阵B的column，所以它需要的iterations数量少。而作为与之相反的Max AR，则需要最多的iterations数量，这部分overhead在大file和code chunk数目相对多（第4-6的testcases）的情况下尤其明显。
+		  我们又用nvprof这个profiler来测这两种strategies分别执行了多少个branches，结果如右图所示，"Max AR"的数目远高于"Min AR"，在file较大时更加明显，这与我们的分析是吻合的。
+		</aside>
+	  </section>
+	  <section>
+		<h4>How to Determine the Parameter of Tiles</h4>
+		<img src="./images/matrix-multiplication/tiling-tileWidth(AR=1).png" width="80%" height="40%" alt="AR=1">
+		<ul>
+		  <li>The "$AR=1$" strategy has significant performance degradation when the number of code chunks is smaller than tileWidthRow (wasting cache space, extra boundary checking).</li>
+		</ul>
+		<aside class="notes">
+		  而最后两个testcase反应了AR=1这种策略performance很差的典型情况。这种情况是code chunk的数目很少，使A的row的数目小于要切割它的tileWidthRow。此时，这种策略用了一个比矩阵A还大的tile来cache矩阵A，不仅浪费了sMem空间，而且还需要额外的boundary checking，从而导致了严重的performance degradation。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of Tiling Algorithm</h3>
+		<!--
+		<aside style="position: absolute; top: 300px; right: -380px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<p>
+		When each chunk can be word-aligned, we can further improve the tiling algorithm.
+		</p>
+		<img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="60%" height="50%" alt="Roadmap">
+		<aside class="notes">
+		  当file所切出来的chunk可以被word-aligned时，我们还可以对tiling algorithm做进一步的优化。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Observation 1: Byte-length Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-ALU-1.png" width="80%" height="50%" alt="tiling alignment">
+		<ul>
+		  <li><del>Multiplication: table look-ups → memory accesses</del></li>
+		  <li>Addition: 8-bit XORs -> ALU operations
+		  <ul>
+			<li>Each ALU operation: <br>operand1 (8-bit) XOR operand2 (8-bit) = result (8-bit)</li>
+			<li>GPU Execution Units: 32-bit</li>
+		  </ul>
+		  </li>
+		</ul>
+		<aside class="notes">
+		  我们的第一个observation着重于对elements所执行的operations。
+		  首先，乘法的部分基本是table look-up，属于memory accesses，这里不予考虑。
+		  而加法的部分实际上是8-bit的XOR。
+		  在GPU中，EU的操作数和结果的registers是32-bit的。
+		  这表明原先的做法，每次的ALU operations都只占用了registers空间的四分之一来做运算，增加了ALU operations的数目。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align.png" width="80%" height="50%" alt="tiling alignment">
+		<aside class="notes">
+		  我们在survey时看到，一些采用loop-based的paper为了解决这一问题，提出了byte-by-word矩阵乘法的solution。
+		  我们针对table-based也implement了byte-by-word的矩阵乘法。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-1.png" width="80%" height="50%" alt="tiling alignment">
+		<aside class="notes">
+		  我们的做法如图。
+		  首先，之前提过，乘法主要是memory accesses，与这部分ALU operations的优化无关，所以这里照旧是byte和byte相乘。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-2.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-3.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-4.png" width="80%" height="50%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 1: Byte-by-word Matrix Multiplication</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-5.png" width="80%" height="50%" alt="observation 2">
+		<aside class="notes">
+		  乘积的四个byte被pack到一个32-bit的register中，再与之前32-bit的结果做加法。这就保证了每次ALU的registers被充分使用。
+		</aside>
+	  </section>
+	  <!--
+	  <section>
+		<h4>Observation 2: Global Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-load-1.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+	  <section>
+		<h4>Observation 2: Global Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-load-2.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+		-->
+	  <section>
+		<h4>Observation 2: Global Memory Transactions</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-load.png" width="80%" height="50%" alt="observation 1">
+		<p>a lot of 8-bit global memory transactions!</p>
+		<aside class="notes">
+		  我们的第二个observation是：之前的做法在把矩阵B黄色矩形的elements从gMem load到sMem的过程中，是一个一个byte同时load进来的。
+		  而8-bit是gMem transactions的最低单位，我们应该想办法让它每次load更多的bit，从而减少transactions的数量。 
+		</aside>
+	  </section>
+	  <!--
+	  <section>
+		<h4>Improvement Technique 2: Packing Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-align-load-1.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+	  <section>
+		<h4>Improvement Technique 2: Packing Memory Transactions</h4>
+		<img src="./images/matrix-multiplication/tiling-align-load-2.png" width="80%" height="50%" alt="observation 1">
+	  </section>
+		-->
+	  <section>
+		<h4>Improvement Technique 2: Packing Memory Transactions</h4>
+		<!--
+		<aside style="position: absolute; top: 100px; right: -840px;">
+		  <img src="./images/dot-graph/roadmap/roadmap-mm-2.png" width="35%" height="35%" alt="Roadmap">
+		</aside>
+		-->
+		<img src="./images/matrix-multiplication/tiling-align-load.png" width="80%" height="50%" alt="observation 1">
+		<p>pack 8-bit global memory transactions into 32-bit transactions → reduce global memory load and store.</p>
+		<aside class="notes">
+		  对此，我们的方法是把这些8-bit的transactions pack成32-bit，从而减少load的数量。
+		  如图所示，load相同数量的elements，用这种方法所需要的transactions明显降低。
+		  同样的techniques也能应用在global memory store上。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Further Improvement of Tiling Algorithm</h3>
+		<p>e.g. $k = 4$, $n = 200$, chunk size = 200 MB</p>
+		<table>
+		  <tr>
+			<td></td>
+			<td>Original</td>
+			<td>Word-alignment</td>
+			<td>Improvement</td>
+		  </tr>
+		  <tr>
+			<td>Effective bandwidth (MB/s)</td>
+			<td>1119.419693</td>
+			<td>1591.051924</td>
+			<td>42.13%</td>
+		  </tr>
+		  <tr>
+			<td><em>ALU Operations</em></td>
+			<td>12331000000</td>
+			<td>3116531712</td>
+			<td>74.73%</td>
+		  </tr>
+		  <tr>
+			<td><em>Global Memory Load Transactions</em></td>
+			<td>516963328</td>
+			<td>131611648</td>
+			<td>74.54%</td>
+		  </tr>
+		  <tr>
+			<td>Global Memory Store Transactions</td>
+			<td>64225280</td>
+			<td>16056320</td>
+			<td>75%</td>
+		  </tr>
+		  <tr>
+			<td>Number of Branches</td>
+			<td>6685685440</td>
+			<td>2703981504</td>
+			<td>59.56%</td>
+		  </tr>
+		</table>
+		<aside class="notes">
+		  我们选了之前8个testcases中的一个。
+		  其他七个testcases由于结果相似，这里就不重复show了。
+		  可以看到，采用word-alignment的技巧后，performance提升了42.13%。
+		  我们又进一步通过nvprof来profile我们的program，结果发现以下四个performance metrics都有不同程度的改善。
+		  其中就有我们之前提到的ALU Operations和gMem Load Transactions，这就证明了我们之前的论述。
+		</aside>
+	  </section>
+	  <!--
+	  <section>
+		<h3>Further Improvement of Tiling Algorithm</h3>
+		<img src="./images/exp/tiling strategies/align/2TB-tiling-strategies.png" width="60%" height="60%" alt="tiling alignment">
+		<p>performance improvement: more than 38%</p>
+	  </section>
+	  <section>
+		<h4>Profiler Evaluation: Global Memory Load Transactions</h4>
+		<img src="./images/exp/tiling strategies/align/global-load.png" width="60%" height="60%" alt="tiling alignment">
+	  </section>
+	  <section>
+		<h4>Profiler Evaluation: ALU Operations</h4>
+		<img src="./images/exp/tiling strategies/align/alu-op.png" width="60%" height="60%" alt="tiling alignment">
+	  </section>
+		-->
+	</section>
+
+	<section>
+	  <section>
+		<h2>Reducing Data Transfer Overhead</h2>
+		<img src="./images/dot-graph/roadmap/roadmap-comm-0.png" width="70%" height="60%" alt="Roadmap">
+		<aside class="notes">
+		  下面的session我们来介绍如何减少data transfer的overhead。
+		</aside>
+	  </section>
+	  <!--
+	  <section>
+		<h2>Reduce Data Transfer Overhead</h2>
+		<ul>
+		  <li>Using Pinned Host Memory</li>
+		  <li>Using CUDA Streams</li>
+		</ul>
+	  </section>
+-->
+	  <section>
+		<h3>Using CUDA Streams</h3>
+		<img src="./images/dot-graph/roadmap/roadmap-comm-1.png" width="60%" height="60%" alt="Roadmap">
+		<aside class="notes">
+		  我们采用了CUDA Streaming。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Using CUDA Streams</h3>
+		<p>CUDA streams are used for further overlapping data transfers with computation.</p>
+		<img src="./images/timeline-comparison-for-copy-and-kernel-execution.png" alt="CUDA-stream">
+		<p>Sequential vs. Concurrent copy and execute</p>
+		<aside class="notes">
+		  如图所示，虽然在同一个stream中，data transfer与kernel execution是被sequential执行的，但是不同stream的operations可以被parallel执行。
+		  这使得CUDA streams可以overlap data transfers和kernel execution，降低overhead。
+		</aside>
+	  </section>
+	  <section>
+		<h4>Using CUDA Streams</h4>
+		<small>
+		  <p>
+		  encoding under $k = 4, n = 6$ settings.
+		  The input file size is scaled from 1000 MB to 1800 MB.
+		  <!--
+		 and the CUDA stream number is increased from one to four.
+		-->
+		  </p>
+		</small>
+		<img src="./images/exp/stream/random/k2n3randomStreamSpeedup.png" width="50%" height="50%" alt="streaming speedup">
+		<ul>
+		  <li>Using CUDA streaming can improve the performance by more than 29%.</li>
+		  <!--<li class="fragment">data size ↑ → data transfer overhead ↑ → CUDA streaming improvement ↑.</li>-->
+		  <li>As the file size increases, the data transfer overhead increases, and the improvement of CUDA streaming is more significant.</li>
+		</ul>
+		<aside class="notes">
+		  我们先通过一个实验来看采用CUDA streaming的效果。
+		  在我们的实验中，我们采用k=4,n=6的Reed-Solomon Code来encode一些file，input file的size从1000MB scale到1800MB。
+		  实验结果表明，streaming有超过29%的improvement。
+		  而且，随着file size变大，data transfer所占用的时间也变多，这时候采用streaming就会有更好的improvement。 
+		</aside>
+	  </section>
+	  <section>
+		<h4>Using CUDA Streams</h4>
+		<small>
+		  <p>
+		  encoding a 2000 MB file under $k = 4, n = 6$ settings.
+		  </p>
+		</small>
+		<img src="./images/exp/stream/random/k2n3randomStreamTime.png" width="60%" height="60%" alt="streaming time breakdown">
+		<p>
+		The kernel execution time is increasing with the growth of the CUDA stream number. → The overhead of kernel execution will exceed the time saving of data transfer at some point.
+		</p>
+		<aside class="notes">
+		  接下来我们来看CUDA stream number对performance的影响。
+		  我们用k=4,n=6的RS去encode一个2000MB的file。
+		  实验结果中，绿色的线——也就是kernel execution time——的变化很有规律：它会随着stream num的增加而增加。
+		  这表明，当stream num大到某一程度之后，kernel execution time多出的部分会盖过data transfer被overlape的部分，此时继续增大stream num就不再有好处。
+		  然而，虽然non-overlapped data transfer time总体是下降的，但仍有不规则的波动。
+		  这也使得如何找到best stream num的问题没那么straightforward，这也是未来我们可以继续研究的issue。
+		</aside>
+	  </section>
+	</section>
+
+	<section>
+	  <section>
+		<h2>Experiment</h2>
+	  </section>
+	  <section>
+		<h3>Experiment Setup</h3>
+		<aside class="notes">
+		  下面介绍实验的部分。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Experiment Setup</h3>
+		<ul>
+		  <li>
+		  CentOS-6 with 2.6.32 Linux kernel.
+		  </li>
+		  <li>Intel Xeon Processor E5-2670 v2 x 2
+		  <ul>
+			<li>10 cores</li>
+			<li>2.5 GHz</li>
+		  </ul>
+		  </li>
+		  <li>NVIDIA Tesla K20X GPU x 2
+		  <ul>
+			<li>2688 CUDA cores</li>
+			<li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
+			<li>maximum size of GPU GDDR5 memory: 6 GB</li>
+			<li>theoretical memory bandwidth 243 GB/s</li>
+			<li>two copy engines → supports concurrent data copy and kernel execution</li>
+		  </ul>
+		  </li>
+		  <li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
+		</ul>
+		<aside class="notes">
+		  我们用的机器是一台CentOS-6的server，kernel版本是2.6.32。
+		  我们用的CPU是Intel Xeon E5-2670，它有10个cores。
+		  我们用的GPU是Tesla K20X，它有2688个CUDA cores，BW是243GB/s，有两个copy engines，表明支持data copy和kernel execution同时执行。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Experiment Setup</h3>
+		<ul>
+		  <li>Input files are randomly generated.</li>
+		  <li>Most of our experimental results reflect the average of 100 runs.</li>
+		  <li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
+		</ul>
+		<aside class="notes">
+		  实验中，我们的files都是random产生的。
+		  所有数据都是跑完100次实验的平均值。
+		  由于encoding和decoding都是矩阵乘法，结果也相似，所以我们只show encoding的结果。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<p>
+		We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
+		</p>
+		<aside class="notes">
+		  我们通过一个实验来看应用了之前的techniques之后的overall performance如何。
+		  我们采用k=4,n=6的RS去encode一个1600MB的file。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-0.png" width="50%" height="50%" alt="Step-by-step Improvement">
+		<aside class="notes">
+		  首先我们来看step-by-step的improvement。
+		  这是baseline的breakdown结果。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-1.png" width="40%" height="40%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+		  </table>
+		</small>
+		<aside class="notes">
+		  接下来我们apply改善矩阵乘法的tiling algorithm，发现computation有1.469的speedup。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-2.png" width="40%" height="40%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>optimize log&exp table-based method</td>
+			  <td>1.502 x</td>
+			  <td>0</td>
+			  <td>2.206 x</td>
+			  <td>0</td>
+			</tr>
+		  </table>
+		</small>
+		<aside class="notes">
+		  接下来我们继续apply针对log&exp table-based方法的优化，computation又得到了1.502倍的performance提升。 
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-3.png" width="40%" height="40%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>optimize log&exp table-based method</td>
+			  <td>1.502 x</td>
+			  <td>0</td>
+			  <td>2.206 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>use CUDA streams</td>
+			  <td>0.862 x</td>
+			  <td>18.452 x</td>
+			  <td>1.902 x</td>
+			  <td>18.452 x</td>
+			</tr>
+		  </table>
+		</small>
+		<aside class="notes">
+		  下面apply CUDA streaming，虽然computation变差了，但是data transfer由于大部分被overlap，这部分overhead有18.452倍的改善。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-4.png" width="40%" height="40%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>optimize log&exp table-based method</td>
+			  <td>1.502 x</td>
+			  <td>0</td>
+			  <td>2.206 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>use CUDA streams</td>
+			  <td>0.862 x</td>
+			  <td>18.452 x</td>
+			  <td>1.902 x</td>
+			  <td>18.452 x</td>
+			</tr>
+			<tr>
+			  <td>parallel in 2GPUs</td>
+			  <td>2.030 x</td>
+			  <td>2.857 x</td>
+			  <td>3.861 x</td>
+			  <td>52.718 x</td>
+			</tr>
+		  </table>
+		</small>
+		<p>Total Cumulative Speedup: 7.145 x</p>
+		<aside class="notes">
+		  最后我们还在2张GPU卡做parallelize，结果表明我们的program有比较好的scalability。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>GPU vs. CPU</h4>
+		<img src="./images/exp/step-perf/stepBreakdownCPU.png" width="40%" height="40%" alt="Step-by-step Improvement">
+		<ul>
+		  <li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): <em>4309.08 ms</em>.</li>
+		  <li>optimized GPU implementation: <em>292.977 ms</em> (<em>$14.71 \times$</em> speedup).</li>
+		</ul>
+		<aside class="notes">
+		  接下来我们做一个CPU和GPU的performance对比。
+		  我们采用的CPU版本是一个open-source library Jerasure。我们采用compiler中优化做得很好的llvm的front-end clang来作为我们的compiler，并使用了-O3的optimization flag。再加上我们CPU的计算能力本身很强，我们认为这个结果一定程度上已经代表了CPU版本的最好表现。
+		  在我们的实验中，CPU花了4309.08ms，而我们optimized的GPU版本只需要292.977ms，GPU版本有14.71倍的speedup。
+		</aside>
+	  </section>
+	</section>
+
+	<section>
+	  <h2>Conclusion</h2>
+	  <ul>
+		<li>We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
+		<li>We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
+		<li>We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
+	  </ul>
+	  <h2>Future Works</h2>
+	  <ul>
+		<li>Better corporation of CPU and GPU.</li>
+		<li>Heuristic strategies for deciding the best CUDA stream number.</li>
+	  </ul>
+	</section>
+
+	<!--
+	  <section>
+		<h2>Future Works</h2>
+		<ul>
+		  <li>Better corporation of CPU and GPU.</li>
+		  <li>Heuristic strategies for deciding the best CUDA stream number.</li>
+		</ul>
+	  </section>
+		-->
+
+	<section>
+	  <h1>THE END</h1>
+	  <h3>Q & A</h3>
+	</section>
+
+  </div>
+
+</div>
+
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.min.js"></script>
+
+<script>
+function slidenumber(event){
+  var totalslides = document.querySelectorAll( '.reveal .slides section:not(.stack)' ).length;
+  var current_slide = 0;
+
+  var horizontal_slides = document.querySelectorAll( '.reveal .slides>section' );
+  for (var i = 0; i < event.indexh; i++) {
+	// get subslides
+	var subslides = horizontal_slides[i].querySelectorAll('section');
+
+	// if subslides.length is 0, add 1 for horizontal slide, else add subslides.length
+	current_slide += (subslides.length === 0) ? 1 : subslides.length;
+  }
+
+  current_slide += event.indexv+1;
+  return current_slide.toString()+"/"+totalslides.toString();
+}
+
+Reveal.addEventListener('slidechanged', function(event){
+	document.querySelector(".slidenumber").innerText=slidenumber(event);
+	});
+Reveal.addEventListener('ready', function(event){
+	document.querySelector(".slidenumber").innerText=slidenumber(event);
+	});
+</script>
+
+<script>
+
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+controls: false,
+progress: true,
+// Display the page number of the current slide
+slideNumber: true,
+history: true,
+center: true,
+embedded: true,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'default', // default/cube/page/concave/zoom/linear/fade/none
+
+//				math: {
+//				    mathjax: 'http://cdn.mathjax.org/mathjax/latest/MathJax.js',
+//				    config: 'TeX-AMS_HTML-full'  // See http://docs.mathjax.org/en/latest/config-files.html
+//				},
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } },
+{ src: 'plugin/math/math.js', async: true }
+]
+});
+
+</script>
+
+<a href="https://github.com/yszheda/GPU-RSCode"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png" alt="Fork GPU-RSCode on GitHub"></a>
+
+</body>
+</html>
