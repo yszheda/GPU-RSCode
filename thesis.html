@@ -54,7 +54,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
   <div class="slides">
 	<section>
 	  <h2>Accelerate Reed-Solomon Erasure Codes on GPUs</h2>
-	  <br>
+	  <img src="./images/nthu-logo.png" width="30%" height="30%" alt="nthu logo">
 	  <h3>
 		Student: <a href="http://yszheda.github.io">Shuai Yuan</a>, 
 		<br>Advisor: Prof. Jerry Chi-Yuan Chou
@@ -193,13 +193,13 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<h3>Cloud Storage Systems: Why Erasure Codes?</h3>
 		<p>
 		$(n, k)$ MDS (Maximum Distance Separable) codes where $n$ and $k$ are integers and $n > k$:
+		</p>
 		<ul>
 		  <li>File → $k$ equal-size native data chunks.</li>
 		  <li>$k$ equal-size native chunks → $(n - k)$ code chunks.</li>
 		  <li>The native and code chunks are distributed on $n$ different storage nodes.</li>
 		  <li>tolerates the failure of any $(n - k)$ storage nodes.</li>
 		</ul>
-		</p>
 		<p class="fragment">Example:</p>
 		<table class="fragment">
 		  <tr align="center">
@@ -574,30 +574,30 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</ul>
 		<hr>
 		<small>
-		<sub>
-		  <!--
+		  <sub>
+			<!--
 		  [1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//Network Computing and Applications, 2006. NCA 2006. Fifth IEEE International Symposium on. IEEE, 2006: 173-180.
 			-->
-		  [1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//NCA 2006.
-		</sub>
-		<br>
-		<sub>
-		  <!--
+			[1] Plank J S, Xu L. Optimizing Cauchy Reed-Solomon codes for fault-tolerant network storage applications[C]//NCA 2006.
+		  </sub>
+		  <br>
+		  <sub>
+			<!--
 		  [2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009, IEEE. IEEE, 2009: 459-467.
 			-->
-		  [2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009.
-		</sub>
-		<br>
-		<sub>
-		  <!--
+			[2] Shojania H, Li B, Wang X. Nuclei: GPU-accelerated many-core network coding[C]//INFOCOM 2009.
+		  </sub>
+		  <br>
+		  <sub>
+			<!--
 		  [3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER), 2011 IEEE International Conference on. IEEE, 2011: 290-298.
 			-->
-		  [3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER) 2011.
-		</sub>
-		<br>
-		<sub>
-		  [4] Chu X, Zhao K. Practical random linear network coding on GPUs[M]//GPU Solutions to Multi-scale Problems in Science and Engineering. Springer Berlin Heidelberg, 2013: 115-130.
-		</sub>
+			[3] Kalcher S, Lindenstruth V. Accelerating Galois Field arithmetic for Reed-Solomon erasure codes in storage applications[C]//Cluster Computing (CLUSTER) 2011.
+		  </sub>
+		  <br>
+		  <sub>
+			[4] Chu X, Zhao K. Practical random linear network coding on GPUs[M]//GPU Solutions to Multi-scale Problems in Science and Engineering. Springer Berlin Heidelberg, 2013: 115-130.
+		  </sub>
 		</small>
 		<aside class="notes">
 		  下面我们通过一个实验来决定采用loop-based或是table-based。
@@ -1538,249 +1538,255 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li>
 		  CentOS-6 with 2.6.32 Linux kernel.
 		  </li>
+		  <li>Intel Xeon Processor E5-2670 v2 x 2
 		  <ul>
-			<li>Intel Xeon Processor E5-2670 v2 x 2
-			<ul>
-			  <li>10 cores</li>
-			  <li>2.5 GHz</li>
-			</ul>
-			</li>
-			<li>NVIDIA Tesla K20X GPU x 2
-			<ul>
-			  <li>2688 CUDA cores</li>
-			  <li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
-			  <li>maximum size of GPU GDDR5 memory: 6 GB</li>
-			  <li>theoretical memory bandwidth 243 GB/s</li>
-			  <li>two copy engines → supports concurrent data copy and kernel execution</li>
-			</ul>
-			</li>
-			<li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
+			<li>10 cores</li>
+			<li>2.5 GHz</li>
 		  </ul>
-		  <aside class="notes">
-			我们用的机器是一台CentOS-6的server，kernel版本是2.6.32。
-			我们用的CPU是Intel Xeon E5-2670，它有10个cores。
-			我们用的GPU是Tesla K20X，它有2688个CUDA cores，BW是243GB/s，有两个copy engines，表明支持data copy和kernel execution同时执行。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Experiment Setup</h3>
+		  </li>
+		  <li>NVIDIA Tesla K20X GPU x 2
 		  <ul>
-			<li>Input files are randomly generated.</li>
-			<li>Most of our experimental results reflect the average of 100 runs.</li>
-			<li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
+			<li>2688 CUDA cores</li>
+			<li>peak performance: 1.31 Tflops (double precision floating point calculation) and 3.95 Tflops (single precision floating point)</li>
+			<li>maximum size of GPU GDDR5 memory: 6 GB</li>
+			<li>theoretical memory bandwidth 243 GB/s</li>
+			<li>two copy engines → supports concurrent data copy and kernel execution</li>
 		  </ul>
-		  <aside class="notes">
-			实验中，我们的files都是random产生的。
-			所有数据都是跑完100次实验的平均值。
-			由于encoding和decoding都是矩阵乘法，结果也相似，所以我们只show encoding的结果。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <p>
-		  We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
-		  </p>
-		  <aside class="notes">
-			我们通过一个实验来看应用了之前的techniques之后的overall performance如何。
-			我们采用k=4,n=6的RS去encode一个1600MB的file。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown-0.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		  <aside class="notes">
-			首先我们来看step-by-step的improvement。
-			这是baseline的breakdown结果。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown-1.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		  <small>
-			<table>
-			  <tr>
-				<td rowspan="2"></td>
-				<td colspan="2">Step Speedup</td>
-				<td colspan="2">Cumulative Speedup</td>
-			  </tr>
-			  <tr>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-			  </tr>
-			  <tr>
-				<td>optimize tiling algorithm</td>
-				<td>1.469 x</td>
-				<td>0</td>
-				<td>1.469 x</td>
-				<td>0</td>
-			  </tr>
-			</table>
-		  </small>
-		  <aside class="notes">
-			接下来我们apply改善矩阵乘法的tiling algorithm，发现computation有1.469的speedup。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown-2.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		  <small>
-			<table>
-			  <tr>
-				<td rowspan="2"></td>
-				<td colspan="2">Step Speedup</td>
-				<td colspan="2">Cumulative Speedup</td>
-			  </tr>
-			  <tr>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-			  </tr>
-			  <tr>
-				<td>optimize tiling algorithm</td>
-				<td>1.469 x</td>
-				<td>0</td>
-				<td>1.469 x</td>
-				<td>0</td>
-			  </tr>
-			  <tr>
-				<td>optimize log&exp table-based method</td>
-				<td>1.502 x</td>
-				<td>0</td>
-				<td>2.206 x</td>
-				<td>0</td>
-			  </tr>
-			</table>
-		  </small>
-		  <aside class="notes">
-			接下来我们继续apply针对log&exp table-based方法的优化，computation又得到了1.502倍的performance提升。 
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown-3.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		  <small>
-			<table>
-			  <tr>
-				<td rowspan="2"></td>
-				<td colspan="2">Step Speedup</td>
-				<td colspan="2">Cumulative Speedup</td>
-			  </tr>
-			  <tr>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-			  </tr>
-			  <tr>
-				<td>optimize tiling algorithm</td>
-				<td>1.469 x</td>
-				<td>0</td>
-				<td>1.469 x</td>
-				<td>0</td>
-			  </tr>
-			  <tr>
-				<td>optimize log&exp table-based method</td>
-				<td>1.502 x</td>
-				<td>0</td>
-				<td>2.206 x</td>
-				<td>0</td>
-			  </tr>
-			  <tr>
-				<td>use CUDA streams</td>
-				<td>0.862 x</td>
-				<td>18.452 x</td>
-				<td>1.902 x</td>
-				<td>18.452 x</td>
-			  </tr>
-			</table>
-		  </small>
-		  <aside class="notes">
-			下面apply CUDA streaming，虽然computation变差了，但是data transfer由于大部分被overlap，这部分overhead有18.452倍的改善。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>Step-by-step Improvement</h4>
-		  <img src="./images/exp/step-perf/stepBreakdown-4.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		  <small>
-			<table>
-			  <tr>
-				<td rowspan="2"></td>
-				<td colspan="2">Step Speedup</td>
-				<td colspan="2">Cumulative Speedup</td>
-			  </tr>
-			  <tr>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-				<td>Kernel Execution</td>
-				<td>Non-overlapped Data Transfer</td>
-			  </tr>
-			  <tr>
-				<td>optimize tiling algorithm</td>
-				<td>1.469 x</td>
-				<td>0</td>
-				<td>1.469 x</td>
-				<td>0</td>
-			  </tr>
-			  <tr>
-				<td>optimize log&exp table-based method</td>
-				<td>1.502 x</td>
-				<td>0</td>
-				<td>2.206 x</td>
-				<td>0</td>
-			  </tr>
-			  <tr>
-				<td>use CUDA streams</td>
-				<td>0.862 x</td>
-				<td>18.452 x</td>
-				<td>1.902 x</td>
-				<td>18.452 x</td>
-			  </tr>
-			  <tr>
-				<td>parallel in 2GPUs</td>
-				<td>2.030 x</td>
-				<td>2.857 x</td>
-				<td>3.861 x</td>
-				<td>52.718 x</td>
-			  </tr>
-			</table>
-		  </small>
-		  <aside class="notes">
-			最后我们还在2张GPU卡做parallelize，结果表明我们的program有比较好的scalability。
-		  </aside>
-		</section>
-		<section>
-		  <h3>Overall Performance Evaluation</h3>
-		  <h4>GPU vs. CPU</h4>
-		  <img src="./images/exp/step-perf/stepBreakdownCPU.png" width="60%" height="60%" alt="Step-by-step Improvement">
-		  <ul>
-			<li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): 4309.08 ms.</li>
-			<li>optimized GPU implementation: 292.977 ms (14.71x speedup).</li>
-		  </ul>
-		  <aside class="notes">
-			接下来我们做一个CPU和GPU的performance对比。
-			我们采用的CPU版本是一个open-source library Jerasure。我们采用compiler中优化做得很好的llvm的front-end clang来作为我们的compiler，并使用了-O3的optimization flag。再加上我们CPU的计算能力本身很强，我们认为这个结果一定程度上已经代表了CPU版本的最好表现。
-			在我们的实验中，CPU花了4309.08ms，而我们optimized的GPU版本只需要292.977ms，GPU版本有14.71倍的speedup。
-		  </aside>
-		</section>
-	  </section>
-
-	  <section>
-		<h2>Conclusion</h2>
-		<ul>
-		  <li class="fragment">We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
-		  <li class="fragment">We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
-		  <li class="fragment">We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
+		  </li>
+		  <li>maximum bidirectional bandwidth of the PCI-Express bus: 8 GB/s</li>
 		</ul>
+		<aside class="notes">
+		  我们用的机器是一台CentOS-6的server，kernel版本是2.6.32。
+		  我们用的CPU是Intel Xeon E5-2670，它有10个cores。
+		  我们用的GPU是Tesla K20X，它有2688个CUDA cores，BW是243GB/s，有两个copy engines，表明支持data copy和kernel execution同时执行。
+		</aside>
 	  </section>
+	  <section>
+		<h3>Experiment Setup</h3>
+		<ul>
+		  <li>Input files are randomly generated.</li>
+		  <li>Most of our experimental results reflect the average of 100 runs.</li>
+		  <li>Due to the similarity of the performance result of encoding and that of decoding in most experiments, the latter one is omitted.</li>
+		</ul>
+		<aside class="notes">
+		  实验中，我们的files都是random产生的。
+		  所有数据都是跑完100次实验的平均值。
+		  由于encoding和decoding都是矩阵乘法，结果也相似，所以我们只show encoding的结果。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<p>
+		We evaluate the overall performance by encoding a 1600 MB file with $k = 4, n = 6$.
+		</p>
+		<aside class="notes">
+		  我们通过一个实验来看应用了之前的techniques之后的overall performance如何。
+		  我们采用k=4,n=6的RS去encode一个1600MB的file。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-0.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		<aside class="notes">
+		  首先我们来看step-by-step的improvement。
+		  这是baseline的breakdown结果。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-1.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+		  </table>
+		</small>
+		<aside class="notes">
+		  接下来我们apply改善矩阵乘法的tiling algorithm，发现computation有1.469的speedup。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-2.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>optimize log&exp table-based method</td>
+			  <td>1.502 x</td>
+			  <td>0</td>
+			  <td>2.206 x</td>
+			  <td>0</td>
+			</tr>
+		  </table>
+		</small>
+		<aside class="notes">
+		  接下来我们继续apply针对log&exp table-based方法的优化，computation又得到了1.502倍的performance提升。 
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-3.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>optimize log&exp table-based method</td>
+			  <td>1.502 x</td>
+			  <td>0</td>
+			  <td>2.206 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>use CUDA streams</td>
+			  <td>0.862 x</td>
+			  <td>18.452 x</td>
+			  <td>1.902 x</td>
+			  <td>18.452 x</td>
+			</tr>
+		  </table>
+		</small>
+		<aside class="notes">
+		  下面apply CUDA streaming，虽然computation变差了，但是data transfer由于大部分被overlap，这部分overhead有18.452倍的改善。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>Step-by-step Improvement</h4>
+		<img src="./images/exp/step-perf/stepBreakdown-4.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		<small>
+		  <table>
+			<tr>
+			  <td rowspan="2"></td>
+			  <td colspan="2">Step Speedup</td>
+			  <td colspan="2">Cumulative Speedup</td>
+			</tr>
+			<tr>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			  <td>Kernel Execution</td>
+			  <td>Non-overlapped Data Transfer</td>
+			</tr>
+			<tr>
+			  <td>optimize tiling algorithm</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			  <td>1.469 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>optimize log&exp table-based method</td>
+			  <td>1.502 x</td>
+			  <td>0</td>
+			  <td>2.206 x</td>
+			  <td>0</td>
+			</tr>
+			<tr>
+			  <td>use CUDA streams</td>
+			  <td>0.862 x</td>
+			  <td>18.452 x</td>
+			  <td>1.902 x</td>
+			  <td>18.452 x</td>
+			</tr>
+			<tr>
+			  <td>parallel in 2GPUs</td>
+			  <td>2.030 x</td>
+			  <td>2.857 x</td>
+			  <td>3.861 x</td>
+			  <td>52.718 x</td>
+			</tr>
+		  </table>
+		</small>
+		<p>Total Cumulative Speedup: 7.145 x</p>
+		<aside class="notes">
+		  最后我们还在2张GPU卡做parallelize，结果表明我们的program有比较好的scalability。
+		</aside>
+	  </section>
+	  <section>
+		<h3>Overall Performance Evaluation</h3>
+		<h4>GPU vs. CPU</h4>
+		<img src="./images/exp/step-perf/stepBreakdownCPU.png" width="60%" height="60%" alt="Step-by-step Improvement">
+		<ul>
+		  <li>best CPU implementation (Jerasure library, compiled by clang with the -O3 compiler optimization flag): <em>4309.08 ms</em>.</li>
+		  <li>optimized GPU implementation: <em>292.977 ms</em> (<em>$14.71 \times$</em> speedup).</li>
+		</ul>
+		<aside class="notes">
+		  接下来我们做一个CPU和GPU的performance对比。
+		  我们采用的CPU版本是一个open-source library Jerasure。我们采用compiler中优化做得很好的llvm的front-end clang来作为我们的compiler，并使用了-O3的optimization flag。再加上我们CPU的计算能力本身很强，我们认为这个结果一定程度上已经代表了CPU版本的最好表现。
+		  在我们的实验中，CPU花了4309.08ms，而我们optimized的GPU版本只需要292.977ms，GPU版本有14.71倍的speedup。
+		</aside>
+	  </section>
+	</section>
 
+	<section>
+	  <h2>Conclusion</h2>
+	  <ul>
+		<li>We have studied several techniques to improve the performance of Reed-Solomon codes according to their coding mechanism, and figured out the best choices on the basis of GPU architecture.</li>
+		<li>We have illustrated methods to reduce the data transfer overhead introduced by the GPU implementation.</li>
+		<li>We present an optimized GPU implementation of Reed-Solomon Codes, which can achieve a speedup of 14.71 over the current best CPU implementation.</li>
+	  </ul>
+	  <h2>Future Works</h2>
+	  <ul>
+		<li>Better corporation of CPU and GPU.</li>
+		<li>Heuristic strategies for deciding the best CUDA stream number.</li>
+	  </ul>
+	</section>
+
+	<!--
 	  <section>
 		<h2>Future Works</h2>
 		<ul>
@@ -1788,20 +1794,21 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		  <li>Heuristic strategies for deciding the best CUDA stream number.</li>
 		</ul>
 	  </section>
+		-->
 
-	  <section>
-		<h1>THE END</h1>
-		<h3>Q & A</h3>
-	  </section>
-
-	</div>
+	<section>
+	  <h1>THE END</h1>
+	  <h3>Q & A</h3>
+	</section>
 
   </div>
 
-  <script src="lib/js/head.min.js"></script>
-  <script src="js/reveal.min.js"></script>
+</div>
 
-  <script>
+<script src="lib/js/head.min.js"></script>
+<script src="js/reveal.min.js"></script>
+
+<script>
 function slidenumber(event){
   var totalslides = document.querySelectorAll( '.reveal .slides section:not(.stack)' ).length;
   var current_slide = 0;
@@ -1825,13 +1832,13 @@ Reveal.addEventListener('slidechanged', function(event){
 Reveal.addEventListener('ready', function(event){
 	document.querySelector(".slidenumber").innerText=slidenumber(event);
 	});
-  </script>
+</script>
 
-  <script>
+<script>
 
 // Full list of configuration options available here:
 // https://github.com/hakimel/reveal.js#configuration
-  Reveal.initialize({
+Reveal.initialize({
 controls: false,
 progress: true,
 // Display the page number of the current slide
@@ -1860,9 +1867,9 @@ dependencies: [
 ]
 });
 
-  </script>
+</script>
 
-  <a href="https://github.com/yszheda/GPU-RSCode"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png" alt="Fork GPU-RSCode on GitHub"></a>
+<a href="https://github.com/yszheda/GPU-RSCode"><img style="position: absolute; top: 0; left: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_left_darkblue_121621.png" alt="Fork GPU-RSCode on GitHub"></a>
 
-  </body>
-  </html>
+</body>
+</html>
