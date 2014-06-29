@@ -77,14 +77,14 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<li>Accelerating Matrix Multiplication</li>
 		<li>Reducing Data Transfer Overhead</li>
 		<li>Experiment</li>
-		<li>Conclusion</li>
+		<li>Conclusion & Future Works</li>
 	  </ul>
 	  <aside class="notes">
 		这是我这次的outline。
 		首先我会介绍这个题目的background和motivation。
 		接下来我会讲述我们要针对哪些方面进行加速。
 		然后对于这里所列出的三个要被加速的目标，我会进一步介绍我们用了哪些方法来优化。
-		最后是实验和conclusion。
+		最后是实验、conclusion和future works。
 	  </aside>
 	</section>
 
@@ -152,7 +152,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		Therefore, redundancy must be introduced into cloud system.
 		</p>
 		<aside class="notes">
-		  availability和stability是cloud storage vendor与客户之间签署的SLA（Service Level Agreement）中的重要考量。
+		  众所周知，availability和stability是cloud storage vendor与客户之间签署的SLA（Service Level Agreement）中的重要考量。
 		  不管是availability还是stability，都对cloud storage system的fault tolerance容错性提出了严格的要求。
 		  但是，随着cloud storage system的有越来越多的node，发生failure的机率也越来越大。
 		  为了保证不违反SLA，我们需要引入redundancy来保证系统的fault tolerance容错性。
@@ -247,7 +247,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		  </li>
 		</ul>
 		<aside class="notes">
-		  在MDS erasure codes当中，Reed-Solomon codes是使用最为广泛的code之一，例如Fackbook和Google的cloud storage system就使用了不同setting的Reed-Solomon codes作为它们的redundancy solution。
+		  在MDS erasure codes当中，Reed-Solomon codes是使用最为广泛的code之一，例如Facebook和Google的cloud storage system就使用了不同setting的Reed-Solomon codes作为它们的redundancy solution。
 		</aside>
 	  </section>
 	  <section>
@@ -262,6 +262,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</ul>
 		<aside class="notes">
 		  然而，Reed-Solomon codes虽然有效地降低了storage overhead，但相比replication却需要encoding与decoding，这也造成了额外的high computation cost。
+		  (next)
 		  为了弥补Reed-Solomon codes的这一缺陷，我们采用GPU作为accelerator来加速它的encoding与decoding，这也是我们这篇thesis的主要贡献。
 		</aside>
 	  </section>
@@ -454,6 +455,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		<aside class="notes">
 		  loop-based的方法就是直接用同构得到的一系列bitwise operations来做计算。
 		  由于计算两个元素的乘法需要跑完一个loop，故而得名。
+		  如图所示，在计算21乘以39时，其中被乘数21除以2，乘数39则乘以2，以此类推。假如被乘数不能被2整除，则最后的结果需要再加上乘数。
 		  在计算GF(2^8)的乘法时，loop-based需要至多多达八次的iterations。
 		  显而易见，它是computation bound的。
 		</aside>
@@ -514,6 +516,7 @@ if( window.location.search.match( /print-pdf/gi ) ) {
 		</table>
 		<aside class="notes">
 		  相较于loop-based，table-based由于采用先计算完结果再查表的方式，因此computation cost大为降低。
+		  例如其中最简单的full multiplication table方法，同样是计算21乘以39，只需要一次table lookup（查表）即可。
 		</aside>
 	  </section>
 	  <section>
@@ -891,7 +894,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<aside class="notes">
 		  但是，square-tiling algorithm应对的一般是矩阵A和B的大小接近的情况，对于Reed-Solomon codes实际编解码的情况并不适用。
 		  在Reed-Solomon codes实际被使用的cases中，chunk的数量一般很少大过三位数（二位数），而实际的input file又是mega甚至giga这种级别的，使得chunk的大小一般大于百万的数量级。
-		  无论是encoding和decoding，矩阵的乘法都是一个很小的矩阵A乘以一个扁长的大矩阵B的情形。
+		  无论是encoding和decoding，矩阵的乘法Galois 都是一个很小的矩阵A乘以一个扁长的大矩阵B的情形。
 		  为了能使这种特殊的矩阵乘法有较好的performance，我们需要generalize square-tiling algorithm以适应实际情况。
 		</aside>
 	  </section>
@@ -1373,6 +1376,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<img src="./images/matrix-multiplication/tiling-align-load.png" width="80%" height="50%" alt="observation 1">
 		<p>pack 8-bit global memory transactions into 32-bit transactions → reduce global memory load and store.</p>
 		<aside class="notes">
+		  （结合之前我们针对ALU Operations的优化）
 		  对此，我们的方法是把这些8-bit的transactions pack成32-bit，从而减少load的数量。
 		  如图所示，load相同数量的elements，用这种方法所需要的transactions明显降低。
 		  同样的techniques也能应用在global memory store上。
@@ -1754,6 +1758,7 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<p>Total Cumulative Speedup: 7.145 x</p>
 		<aside class="notes">
 		  最后我们还在2张GPU卡做parallelize，结果表明我们的program有比较好的scalability。
+		  到这一步，我们累计的speedup已有7.145倍。
 		</aside>
 	  </section>
 	  <section>
@@ -1784,6 +1789,16 @@ result = gf256_log_table[a] + gf256_log_table[b];
 		<li>Better corporation of CPU and GPU.</li>
 		<li>Heuristic strategies for deciding the best CUDA stream number.</li>
 	  </ul>
+	  <aside class="notes">
+		最后是我们这篇thesis的conclusion与future works。
+		首先，我们从Reed-Solomon Codes的performance bottleneck出发，对一些降低它computation overhead的加速技巧进行研究，并根据GPU的architecture选择最合适的方法。
+		其次，对于使用GPU加速所产生的额外的data transfer overhead，我们也采用了一些方法来降低它对performance的影响。
+		最后，我们用CUDA实作了GPU版本的Reed-Solomon Codes，并与我们所知的最佳的CPU版本进行比较。我们的GPU版本可以达到14.71倍的speedup。
+		当然，我们目前的works还有有待改进之处。
+		例如如何让CPU和GPU有更好的corporation，使二者在encoding和decoding时都可以被utilize。
+		其实在我们目前的实作中，我们也实现了一部分的corporation。我们在实验中发现，decoding matrix的generation由于是dependencies较高的矩阵求逆，放在GPU来做反而比CPU还慢。所以我们采用CPU来计算decoding matrix，并让这一过程和data transfer同时进行。但是，我们在做encoding和decoding的矩阵乘法时，仍然只有用到GPU，CPU是idle的，这个问题之后仍可以进一步改进。
+		另外一个可以继续改进之处，是之前所提到的，如何选择最佳CUDA stream number的问题，这个问题或许可以通过某些heristic algorithm来解决。
+	  </aside>
 	</section>
 
 	<!--
