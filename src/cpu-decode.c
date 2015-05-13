@@ -274,7 +274,7 @@ show_squre_matrix(result, size);
         pivotIndex = get_pivot_index(currentRow, index, size);
         if(pivotIndex != row)
 		{
-            switch_columns(matrix, result, index, pivotIndex, size);
+            switch_rows(matrix, result, index, pivotIndex, size);
 		}
 
     	// Normalize the pivot row
