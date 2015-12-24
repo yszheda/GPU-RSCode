@@ -24,7 +24,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-		void CPU_invert_matrix(uint8_t *matrix, uint8_t *result, int size);
+    void CPU_invert_matrix(uint8_t *matrix, uint8_t *result, int size);
 #ifdef __cplusplus
 }
 #endif
