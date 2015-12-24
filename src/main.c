@@ -156,7 +156,6 @@ int main(int argc, char *argv[])
         case decode:	
             assert(inFile != NULL);
             assert(confFile != NULL);
-            assert(outFile != NULL);
             decode_file(inFile, confFile, outFile, gridDimXSize, streamNum);
             break;
 
