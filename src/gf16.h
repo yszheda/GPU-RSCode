@@ -1,4 +1,4 @@
-#ifdef _GF16_H_ 
+#ifndef _GF16_H_ 
 #define _GF16_H_ 
 __shared__ uint8_t gfexp[16] = { 1,  2,  4,  8,  3,  6,  12,  11,  5,  10,  7,  14,  15,  13,  9,  0 }; 
 __shared__ uint8_t gflog[16] = { 0,  0,  1,  4,  2,  8,  5,  10,  3,  14,  9,  7,  6,  13,  11,  12 }; 
