@@ -231,7 +231,8 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
  *  tileWidthRow, tileWidthCol, and tileDepth are used to control the sMem tile size.
  * =====================================================================================
  */
-__global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
+    template <>
+__global__ void matrix_mul<>(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
 {
     extern __shared__ uint8_t sMem[];
     int rowVectorSize = tileWidthRow * tileDepth;
@@ -297,6 +298,109 @@ __global__ void matrix_mul(unsigned char *A, unsigned char *B, unsigned char *C,
                 product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
             }
             __syncthreads();
+            C[row * m + col] = product;
+        }
+        bx += gridDim.x;
+        col = bx * tileWidthCol + tx;
+        __syncthreads();
+    } while (col < m);
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  matrix_mul
+ *  Description:  optimized matrix multiplication for word-aligned cases.
+ *  A is a nxp matrix,
+ *  B is a pxm matrix,
+ *  C is a nxm matrix.
+ *  tileWidthRow, tileWidthCol, and tileDepth are used to control the sMem tile size.
+ * =====================================================================================
+ */
+    template <typename T>
+__global__ void matrix_mul(unsigned char *A, T *B, T *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
+{
+    extern __shared__ uint8_t sMemBytes[];
+    extern __shared__ T sMemWords[];
+    int rowVectorSize = (int)(ceil((float)tileWidthRow * tileDepth / sizeof(T))) * sizeof(T);
+    T product;
+
+    int bx = blockIdx.x;
+    int by = blockIdx.y;
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    int row;
+    int col;
+
+    //	setup_tables();
+    //	__syncthreads();
+
+#pragma unroll
+    //	for(int j = tx; j < gflog_table_size; j += blockDim.x)
+    for(int j = tx * blockDim.y + ty; j < gflog_table_size; j += blockDim.x * blockDim.y)
+    {
+        gflog[j] = gflog_cMem[j];
+    }
+#pragma unroll
+    //	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
+    for(int j = tx * blockDim.y + ty; j < gfexp_table_size; j += blockDim.x * blockDim.y)
+    {
+        gfexp[j] = gfexp_cMem[j];
+    }
+    __syncthreads();
+
+    bx = blockIdx.x;
+    do {
+        row = by * tileWidthRow + ty;
+        col = bx * tileWidthCol + tx;
+        product = 0;
+        __syncthreads();
+
+        if(row < n && col < m)
+        {
+            for (int i = 0; i < (int) (ceil((float) p / tileDepth)); ++i)
+            {
+                /* 
+                   for(int j = tx; j < tileDepth; j += blockDim.x)
+                   {
+                   sMemBytes[ index(ty, j, tileDepth) ] = A[row * p + i * tileDepth + j];
+                   }
+                   for(int j = ty; j < tileDepth; j += blockDim.y)
+                   {
+                   sMemBytes[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + (j + i * tileDepth) * m];
+                   }
+                 */
+                for(int j = 0; j < tileDepth; ++j)
+                {
+                    sMemBytes[ index(ty, j, tileDepth) ] = A[row * p + i * tileDepth + j];
+                }
+                for(int j = 0; j < tileDepth; ++j)
+                {
+                    sMemWords[rowVectorSize / sizeof(T) + index(j, tx, tileWidthCol)] = B[col + (j + i * tileDepth) * m];
+                }
+                //  TODO: Assume removing the loop
+                //  if (tx < tileDepth)
+                //  {
+                //  	sMemBytes[ index(ty, tx, tileDepth) ] = A[row * p + tx];
+                //  }
+                //  if (ty < tileDepth)
+                //  {
+                //  	sMemBytes[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty * m];
+                //  }
+                __syncthreads();
+
+                for(int j = 0; j < tileDepth; j++)
+                {
+                    T C_word_item = 0;
+                    unsigned char *C_byte_item = (unsigned char *) &C_word_item;
+                    //  C_word_item = 0;
+                    for (int k = 0; k < sizeof(T); ++k)
+                    {
+                        C_byte_item[k] = gf_mul(sMemBytes[ index(ty, j, tileDepth) ], sMemBytes[rowVectorSize + index(j, sizeof(T) * tx + k, tileWidthCol * sizeof(T))]);
+                    }
+                    product ^= C_word_item;
+                }
+                __syncthreads();
+            }
             C[row * m + col] = product;
         }
         bx += gridDim.x;
@@ -668,19 +772,18 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
  */
 __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, cudaStream_t streamID)
 {
+    // TODO: make threadsPerBlock configurable
     int threadsPerBlock = 128;
+
     int tileWidthRow = parityBlockNum;
     int tileWidthCol = threadsPerBlock / tileWidthRow;
     int tileDepth = nativeBlockNum;
-    //	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), SINGLE_GRID_SIZE);
-    int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), gridDimXSize);
-    int gridDimY = (int)( ceil((float) parityBlockNum / tileWidthRow));
-    dim3 grid(gridDimX, gridDimY);
     dim3 block(tileWidthCol, tileWidthRow);
+    int gridDimY = (int)(ceil((float) parityBlockNum / tileWidthRow));
+
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
     int sMemMaxSize = deviceProp.sharedMemPerBlock;
-    int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
     int tunedSMemSize = 2048;
     /* 
        size_t sMemSize = tunedSMemSize;
@@ -689,21 +792,46 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
        sMemSize = sMemMinSize;
        }
      */
-    size_t sMemSize = sMemMinSize;
+
     float stepTime = 0;
     cudaEvent_t stepStart, stepStop;
     // create event
     cudaEventCreate(&stepStart);
     cudaEventCreate(&stepStop);
-    //	// record event
-    //	cudaEventRecord(stepStart);
-    matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-    //	matrix_mul<<<grid, block>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-    //	// record event and synchronize
-    //	cudaEventRecord(stepStop);
-    //	cudaEventSynchronize(stepStop);
-    //	// get event elapsed time
-    //	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+
+    if (chunkSize % sizeof(AlignType) == 0)
+    {
+        int gridDimX = min((int) (ceil((float) chunkSize / sizeof(AlignType) / tileWidthCol)), gridDimXSize);
+        dim3 grid(gridDimX, gridDimY);
+
+        int sMemMinSize = (tileWidthRow * sizeof(uint8_t) + tileWidthCol * sizeof(AlignType)) * tileDepth;
+        size_t sMemSize = sMemMinSize;
+
+        // record event
+        cudaEventRecord(stepStart);
+        matrix_mul<AlignType><<<grid, block, sMemSize, streamID>>>(parityCoeff, (AlignType *)dataChunk, (AlignType *)codeChunk, parityBlockNum, nativeBlockNum, (chunkSize / sizeof(AlignType)), tileWidthRow, tileWidthCol, tileDepth);
+        // record event and synchronize
+        cudaEventRecord(stepStop);
+        cudaEventSynchronize(stepStop);
+    }
+    else
+    {
+        int gridDimX = min((int)(ceil((float) chunkSize / tileWidthCol)), gridDimXSize);
+        dim3 grid(gridDimX, gridDimY);
+
+        int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
+        size_t sMemSize = sMemMinSize;
+
+        // record event
+        cudaEventRecord(stepStart);
+        matrix_mul<><<<grid, block, sMemSize, streamID>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+        // record event and synchronize
+        cudaEventRecord(stepStop);
+        cudaEventSynchronize(stepStop);
+    }
+
+    // get event elapsed time
+    cudaEventElapsedTime(&stepTime, stepStart, stepStop);
     return stepTime;
 }
 
@@ -715,7 +843,9 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
  */
 __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, cudaStream_t streamID)
 {
+    // TODO: make threadsPerBlock configurable
     int threadsPerBlock = 128;
+
     int tileWidthRow = nativeBlockNum;
     if (tileWidthRow > 8)
     {
@@ -723,15 +853,12 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
     }
     int tileWidthCol = threadsPerBlock / tileWidthRow;
     int tileDepth = nativeBlockNum;
-    //	int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), SINGLE_GRID_SIZE);
-    int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), gridDimXSize);
-    int gridDimY = (int) (ceil((float) nativeBlockNum / tileWidthRow));
-    dim3 grid(gridDimX, gridDimY);
     dim3 block(tileWidthCol, tileWidthRow);
+    int gridDimY = (int) (ceil((float) nativeBlockNum / tileWidthRow));
+
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
     int sMemMaxSize = deviceProp.sharedMemPerBlock;
-    int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
     int tunedSMemSize = 2048;
     /* 
        size_t sMemSize = tunedSMemSize;
@@ -740,21 +867,46 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
        sMemSize = sMemMinSize;
        }
      */
-    size_t sMemSize = sMemMinSize;
+
     float stepTime = 0;
     cudaEvent_t stepStart, stepStop;
     // create event
     cudaEventCreate(&stepStart);
     cudaEventCreate(&stepStop);
-    // record event
-    cudaEventRecord(stepStart);
-    matrix_mul<<<grid, block, sMemSize, streamID>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-    //	matrix_mul<<<grid, block>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
-    //	// record event and synchronize
-    //	cudaEventRecord(stepStop);
-    //	cudaEventSynchronize(stepStop);
-    //	// get event elapsed time
-    //	cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+
+    if (chunkSize % sizeof(AlignType) == 0)
+    {
+        int gridDimX = min((int) (ceil((float) chunkSize / sizeof(AlignType) / tileWidthCol)), gridDimXSize);
+        dim3 grid(gridDimX, gridDimY);
+
+        int sMemMinSize = (tileWidthRow * sizeof(uint8_t) + tileWidthCol * sizeof(AlignType)) * tileDepth;
+        size_t sMemSize = sMemMinSize;
+
+        // record event
+        cudaEventRecord(stepStart);
+        matrix_mul<AlignType><<<grid, block, sMemSize, streamID>>>(parityCoeff, (AlignType *) codeChunk, (AlignType *) dataChunk, nativeBlockNum, nativeBlockNum, (chunkSize / sizeof(AlignType)), tileWidthRow, tileWidthCol, tileDepth);
+        // record event and synchronize
+        cudaEventRecord(stepStop);
+        cudaEventSynchronize(stepStop);
+    }
+    else
+    {
+        int gridDimX = min((int) (ceil((float) chunkSize / tileWidthCol)), gridDimXSize);
+        dim3 grid(gridDimX, gridDimY);
+
+        int sMemMinSize = (tileWidthRow + tileWidthCol) * tileDepth * sizeof(uint8_t);
+        size_t sMemSize = sMemMinSize;
+
+        // record event
+        cudaEventRecord(stepStart);
+        matrix_mul<><<<grid, block, sMemSize, streamID>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
+        // record event and synchronize
+        cudaEventRecord(stepStop);
+        cudaEventSynchronize(stepStop);
+    }
+
+    // get event elapsed time
+    cudaEventElapsedTime(&stepTime, stepStart, stepStop);
     return stepTime;
 }
 

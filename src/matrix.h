@@ -34,6 +34,9 @@
 
 #define gf uint8_t
 
+// AlignType: the word-alignment length
+typedef unsigned int AlignType;
+
 // __host__ __device__ uint8_t gf_add(uint8_t a, uint8_t b);
 // __host__ __device__ uint8_t gf_sub(uint8_t a, uint8_t b);
 // __host__ __device__ uint8_t gf_mul(uint8_t a, uint8_t b);
