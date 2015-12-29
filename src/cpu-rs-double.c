@@ -5,7 +5,7 @@
  *
  *    Description:  
  *
- *        Version:  2.0
+ *        Version:  1.0
  *        Created:  12/05/2012 10:42:32 PM
  *       Revision:  none
  *       Compiler:  gcc
@@ -20,104 +20,39 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include <getopt.h>
-#include <assert.h>
 #include <math.h>
 #include <time.h>
 
-#define index(i, j, size) (((i) * (size)) + (j))
+// #define _POSIX_C_SOURCE >= 199309L
+
+//#include "galoisfield.h"
+
+#define index(i,j,ld) (((i)*(ld))+(j))
+
+//extern uint8_t encodingMatrix[];
+//extern unsigned char encodingMatrix[];
+
+//unsigned char* encodingMatrix;
 
 const int w = 8;
 
 const int NW = 1 << 8;
+//#define NW (1 << w) /* In other words, NW equals 2 to the w-th power */
 
+//#define DEBUG 
 #define BUFFER_SIZE 256
 
-const unsigned int prim_poly_4 = 023;
-const unsigned int prim_poly_8 = 0435;
-const unsigned int prim_poly_16 = 0210013;
-
-uint8_t gflog[256];
-uint8_t gfilog[256];
-
-int setup_tables(int w)
-{
-    unsigned int b;
-    unsigned int r;
-    unsigned int log;
-    unsigned int x_to_w;
-    unsigned int prim_poly;
-    unsigned int x;
-    unsigned int y;
-    switch(w) 
-    {
-        case 4: prim_poly = prim_poly_4; break;
-        case 8: prim_poly = prim_poly_8; break;
-        case 16: prim_poly = prim_poly_16; break;
-        default: return -1;
-    }
-    x_to_w = 1 << w;
-    b = 1;
-    r = 0;
-    for (log = 0; log < x_to_w-1; log++) 
-    {
-        if(b>x_to_w) break;
-        gflog[b] = (uint8_t) log;
-        gfilog[log] = (uint8_t) b;
-        b = b << 1;
-        if (b & x_to_w) 
-        {
-            b = b ^ prim_poly;
-        }
-    }
-    return 0;
-}
-
-void showgflog()
-{
-    int i;
-    printf("gflog\n");
-    for(i =0; i< NW; i++)
-    {
-        printf("%d ", gflog[i]);
-    }
-}
-
-void showgfilog()
-{
-    int i;
-    printf("gfilog\n");
-    for(i =0; i< NW; i++)
-    {
-        printf("%d ", gfilog[i]);
-    }
-}
-
-uint8_t gf_add(uint8_t a, uint8_t b)
-{
-    return a^b;
-}
-
-uint8_t gf_sub(uint8_t a, uint8_t b)
-{
-    return gf_add(a, b);
-}
-
-uint8_t gf_mul(uint8_t a, uint8_t b)
-{
-    int sum_log;
-    if (a == 0 || b == 0)
-    {
-        return 0;
-    }
-    //	sum_log = (gflog[a] + gflog[b]) % (NW-1);
-    sum_log = gflog[a] + gflog[b];
-    if (sum_log >= NW-1)
-    {	
-        sum_log -= NW-1;
-    }
-    return gfilog[sum_log];
-}
+//unsigned int prim_poly_4 = 023;
+//unsigned int prim_poly_8 = 0435;
+//unsigned int prim_poly_16 = 0210013;
+unsigned int prim_poly_4 = 023;
+unsigned int prim_poly_8 = 0435;
+//uint8_t prim_poly_8 = 285;
+unsigned int prim_poly_16 = 0210013;
+uint8_t gf_left_mul_table[4096];
+uint8_t gf_right_mul_table[4096];
+uint8_t gf_left_div_table[4096];
+uint8_t gf_right_div_table[4096];
 
 uint8_t gf_mul_bit(uint8_t a, uint8_t b)
 {
@@ -134,31 +69,180 @@ uint8_t gf_mul_bit(uint8_t a, uint8_t b)
     return sum_log;
 }
 
-uint8_t gf_div(uint8_t a, uint8_t b)
+void invertBinaryMatrix( int* mat, int* inv )
 {
-    int diff_log;
-    if (a == 0)
-    {	
-        return 0;
-    }
-    /* Can't divide by 0 */
-    if (b == 0)
+    const int gf_width = 8;
+    int size = gf_width;
+    int i;
+    for (i = 0; i < size; ++i)
     {
-        return -1;
+        inv[i] = 1 << i;
     }
-    //	diff_log = (gflog[a] - gflog[b]) % (NW-1);
-    diff_log = gflog[a] - gflog[b];
-    if (diff_log < 0)
-    {	
-        diff_log += NW-1;
+    for (i = 0; i < size; ++i)
+    {
+        int j;
+        if ((mat[i] & (1 << i)) == 0)
+        {
+            for (j = i+1; j < size && (mat[j] & (1 << i)) == 0; j++) ;
+            if (j == size)
+            {
+                // invertible
+                exit(1);
+            }
+            int tmp;
+            tmp = mat[i];
+            mat[i] = mat[j];
+            mat[j] = tmp;
+            tmp = inv[i];
+            inv[i] = inv[j];
+            inv[j] = tmp;
+
+        }
+        for (j = i+1; j < size; ++j)
+        {
+            if ((mat[j] & (1 << i)) != 0)
+            {
+                mat[j] ^= mat[i];
+                inv[j] ^= inv[i];
+            }
+        }
     }
-    return gfilog[diff_log];
+    for (i = size - 1; i >= 0; --i)
+    {
+        int j;
+        for (j = 0; j < i; ++j)
+        {
+            if (mat[j] & (1 << i))
+            {
+                inv[j] ^= inv[i];
+            }
+        }
+    }
 }
 
-uint8_t gf_pow(uint8_t a, uint8_t power)
+int gf_inv( int x )
 {
-    int pow_log = (gflog[a] * power) % (NW-1);
-    return gfilog[pow_log];
+    if (x == 0)
+    {
+        // exception?
+        return -1;
+    }
+    int mat[32];
+    int inv[32];
+    const int gf_width = 8;
+    const int gf_max_value = (1 << gf_width) - 1;
+    int i;
+    for (i = 0; i < gf_width; ++i)
+    {
+        mat[i] = x;
+        x <<= 1;
+        if (x & (1 << (gf_width-1)))
+        {
+            x = (x ^ prim_poly_8) & gf_max_value;
+        }
+    }
+    invertBinaryMatrix(mat, inv);
+    return inv[0];
+}
+
+int gf_div_bit( const int x, const int y )
+{
+    if (x == 0)
+    {
+        return 0;
+    }
+    if (y == 0)
+    {
+        // exception?
+        return -1;
+    }
+    int inverse = gf_inv(y);
+    return gf_mul_bit(x, inverse);
+}
+
+
+int setup_tables(int gf_width)
+{
+    int field_size = 1 << gf_width;
+    int table_size = field_size * field_size;
+    int i, j;
+    for (i = 0; i < (field_size >> (gf_width/2)); ++i)
+    {
+        for (j = 0; j < field_size; ++j)
+        {
+            int left_prod = gf_mul_bit(i << gf_width/2, j);
+            int right_prod = gf_mul_bit(i, j);
+            gf_left_mul_table[ index(i, j, field_size) ] = gf_mul_bit(i << gf_width/2, j);
+            gf_right_mul_table[ index(i, j, field_size) ] = gf_mul_bit(i, j);
+            int mask = (1 << (gf_width/2)) - 1;
+            int left_mul_operand = (i >> (gf_width/2)) & mask;
+            int right_mul_operand = i & mask;
+            int result = gf_left_mul_table[ index(left_mul_operand, j, field_size)] 
+                ^ gf_right_mul_table[index(right_mul_operand, j, field_size)];
+            int left_div_operand = (result >> (gf_width/2)) & mask;
+            int right_div_operand = result & mask;
+            if (j != 0)
+            {
+                //	gf_left_div_table[ index(i, j, field_size) ] = gf_div_bit(i << gf_width/2, j);
+                //	gf_right_div_table[ index(i, j, field_size) ] = gf_div_bit(i, j);
+                gf_left_div_table[ index(left_div_operand, j, field_size) ] = gf_div_bit(left_div_operand, j);
+                gf_right_div_table[ index(right_div_operand, j, field_size) ] = gf_div_bit(right_div_operand, j);
+            }
+            if (i != 0)
+            {
+                gf_left_div_table[ index(left_div_operand, i, field_size) ] = gf_div_bit(left_div_operand, i);
+                gf_right_div_table[ index(right_div_operand, i, field_size) ] = gf_div_bit(right_div_operand, i);
+            }
+        }
+    }
+    return 0;
+}
+
+uint8_t gf_add(uint8_t a, uint8_t b)
+{
+    return a^b;
+}
+
+uint8_t gf_sub(uint8_t a, uint8_t b)
+{
+    return gf_add(a, b);
+}
+
+uint8_t gf_mul(uint8_t a, uint8_t b)
+{
+    const int gf_width = 8;
+    int mask = (1 << (gf_width/2)) - 1;
+    int left_value = (a >> (gf_width/2)) & mask;
+    int right_value = a & mask;
+    int field_size = 1 << gf_width;
+    int table_size = (1 << (gf_width / 2)) * field_size;
+    int result = gf_left_mul_table[ index(left_value, b, field_size)] 
+        ^ gf_right_mul_table[index(right_value, b, field_size)];
+    return result;
+}
+
+uint8_t gf_div(uint8_t a, uint8_t b)
+{
+    const int gf_width = 8;
+    int mask = (1 << (gf_width/2)) - 1;
+    int left_value = (a >> (gf_width/2)) & mask;
+    int right_value = a & mask;
+    int field_size = 1 << gf_width;
+    int table_size = (1 << (gf_width / 2)) * field_size;
+    int result = gf_left_div_table[ index(left_value, b, field_size)] 
+        ^ gf_right_div_table[index(right_value, b, field_size)];
+    return result;
+}
+
+uint8_t gf_pow(uint8_t a, int power)
+{
+    uint8_t result = 1;
+    int i;
+    for (i = 0; i < power; ++i)
+    {
+        result = gf_mul(result, a);
+    }
+    return result;
 }
 
 void show_squre_matrix(uint8_t *matrix, int size)
@@ -172,6 +256,19 @@ void show_squre_matrix(uint8_t *matrix, int size)
             printf("%d ", matrix[i*size+j]);
         }
         printf("\n");
+    }
+}
+
+void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
+{
+    int i;
+    int j;
+    for(i = 0; i < row; i++)
+    {
+        for(j = 0; j < col; j++)
+        {
+            encodingMatrix[i*col + j] = gf_pow(j+1, i);
+        }
     }
 }
 
@@ -262,7 +359,7 @@ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, int size)
     }
 }
 
-// eliminate by row to make the pivot column become reduced echelon form
+//eliminate by row to make the pivot column become reduced echelon form
 void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int row;
@@ -286,7 +383,7 @@ void eliminate_by_row(uint8_t *matrix, uint8_t *result, int pivotIndex, int size
     }
 }
 
-// eliminate by column to make the pivot row become reduced echelon form
+//eliminate by column to make the pivot row become reduced echelon form
 void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
     int row;
@@ -311,7 +408,7 @@ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size
 }
 
 
-// generate an identity matrix
+//generate an identity matrix
 void get_identity_matrix(uint8_t *result, int size)
 {
     int i;
@@ -347,7 +444,7 @@ int get_pivot_index(uint8_t *vector, int index, int size)
 }
 
 // compute the inverse of a given matrix
-// Gaussian elimination
+// Guassian elimination
 void invert_matrix(uint8_t *matrix, uint8_t *result, int size)
 {
     int row;
@@ -360,10 +457,9 @@ void invert_matrix(uint8_t *matrix, uint8_t *result, int size)
 #ifdef DEBUG
     printf("original matrix:\n");
     show_squre_matrix(matrix, size);
-    printf("result:\n");
+    printf("result: \n");
     show_squre_matrix(result,size);
 #endif
-
     for(row=0; row<size; row++)
     {
         // check whether the leading coefficient of the current row is in the 'index'th column
@@ -381,7 +477,7 @@ void invert_matrix(uint8_t *matrix, uint8_t *result, int size)
 #ifdef DEBUG
         printf("original matrix:\n");
         show_squre_matrix(matrix, size);
-        printf("result:\n");
+        printf("result: \n");
         show_squre_matrix(result,size);
 #endif
         eliminate_by_row(matrix, result, row, size);
@@ -389,7 +485,7 @@ void invert_matrix(uint8_t *matrix, uint8_t *result, int size)
 #ifdef DEBUG
         printf("original matrix:\n");
         show_squre_matrix(matrix, size);
-        printf("result:\n");
+        printf("result: \n");
         show_squre_matrix(result,size);
 #endif
     }
@@ -398,6 +494,8 @@ void invert_matrix(uint8_t *matrix, uint8_t *result, int size)
 
 void encode_chunk(uint8_t *dataChunk, uint8_t *parityCoeff, uint8_t *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize)
 {
+    //	codeChunk = (unsigned char*)malloc(parityBlockNum*chunkSize);
+    //	codeChunk = (uint8_t*) malloc( parityBlockNum*chunkSize*sizeof(uint8_t) );
     matrix_mul(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize);
 }
 
@@ -443,35 +541,41 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
     }
 }
 
-void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
-{
-    int i;
-    int j;
-    for(i = 0; i < row; i++)
-    {
-        for(j = 0; j < col; j++)
-        {
-            encodingMatrix[i*col + j] = gf_pow(j+1, i);
-        }
-    }
-}
-
-void gen_total_encoding_matrix(uint8_t *totalEncodingMatrix, int nativeBlockNum, int parityBlockNum)
-{
-    get_identity_matrix(totalEncodingMatrix, nativeBlockNum);
-    gen_encoding_matrix(totalEncodingMatrix + nativeBlockNum*nativeBlockNum, parityBlockNum, nativeBlockNum);
-}
-
-void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativeBlockNum)
+void write_metadata(int totalSize, int parityBlockNum, int nativeBlockNum, uint8_t *encodingMatrix)
 {
     FILE *fp;
-    if( ( fp = fopen(fileName, "wb") ) == NULL )
+    if( ( fp = fopen(".METADATA", "wb") ) == NULL )
     {
         printf("Can not open META file!\n");
         exit(0);
     }
     fprintf(fp, "%d\n", totalSize);
     fprintf(fp, "%d %d\n", parityBlockNum, nativeBlockNum);
+    int i;
+    int j;
+    for(i=0; i<nativeBlockNum; i++)
+    {
+        for(j=0; j<nativeBlockNum; j++)
+        {
+            if(i == j)
+            {
+                fprintf(fp, "1 ");
+            }
+            else
+            {
+                fprintf(fp, "0 ");
+            }
+        }
+        fprintf(fp, "\n");
+    }
+    for(i=0; i<parityBlockNum; i++)
+    {
+        for(j=0; j<nativeBlockNum; j++)
+        {
+            fprintf(fp, "%d ", encodingMatrix[i*nativeBlockNum+j]);
+        }
+        fprintf(fp, "\n");
+    }
     fclose(fp);
 }
 
@@ -492,10 +596,12 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
     fseek(fp_in, 0L, SEEK_END);
     //ftell() get the total size of the file
     totalSize = ftell(fp_in);
-    chunkSize = (totalSize / nativeBlockNum) + (totalSize%nativeBlockNum != 0); 
+    chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
+    //	chunkSize = (ftell(fp_in) / nativeBlockNum) + ( ftell(fp_in)%nativeBlockNum != 0 ); 
+    //	chunkSize = (int) (ceil( (long double) (ftell(fp_in) / nativeBlockNum)) ); 
 
-    uint8_t *dataBuf;
-    uint8_t *codeBuf;
+    uint8_t *dataBuf;		//host
+    uint8_t *codeBuf;		//host
     int dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
     int codeSize = parityBlockNum*chunkSize*sizeof(uint8_t);
     dataBuf = (uint8_t*) malloc( nativeBlockNum*chunkSize*sizeof(uint8_t) );
@@ -504,7 +610,7 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
     memset(codeBuf, 0, codeSize);
 
     int i;
-    for(i = 0; i < nativeBlockNum; i++)
+    for(i=0; i<nativeBlockNum; i++)
     {
         if( fseek( fp_in, i*chunkSize, SEEK_SET ) == -1 )
         {
@@ -523,46 +629,65 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
     struct timespec start, end;
     double totalTime;
     clock_gettime(CLOCK_REALTIME,&start);
+    //	// setup table for GF(2^8)
+    //	setup_tables(8);
     uint8_t *encodingMatrix;
     encodingMatrix = (uint8_t*) malloc( parityBlockNum*nativeBlockNum*sizeof(uint8_t) );
     gen_encoding_matrix(encodingMatrix, parityBlockNum, nativeBlockNum);
+    write_metadata(totalSize, parityBlockNum, nativeBlockNum, encodingMatrix);
     encode_chunk(dataBuf, encodingMatrix, codeBuf, nativeBlockNum, parityBlockNum, chunkSize);
+    //	matrix_mul(encodingMatrix, dataBuf, codeBuf, parityBlockNum, nativeBlockNum, chunkSize);
+    /*
+    //int i;
+    int j;
+    int k;
+    int n=parityBlockNum;
+    int p=nativeBlockNum;
+    int m=chunkSize;
+    for(i=0; i<n; i++)
+    {
+    for(j=0; j<m; j++)
+    {
+    codeBuf[i*m+j] = 0;
+    for(k=0; k<p; k++)
+    {
+    //				C[i*m+j] = gf_add(C[i*m+j], gf_mul(A[i*p+k],B[k*m+j]));
+    codeBuf[i*m+j] ^= gf_mul(encodingMatrix[i*p+k],dataBuf[k*m+j]);
+    }
+    }
+    }
+    */
     clock_gettime(CLOCK_REALTIME,&end);
     totalTime = (double)(end.tv_sec-start.tv_sec)*1000+(double)(end.tv_nsec-start.tv_nsec)/(double)1000000L;
     printf("Total CPU encoding time: %fms\n", totalTime);
-    char metadata_file_name[strlen(file) + 15];
-    sprintf(metadata_file_name, "%s.METADATA", file);
-    write_metadata(metadata_file_name, totalSize, parityBlockNum, nativeBlockNum);
 
-    char output_file_name[strlen(file) + 5];
-    for(i = 0; i < nativeBlockNum; i++)
+    char output_file_name[100];
+    for(i=0; i<nativeBlockNum; i++)
     {
-        //		sprintf(output_file_name, "_%d_", i);
-        //		strcat(output_file_name, file);
-        sprintf(output_file_name, "_%d_%s", i, file);
-        if(( fp_out = fopen(output_file_name, "wb") ) == NULL)
+        sprintf(output_file_name, "_%d_", i);
+        strcat(output_file_name, file);
+        if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
         {
             printf("Can not open source file!\n");
             exit(0);
         }
-        if( fwrite(dataBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out) != sizeof(uint8_t)*chunkSize )
+        if( fwrite(dataBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
         {
             printf("fwrite error!\n");
             exit(0);
         }
         fclose(fp_out);
     }
-    for(i = 0; i < parityBlockNum; i++)
+    for(i=0; i<parityBlockNum; i++)
     {
-        //		sprintf(output_file_name, "_%d_", i+nativeBlockNum);
-        //		strcat(output_file_name, file);
-        sprintf(output_file_name, "_%d_%s", i+nativeBlockNum, file);
-        if((fp_out = fopen(output_file_name, "wb")) == NULL)
+        sprintf(output_file_name, "_%d_", i+nativeBlockNum);
+        strcat(output_file_name, file);
+        if( ( fp_out = fopen(output_file_name, "wb") ) == NULL )
         {
             printf("Can not open source file!\n");
             exit(0);
         }
-        if(fwrite(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out) != sizeof(uint8_t)*chunkSize)
+        if( fwrite(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_out ) != sizeof(uint8_t)*chunkSize )
         {
             printf("fwrite error!\n");
             exit(0);
@@ -572,17 +697,15 @@ void encode_file(char *file, int nativeBlockNum, int parityBlockNum)
 
     free(dataBuf);
     free(codeBuf);
+
     free(encodingMatrix);
+
 }
 
-// void decode_file(char *inFile, char *confFile, char *outFile, int nativeBlockNum, int parityBlockNum)
-void decode_file(char *inFile, char *confFile, char *outFile)
+void decode_file(char *confFile, char *outFile, int nativeBlockNum, int parityBlockNum)
 {
     int chunkSize = 1;
     int totalSize;
-
-    int parityBlockNum;
-    int nativeBlockNum;
 
     uint8_t *dataBuf;
     uint8_t *codeBuf;
@@ -597,28 +720,27 @@ void decode_file(char *inFile, char *confFile, char *outFile)
     int matrixSize;
     uint8_t *totalEncodingMatrix;
     uint8_t *encodingMatrix;
-    char metadata_file_name[strlen(inFile) + 15];
-    sprintf(metadata_file_name, "%s.METADATA", inFile);
-    if((fp_in = fopen(metadata_file_name, "rb")) == NULL)
+    if( ( fp_in = fopen(".METADATA","rb") ) == NULL )
     {
-        printf("Can not open metadata file!\n");
+        printf("Can not open source file!\n");
         exit(0);
     }
     fscanf(fp_in, "%d", &totalSize);
     fscanf(fp_in, "%d %d", &parityBlockNum, &nativeBlockNum);
-    fclose(fp_in);
     //	chunkSize = (int) (ceil( (float) (totalSize / nativeBlockNum) )); 
     chunkSize = (totalSize / nativeBlockNum) + ( totalSize%nativeBlockNum != 0 ); 
-
 #ifdef DEBUG
     printf("chunk size: %d\n", chunkSize);
 #endif
-
-    totalMatrixSize = nativeBlockNum * (nativeBlockNum + parityBlockNum);
-    totalEncodingMatrix = (uint8_t*) malloc(totalMatrixSize);
+    totalMatrixSize = nativeBlockNum * ( nativeBlockNum + parityBlockNum );
+    totalEncodingMatrix = (uint8_t*) malloc( totalMatrixSize );
     matrixSize = nativeBlockNum * nativeBlockNum;
-    encodingMatrix = (uint8_t*) malloc(matrixSize);
-    gen_total_encoding_matrix(totalEncodingMatrix, nativeBlockNum, parityBlockNum);
+    encodingMatrix = (uint8_t*) malloc( matrixSize );
+    int i;
+    for(i =0; i<nativeBlockNum*(nativeBlockNum+parityBlockNum); i++)
+    {
+        fscanf(fp_in, "%d", totalEncodingMatrix+i);
+    }
 
     dataSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
     codeSize = nativeBlockNum*chunkSize*sizeof(uint8_t);
@@ -627,25 +749,49 @@ void decode_file(char *inFile, char *confFile, char *outFile)
     codeBuf = (uint8_t*) malloc( codeSize);
     memset(codeBuf, 0, codeSize);
 
-    FILE *fp_conf;
-    char input_file_name[strlen(inFile) + 20];
-    int index;
-    fp_conf = fopen(confFile, "r");
-    int i;
-    for(i = 0; i < nativeBlockNum; i++)
+    if(confFile != NULL)
     {
-        fscanf(fp_conf, "%s", input_file_name);
-        index = atoi(input_file_name + 1);
+        FILE *fp_conf;
+        char input_file_name[100];
+        int index;
+        fp_conf = fopen(confFile, "r");
 
-        copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
+        for(i=0; i<nativeBlockNum; i++)
+        {
+            fscanf(fp_conf, "%s", input_file_name);
+            index = atoi(input_file_name+1);
 
-        fp_in = fopen(input_file_name, "rb");
-        fseek(fp_in, 0L, SEEK_SET);
-        // this part can be process in parallel with computing inversed matrix
-        fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
-        fclose(fp_in);
+            copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
+
+            fp_in = fopen(input_file_name, "rb");
+            fseek(fp_in, 0L, SEEK_SET);
+            // this part can be process in parallel with computing inversed matrix
+            fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
+            fclose(fp_in);
+        }
+        fclose(fp_conf);
     }
-    fclose(fp_conf);
+    else
+    {
+        for(i=0; i<nativeBlockNum; i++)
+        {
+            char input_file_name[100];
+            int index;
+            printf("Please enter the file name of fragment:\n");
+            scanf("%s", input_file_name);
+            index = atoi(input_file_name+1);
+            printf("#%dth fragment\n", index);
+
+            copy_matrix(totalEncodingMatrix, encodingMatrix, index, i, nativeBlockNum);
+
+            fp_in = fopen(input_file_name, "rb");
+            fseek(fp_in, 0L, SEEK_SET);
+            // TODO: this part can be process in parallel with computing inversed matrix
+            fread(codeBuf+i*chunkSize, sizeof(uint8_t), chunkSize, fp_in);
+            fclose(fp_in);
+
+        }
+    }
 
     struct timespec start, end;
     double totalTime;
@@ -654,19 +800,27 @@ void decode_file(char *inFile, char *confFile, char *outFile)
     decodingMatrix = (uint8_t*) malloc( matrixSize );
 
     invert_matrix(encodingMatrix, decodingMatrix, nativeBlockNum);
-
     //#ifndef DEBUG
     //	show_matrix(totalEncodingMatrix, nativeBlockNum+parityBlockNum, nativeBlockNum);
     //#endif
 
+    //#ifndef DEBUG
     decode_chunk(dataBuf, decodingMatrix, codeBuf, nativeBlockNum, parityBlockNum, chunkSize);
+    //#endif
+    //#ifdef DEBUG
+    //	uint8_t test_DM[16] = {1,0,0,0, 2,1,3,7, 3,1,2,6, 0,0,0,1};	
+    //	decode_chunk(dataBuf, test_DM, codeBuf, nativeBlockNum, parityBlockNum, chunkSize);
+    //#endif	
     clock_gettime(CLOCK_REALTIME,&end);
     totalTime = (double)(end.tv_sec-start.tv_sec)*1000+(double)(end.tv_nsec-start.tv_nsec)/(double)1000000L;
     printf("Total CPU decoding time: %fms\n", totalTime);
 
     if(outFile == NULL)
     {
-        fp_out = fopen(inFile, "wb");
+        char output_file_name[100];
+        printf("Enter the name of the decoded file:\n");
+        scanf("%s", output_file_name);
+        fp_out = fopen(output_file_name, "wb");
     }
     else
     {
@@ -680,23 +834,10 @@ void decode_file(char *inFile, char *confFile, char *outFile)
 
 }
 
-void show_help_info()
-{
-    printf("Usage:\n");
-    printf("[-h]: show usage information\n");
-    printf("Encode: [-k|-K nativeBlockNum] [-n|-N totalBlockNum] [-e|-E fileName]\n");
-    printf("Decode: [-d|-D] [-k|-K nativeBlockNum] [-n|-N totalBlockNum] \n\t [-i|-I originalFileName] [-c|-C config] [-o|-O output]\n");
-    printf("For encoding, the -k, -n, and -e options are all necessary.\n");
-    printf("For decoding, the -d, -i, and -c options are all necessary.\n");
-    printf("If the -o option is not set, the original file name will be chosen as the output file name by default.\n");
-    exit(0);
-}
-
 int main(int argc, char *argv[])
 {
-    int nativeBlockNum = 0;
-    int parityBlockNum = 0;
-    int totalBlockNum = 0;
+    int nativeBlockNum = 4;
+    int parityBlockNum = 2;
     char *inFile = NULL;
     char *confFile = NULL;
     char *outFile = NULL;
@@ -707,101 +848,52 @@ int main(int argc, char *argv[])
         decode
     };
     enum func op;
-    int func_flag = 0;
 
-    int option;
-    while((option = getopt(argc, argv, "Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
-        switch ( option ) {
-            case 'K':	
-            case 'k':	
-                nativeBlockNum = (int) atoi(optarg);
-                break;
+    nativeBlockNum = atoi(argv[1]);
+    parityBlockNum = atoi(argv[2]);
 
-            case 'N':	
-            case 'n':	
-                totalBlockNum = (int) atoi(optarg);
-                break;
-
-            case 'E':	
-            case 'e':	
-                inFile = optarg;
-                op = encode;
-                func_flag = 1;
-                break;
-
-            case 'D':	
-            case 'd':	
-                op = decode;
-                func_flag = 1;
-                break;
-
-            case 'I':	
-            case 'i':	
-                if (func_flag == 1 && op == decode)
-                {
-                    inFile = optarg;
-                }
-                else
-                {
-                    show_help_info();
-                }
-                break;
-
-            case 'C':	
-            case 'c':	
-                if (func_flag == 1 && op == decode)
-                {
-                    confFile = optarg;
-                }
-                else
-                {
-                    show_help_info();
-                }
-                break;
-
-            case 'O':	
-            case 'o':	
-                if (func_flag == 1 && op == decode)
-                {
-                    outFile = optarg;
-                }
-                else
-                {
-                    show_help_info();
-                }
-                break;
-
-            case 'h':	
-                show_help_info();
-                break;
-
-            default:	
-                show_help_info();
-                break;
-        }	/* -----  end switch  ----- */
+    if( strcmp(argv[3], "-e") == 0 )
+    {
+        op = encode;
+    }
+    else if( strcmp(argv[3], "-d") == 0 )
+    {
+        op = decode;
+    }
+    else
+    {
+        printf("Invalid option!\n");
+        exit(-1);
     }
 
     // setup table for GF(2^8)
     setup_tables(8);
 
-    switch ( op ) {
-        case encode:	
-            assert(nativeBlockNum != 0);
-            assert(totalBlockNum != 0);
-            parityBlockNum = totalBlockNum - nativeBlockNum;
+    switch(op)
+    {
+        case encode:
+            inFile = argv[4];
             encode_file(inFile, nativeBlockNum, parityBlockNum);
             break;
 
-        case decode:	
-            assert(inFile != NULL);
-            assert(confFile != NULL);
-            assert(outFile != NULL);
-            decode_file(inFile, confFile, outFile);
+        case decode:
+            if(argc == 5)
+            {
+                confFile = argv[4];
+            }
+            else if(argc == 7 && strcmp(argv[5], "-o") == 0)
+            {
+                confFile = argv[4];
+                outFile = argv[6];
+            }
+            else
+            {
+                printf("Invalid command!\n");
+                exit(-1);
+            }
+            decode_file(confFile, outFile, nativeBlockNum, parityBlockNum);
             break;
-
-        default:	
-            break;
-    }		/* -----  end switch  ----- */
+    }
 
     return 0;
 

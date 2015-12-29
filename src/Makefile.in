@@ -91,7 +91,7 @@ CONFIG_CLEAN_VPATH_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 PROGRAMS = $(bin_PROGRAMS)
 am___top_builddir__RS_OBJECTS = matrix.$(OBJEXT) encode.$(OBJEXT) \
-	decode.$(OBJEXT) main.$(OBJEXT)
+	cpu-decode.$(OBJEXT) decode.$(OBJEXT) main.$(OBJEXT)
 __top_builddir__RS_OBJECTS = $(am___top_builddir__RS_OBJECTS)
 __top_builddir__RS_LDADD = $(LDADD)
 am__dirstamp = $(am__leading_dot)dirstamp
@@ -184,6 +184,8 @@ LTLIBOBJS = @LTLIBOBJS@
 MAKEINFO = @MAKEINFO@
 MKDIR_P = @MKDIR_P@
 NVCC = @NVCC@
+# NVCCFLAGS = -G -arch=sm_35
+# NVCCFLAGS = -G -gencode=arch=compute_35,code=sm_35 --ptxas-options=-v
 NVCCFLAGS = -G --ptxas-options=-v
 OBJEXT = @OBJEXT@
 PACKAGE = @PACKAGE@
@@ -241,17 +243,17 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 AUTOMAKE_OPTIONS = subdir-objects
-CCFLAGS = -g
-TARGET = RS RS-tiling-S1 RS-tiling-S2 RS-tiling-S3
-COMMON_OBJECTS = encode.o decode.o main.o
-OBJECTS = matrix.o encode.o decode.o main.o
+CCFLAGS = -g -lpthread
+TARGET = RS 
+COMMON_OBJECTS = encode.o cpu-decode.o decode.o main.o
+OBJECTS = matrix.o encode.o cpu-decode.o decode.o main.o
 
 # clean:
 # 	rm *.o $(OBJPROG)
 
 # include .depend
 CCLD = $(CC)
-__top_builddir__RS_SOURCES = matrix.cu encode.cu decode.cu main.c 
+__top_builddir__RS_SOURCES = matrix.cu encode.cu cpu-decode.c decode.cu main.c 
 all: all-am
 
 .SUFFIXES:
@@ -338,6 +340,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cpu-decode.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 
 .c.obj:
@@ -556,8 +559,8 @@ uninstall-am: uninstall-binPROGRAMS
 
 # OBJPROG = $(addprefix $(top_builddir)/, $(TARGET))
 
-$(top_builddir)/RS$(EXEEXT): matrix.o encode.o decode.o main.o
-# $(top_builddir)/RS: matrix.o encode.o decode.o main.o
+$(top_builddir)/RS$(EXEEXT): matrix.o encode.o cpu-decode.o decode.o main.o
+# $(top_builddir)/RS: matrix.o encode.o cpu-decode.o decode.o main.o
 	$(NVCC) $^ -o $@ $(CCFLAGS) $(NVCCFLAGS) 
 
 # $(OBJPROG): $(OBJECTS)

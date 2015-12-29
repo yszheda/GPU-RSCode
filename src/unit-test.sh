@@ -11,17 +11,17 @@ declare -i i=1
 declare -i number=1
 while [ $i -le $k ]
 do
-#declare -i number=$RANDOM*$k/32768
-#echo $number
+    #declare -i number=$RANDOM*$k/32768
+    #echo $number
 
-let "number = n-k-1+i"
+    let "number = n-k-1+i"
 
-chunk_name=_$number\_$file_name
+    chunk_name=_$number\_$file_name
 
-echo $chunk_name
+    echo $chunk_name
 
-echo -e $chunk_name >> $conf_file
-let "i += 1"
-#echo $number
+    echo -e $chunk_name >> $conf_file
+    let "i += 1"
+    #echo $number
 done
 #echo $chunk_name
