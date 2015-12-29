@@ -224,91 +224,6 @@ __host__ __device__ uint8_t gf_pow(uint8_t a, uint8_t power, uint8_t *gflog, uin
 /* 
  * ===  FUNCTION  ======================================================================
  *         Name:  matrix_mul
- *  Description:  given matrix A and B, compute the product matrix C over GF(2^8): C=AB
- *  A is a nxp matrix,
- *  B is a pxm matrix,
- *  C is a nxm matrix.
- *  tileWidthRow, tileWidthCol, and tileDepth are used to control the sMem tile size.
- * =====================================================================================
- */
-    template <>
-__global__ void matrix_mul<>(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
-{
-    extern __shared__ uint8_t sMem[];
-    int rowVectorSize = tileWidthRow * tileDepth;
-    int colVectorSize = tileDepth * tileWidthCol;
-    int product;
-
-    int bx = blockIdx.x;
-    int by = blockIdx.y;
-    int tx = threadIdx.x;
-    int ty = threadIdx.y;
-    int row;
-    int col;
-
-    //	setup_tables();
-    //	__syncthreads();
-
-#pragma unroll
-    //	for(int j = tx; j < gflog_table_size; j += blockDim.x)
-    for(int j = tx * blockDim.y + ty; j < gflog_table_size; j += blockDim.x * blockDim.y)
-    {
-        gflog[j] = gflog_cMem[j];
-    }
-#pragma unroll
-    //	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
-    for(int j = tx * blockDim.y + ty; j < gfexp_table_size; j += blockDim.x * blockDim.y)
-    {
-        gfexp[j] = gfexp_cMem[j];
-    }
-    __syncthreads();
-
-    bx = blockIdx.x;
-    do {
-        row = by * tileWidthRow + ty;
-        col = bx * tileWidthCol + tx;
-        product = 0;
-        __syncthreads();
-
-        if (row < n && col < m)
-        {
-            for (int j = tx; j < tileDepth; j += blockDim.x)
-            {
-                sMem[ index(ty, j, tileDepth) ] = A[row * p + j];
-            }
-            for (int j = ty; j < tileDepth; j += blockDim.y)
-            {
-                sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j * m];
-            }
-            //			// Since blockDim.x > tileDepth for our applications,
-            //			// we can fully parallelize loading matrix A into sMem.
-            //			if (tx < tileDepth)
-            //			{
-            //				sMem[ index(ty, tx, tileDepth) ] = A[row * p + tx];
-            //			}
-            //			TODO: Assume removing the loop
-            //			if (ty < tileDepth)
-            //			{
-            //				sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty * m];
-            //			}
-            __syncthreads();
-
-            for (int j = 0; j < tileDepth; j++)
-            {
-                product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
-            }
-            __syncthreads();
-            C[row * m + col] = product;
-        }
-        bx += gridDim.x;
-        col = bx * tileWidthCol + tx;
-        __syncthreads();
-    } while (col < m);
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  matrix_mul
  *  Description:  optimized matrix multiplication for word-aligned cases.
  *  A is a nxp matrix,
  *  B is a pxm matrix,
@@ -401,6 +316,91 @@ __global__ void matrix_mul(unsigned char *A, T *B, T *C, int n, int p, int m, in
                 }
                 __syncthreads();
             }
+            C[row * m + col] = product;
+        }
+        bx += gridDim.x;
+        col = bx * tileWidthCol + tx;
+        __syncthreads();
+    } while (col < m);
+}
+
+/* 
+ * ===  FUNCTION  ======================================================================
+ *         Name:  matrix_mul
+ *  Description:  given matrix A and B, compute the product matrix C over GF(2^8): C=AB
+ *  A is a nxp matrix,
+ *  B is a pxm matrix,
+ *  C is a nxm matrix.
+ *  tileWidthRow, tileWidthCol, and tileDepth are used to control the sMem tile size.
+ * =====================================================================================
+ */
+    template <>
+__global__ void matrix_mul<>(unsigned char *A, unsigned char *B, unsigned char *C, int n, int p, int m, int tileWidthRow, int tileWidthCol, int tileDepth)
+{
+    extern __shared__ uint8_t sMem[];
+    int rowVectorSize = tileWidthRow * tileDepth;
+    int colVectorSize = tileDepth * tileWidthCol;
+    int product;
+
+    int bx = blockIdx.x;
+    int by = blockIdx.y;
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    int row;
+    int col;
+
+    //	setup_tables();
+    //	__syncthreads();
+
+#pragma unroll
+    //	for(int j = tx; j < gflog_table_size; j += blockDim.x)
+    for(int j = tx * blockDim.y + ty; j < gflog_table_size; j += blockDim.x * blockDim.y)
+    {
+        gflog[j] = gflog_cMem[j];
+    }
+#pragma unroll
+    //	for(int j = tx; j < gfexp_table_size; j += blockDim.x)
+    for(int j = tx * blockDim.y + ty; j < gfexp_table_size; j += blockDim.x * blockDim.y)
+    {
+        gfexp[j] = gfexp_cMem[j];
+    }
+    __syncthreads();
+
+    bx = blockIdx.x;
+    do {
+        row = by * tileWidthRow + ty;
+        col = bx * tileWidthCol + tx;
+        product = 0;
+        __syncthreads();
+
+        if (row < n && col < m)
+        {
+            for (int j = tx; j < tileDepth; j += blockDim.x)
+            {
+                sMem[ index(ty, j, tileDepth) ] = A[row * p + j];
+            }
+            for (int j = ty; j < tileDepth; j += blockDim.y)
+            {
+                sMem[rowVectorSize + index(j, tx, tileWidthCol)] = B[col + j * m];
+            }
+            //			// Since blockDim.x > tileDepth for our applications,
+            //			// we can fully parallelize loading matrix A into sMem.
+            //			if (tx < tileDepth)
+            //			{
+            //				sMem[ index(ty, tx, tileDepth) ] = A[row * p + tx];
+            //			}
+            //			TODO: Assume removing the loop
+            //			if (ty < tileDepth)
+            //			{
+            //				sMem[rowVectorSize + index(ty, tx, tileWidthCol)] = B[col + ty * m];
+            //			}
+            __syncthreads();
+
+            for (int j = 0; j < tileDepth; j++)
+            {
+                product ^= gf_mul(sMem[ index(ty, j, tileDepth) ], sMem[rowVectorSize + index(j, tx, tileWidthCol)]);
+            }
+            __syncthreads();
             C[row * m + col] = product;
         }
         bx += gridDim.x;
