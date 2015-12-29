@@ -34,7 +34,9 @@
  *  The configuration file contains which files are used for decoding.
  * =====================================================================================
  */
+#ifdef _cplusplus
 extern "C"
+#endif
 void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize, int streamNum);
 
 #endif
