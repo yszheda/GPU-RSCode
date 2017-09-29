@@ -419,6 +419,8 @@ void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize, 
         thread_data[i].parityBlockNum = parityBlockNum;
         int deviceChunkSize = min(chunkSize - i * maxChunkSizePerDevice, maxChunkSizePerDevice);
         thread_data[i].chunkSize = deviceChunkSize;
+        thread_data[i].gridDimXSize = gridDimXSize;
+        thread_data[i].streamNum = streamNum;
         int deviceDataSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
         int deviceCodeSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
         cudaSetDevice(i);
