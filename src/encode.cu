@@ -106,9 +106,6 @@ void write_metadata(char *fileName, int totalSize, int parityBlockNum, int nativ
  */
 void encode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int gridDimXSize, int streamNum)
 {
-    int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
-    int codeSize = parityBlockNum * chunkSize * sizeof(uint8_t);
-
     float totalComputationTime = 0;
     float totalCommunicationTime = 0;
     // compute total execution time
@@ -197,8 +194,6 @@ void encode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *encodingMatrix, int id,
         {
             streamChunkSize = chunkSize - i * streamMinChunkSize;
         }
-        int dataSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
-        int codeSize = parityBlockNum * streamChunkSize * sizeof(uint8_t);
         for (int j = 0; j < nativeBlockNum; j++)
         {
             cudaMemcpyAsync(dataBuf_d[i] + j * streamChunkSize,

@@ -180,7 +180,7 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
 {
     int diff_log;
     if (a == 0)
-    {	
+    {
         return 0;
     }
     // optimize out exception cases
@@ -193,7 +193,6 @@ __host__ __device__ uint8_t gf_div(uint8_t a, uint8_t b, uint8_t *gflog, uint8_t
      */
     const int gf_max_value = (1 << gf_width) - 1;
     diff_log = gflog[a] + gf_max_value - gflog[b];
-    return gfexp[diff_log];
     return gfexp[diff_log];
 }
 
@@ -339,7 +338,6 @@ __global__ void matrix_mul<>(unsigned char *A, unsigned char *B, unsigned char *
 {
     extern __shared__ uint8_t sMem[];
     int rowVectorSize = tileWidthRow * tileDepth;
-    int colVectorSize = tileDepth * tileWidthCol;
     int product;
 
     int bx = blockIdx.x;
@@ -527,7 +525,6 @@ __global__ void normalize_pivot_col(uint8_t *matrix, uint8_t *result, int col, i
  */
 __global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *result, int pivotIndex, int size)
 {
-    const int ty = threadIdx.y;
     const int row = blockDim.y * blockIdx.y + threadIdx.y;
     const int col = blockIdx.x;
 
@@ -567,7 +564,6 @@ __global__ void eliminate_by_row(volatile uint8_t *matrix, volatile uint8_t *res
  */
 __global__ void eliminate_by_col(uint8_t *matrix, uint8_t *result, int pivotIndex, int size)
 {
-    const int ty = threadIdx.y;
     const int row = blockIdx.x;
     const int col = blockDim.y * blockIdx.y + threadIdx.y;
 
@@ -783,9 +779,9 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
-    int sMemMaxSize = deviceProp.sharedMemPerBlock;
-    int tunedSMemSize = 2048;
-    /* 
+    /*
+       int tunedSMemSize = 2048;
+       int sMemMaxSize = deviceProp.sharedMemPerBlock;
        size_t sMemSize = tunedSMemSize;
        if (sMemMinSize > tunedSMemSize)
        {
@@ -858,9 +854,9 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
 
     cudaDeviceProp deviceProp;
     cudaGetDeviceProperties(&deviceProp, 0);
-    int sMemMaxSize = deviceProp.sharedMemPerBlock;
-    int tunedSMemSize = 2048;
-    /* 
+    /*
+       int sMemMaxSize = deviceProp.sharedMemPerBlock;
+       int tunedSMemSize = 2048;
        size_t sMemSize = tunedSMemSize;
        if (sMemMinSize > tunedSMemSize)
        {

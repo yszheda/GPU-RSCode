@@ -87,10 +87,6 @@ void copy_matrix(uint8_t *src, uint8_t *des, int srcRowIndex, int desRowIndex, i
  */
 void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, int streamNum)
 {
-    int dataSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
-    int codeSize = nativeBlockNum * chunkSize * sizeof(uint8_t);
-
-    float totalComputationTime = 0;
     float totalCommunicationTime = 0;
     // compute total execution time
     float totalTime;
@@ -157,8 +153,6 @@ void decode(uint8_t *dataBuf, uint8_t *codeBuf, uint8_t *decodingMatrix, int id,
             streamChunkSize = chunkSize - i * streamMinChunkSize;
         }
 
-        int dataSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
-        int codeSize = nativeBlockNum * streamChunkSize * sizeof(uint8_t);
         for (int j = 0; j < nativeBlockNum; j++)
         {
             cudaMemcpyAsync(codeBuf_d[i] + j * streamChunkSize,
