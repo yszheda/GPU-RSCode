@@ -32,9 +32,12 @@
  *  @param streamNum: number of CUDA streams
  * =====================================================================================
  */
-#ifdef _cplusplus
-extern "C"
+#ifdef __cplusplus
+extern "C" {
 #endif
 void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gridDimXSize, int streamNum);
+#ifdef __cplusplus
+}
+#endif
 
 #endif

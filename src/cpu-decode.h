@@ -16,8 +16,8 @@
  * =====================================================================================
  */
 
-#ifndef _MATRIX_H_
-#define _MATRIX_H_
+#ifndef _CPU_DECODE_H_
+#define _CPU_DECODE_H_
 
 #define index(i, j, size) (((i) * (size)) + (j))
 
