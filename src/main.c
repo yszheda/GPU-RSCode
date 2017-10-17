@@ -39,8 +39,8 @@ void show_help_info()
     printf("For decoding, the -d, -i, and -c options are all necessary.\n");
     printf("If the -o option is not set, the original file name will be chosen as the output file name by default.\n");
     printf("Performance-tuning Options:\n");
-    printf("[-p]: set maxmimum blockDimX\n");
-    printf("[-s]: set stream number\n");
+    printf("[-p|-P]: set maxmimum blockDimX\n");
+    printf("[-s|-S]: set stream number\n");
     exit(0);
 }
 
@@ -66,41 +66,41 @@ int main(int argc, char *argv[])
     int option;
     while((option = getopt(argc, argv, "Ss:Pp:Kk:Nn:Ee:Ii:Cc:Oo:Ddh")) != -1) {
         switch (option) {
-            case 'S':	
-            case 's':	
+            case 'S':
+            case 's':
                 streamNum = (int) atoi(optarg);
                 break;
 
-            case 'P':	
-            case 'p':	
+            case 'P':
+            case 'p':
                 gridDimXSize = (int) atoi(optarg);
                 break;
 
-            case 'K':	
-            case 'k':	
+            case 'K':
+            case 'k':
                 nativeBlockNum = (int) atoi(optarg);
                 break;
 
-            case 'N':	
-            case 'n':	
+            case 'N':
+            case 'n':
                 totalBlockNum = (int) atoi(optarg);
                 break;
 
-            case 'E':	
-            case 'e':	
+            case 'E':
+            case 'e':
                 inFile = optarg;
                 op = encode;
                 func_flag = 1;
                 break;
 
-            case 'D':	
-            case 'd':	
+            case 'D':
+            case 'd':
                 op = decode;
                 func_flag = 1;
                 break;
 
-            case 'I':	
-            case 'i':	
+            case 'I':
+            case 'i':
                 if (func_flag == 1 && op == decode)
                 {
                     inFile = optarg;
@@ -111,8 +111,8 @@ int main(int argc, char *argv[])
                 }
                 break;
 
-            case 'C':	
-            case 'c':	
+            case 'C':
+            case 'c':
                 if (func_flag == 1 && op == decode)
                 {
                     confFile = optarg;
@@ -123,8 +123,8 @@ int main(int argc, char *argv[])
                 }
                 break;
 
-            case 'O':	
-            case 'o':	
+            case 'O':
+            case 'o':
                 if (func_flag == 1 && op == decode)
                 {
                     outFile = optarg;
@@ -135,31 +135,31 @@ int main(int argc, char *argv[])
                 }
                 break;
 
-            case 'h':	
+            case 'h':
                 show_help_info();
                 break;
 
-            default:	
+            default:
                 show_help_info();
                 break;
         }	/* -----  end switch  ----- */
     }
 
     switch ( op ) {
-        case encode:	
+        case encode:
             assert(nativeBlockNum != 0);
             assert(totalBlockNum != 0);
             parityBlockNum = totalBlockNum - nativeBlockNum;
             encode_file(inFile, nativeBlockNum, parityBlockNum, gridDimXSize, streamNum);
             break;
 
-        case decode:	
+        case decode:
             assert(inFile != NULL);
             assert(confFile != NULL);
             decode_file(inFile, confFile, outFile, gridDimXSize, streamNum);
             break;
 
-        default:	
+        default:
             break;
     }		/* -----  end switch  ----- */
 

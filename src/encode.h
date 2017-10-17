@@ -18,10 +18,8 @@
 #ifndef _ENCODE_H_
 #define _ENCODE_H_
 
-// extern "C"
-// void encode(char *fileName, uint8_t *dataBuf, uint8_t *codeBuf, int nativeBlockNum, int parityBlockNum, int chunkSize, int totalSize, int gridDimXSize, int streamNum);
 
-/* 
+/*
  * ===  FUNCTION  ======================================================================
  *         Name:  encode_file
  *  Description:  encode the input file <fileName> with the given settings
@@ -39,5 +37,6 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
 #ifdef __cplusplus
 }
 #endif
+
 
 #endif

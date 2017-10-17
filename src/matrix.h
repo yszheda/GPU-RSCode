@@ -29,8 +29,8 @@
 #define TILE_WIDTH_COL 64
 #define TILE_DEPTH 2
 
-#define SINGLE_GRID_SIZE 16384 // MAX 
-// #define SINGLE_GRID_SIZE 2147483647 // Max GridDim.x in K20 
+#define SINGLE_GRID_SIZE 16384 // MAX
+// #define SINGLE_GRID_SIZE 2147483647 // Max GridDim.x in K20
 
 #define gf uint8_t
 
@@ -73,7 +73,6 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int parityBlockNum,
  *  @return the kernel execution time
  * =====================================================================================
  */
-// __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID);
 __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, cudaStream_t streamID);
 
 /* 
@@ -91,8 +90,14 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
  *  @return the kernel execution time
  * =====================================================================================
  */
-// __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, cudaStream_t streamID);
 __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff, unsigned char *codeChunk, int nativeBlockNum, int parityBlockNum, int chunkSize, int gridDimXSize, cudaStream_t streamID);
-extern "C"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size);
+#ifdef __cplusplus
+}
+#endif
+
 #endif

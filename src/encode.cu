@@ -348,14 +348,10 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
 
     cudaDeviceProp deviceProperties;
     cudaGetDeviceProperties(&deviceProperties, 0);
-    int maxGridDimXSize = deviceProperties.maxGridSize[0];
-    if (gridDimXSize > maxGridDimXSize)
+    int maxGridDimXSize = min(deviceProperties.maxGridSize[0], deviceProperties.maxGridSize[1]);
+    if (gridDimXSize > maxGridDimXSize || gridDimXSize <= 0)
     {
-        printf("max X dimension grid size is only %d!\n", maxGridDimXSize);
-        gridDimXSize = maxGridDimXSize;
-    }
-    if (gridDimXSize <= 0)
-    {
+        printf("Valid grid size: (0, %d]\n", maxGridDimXSize);
         gridDimXSize = maxGridDimXSize;
     }
 
