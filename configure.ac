@@ -44,7 +44,7 @@ fi
 # Setup CUDA paths
 # ------------------------------------------------------------------------------
 AC_ARG_WITH([cuda],
-   [  --with-cuda=PATH  		    prefix where cuda is installed [default=auto]])
+   [  --with-cuda=PATH     prefix where cuda is installed [default=auto]])
 if test -n "$with_cuda"
 then
    CUDA_CFLAGS="-I$with_cuda/include"
@@ -59,8 +59,8 @@ else
 fi
 AC_ARG_ENABLE([debug],
               [--enable-debug               enable nVidia CUDA debug mode [default=no]],
-              [NVCCFLAGS="-G -g"],
-              [NVCCFLAGS=""]
+              [NVCCFLAGS="-G -g -O0 --ptxas-options=-v"],
+              [NVCCFLAGS="-O3 -use_fast_math --ptxas-options=-v"]
               )
 AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(CUDA_LIBS)

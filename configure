@@ -1357,7 +1357,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-cuda=PATH  		    prefix where cuda is installed default=auto
+  --with-cuda=PATH     prefix where cuda is installed default=auto
 
 Some influential environment variables:
   CC          C compiler command
@@ -4428,9 +4428,9 @@ else
 fi
 # Check whether --enable-debug was given.
 if test "${enable_debug+set}" = set; then :
-  enableval=$enable_debug; NVCCFLAGS="-G -g"
+  enableval=$enable_debug; NVCCFLAGS="-G -g -O0 --ptxas-options=-v"
 else
-  NVCCFLAGS=""
+  NVCCFLAGS="-O3 -use_fast_math --ptxas-options=-v"
 
 fi
 
