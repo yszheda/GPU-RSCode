@@ -386,16 +386,27 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
 
         int deviceDataSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
         int deviceCodeSize = parityBlockNum * deviceChunkSize * sizeof(uint8_t);
-        checkCudaErrors(cudaMallocHost((void **)&dataBufPerDevice[i], deviceDataSize));
-        checkCudaErrors(cudaMallocHost((void **)&codeBufPerDevice[i], deviceCodeSize));
+        // Pinned Host Memory
+        // checkCudaErrors(cudaMallocHost((void **)&dataBufPerDevice[i], deviceDataSize));
+        // checkCudaErrors(cudaMallocHost((void **)&codeBufPerDevice[i], deviceCodeSize));
+        // Pageable Host Memory
+        dataBufPerDevice[i] = (uint8_t*) malloc(deviceDataSize);
+        codeBufPerDevice[i] = (uint8_t*) malloc(deviceCodeSize);
+
         for (int j = 0; j < nativeBlockNum; ++j)
         {
             // Pinned Host Memory
-            checkCudaErrors(cudaMemcpy(dataBufPerDevice[i] + j * deviceChunkSize,
+            // checkCudaErrors(cudaMemcpy(dataBufPerDevice[i] + j * deviceChunkSize,
+            //         dataBuf + j * chunkSize + i * minChunkSizePerDevice,
+            //         deviceChunkSize,
+            //         cudaMemcpyHostToHost));
+            // Pageable Host Memory
+            memcpy(dataBufPerDevice[i] + j * deviceChunkSize,
                     dataBuf + j * chunkSize + i * minChunkSizePerDevice,
-                    deviceChunkSize,
-                    cudaMemcpyHostToHost));
+                    deviceChunkSize);
         }
+        checkCudaErrors(cudaHostRegister(dataBufPerDevice[i], deviceDataSize, cudaHostRegisterDefault));
+        checkCudaErrors(cudaHostRegister(codeBufPerDevice[i], deviceCodeSize, cudaHostRegisterDefault));
         thread_data[i].dataBuf = dataBufPerDevice[i];
         thread_data[i].codeBuf = codeBufPerDevice[i];
 
@@ -414,18 +425,27 @@ void encode_file(char *fileName, int nativeBlockNum, int parityBlockNum, int gri
             deviceChunkSize = chunkSize - i * minChunkSizePerDevice;
         }
 
+        checkCudaErrors(cudaHostUnregister(dataBufPerDevice[i]));
+        checkCudaErrors(cudaHostUnregister(codeBufPerDevice[i]));
         for (int j = 0; j < parityBlockNum; ++j)
         {
             // Pinned Host Memory
-            checkCudaErrors(cudaMemcpy(codeBuf + j * chunkSize + i * minChunkSizePerDevice,
+            // checkCudaErrors(cudaMemcpy(codeBuf + j * chunkSize + i * minChunkSizePerDevice,
+            //         codeBufPerDevice[i] + j * deviceChunkSize,
+            //         deviceChunkSize,
+            //         cudaMemcpyHostToHost));
+            // Pageable Host Memory
+            memcpy(codeBuf + j * chunkSize + i * minChunkSizePerDevice,
                     codeBufPerDevice[i] + j * deviceChunkSize,
-                    deviceChunkSize,
-                    cudaMemcpyHostToHost));
+                    deviceChunkSize);
         }
 
         // Pinned Host Memory
-        checkCudaErrors(cudaFreeHost(dataBufPerDevice[i]));
-        checkCudaErrors(cudaFreeHost(codeBufPerDevice[i]));
+        // checkCudaErrors(cudaFreeHost(dataBufPerDevice[i]));
+        // checkCudaErrors(cudaFreeHost(codeBufPerDevice[i]));
+        // Pageable Host Memory
+        free(dataBufPerDevice[i]);
+        free(codeBufPerDevice[i]);
     }
 
     pthread_barrier_destroy(&barrier);
