@@ -10,17 +10,16 @@
  *       Revision:  none
  *       Compiler:  nvcc
  *
- *         Author:  Shuai YUAN (yszheda AT gmail.com), 
+ *         Author:  Shuai YUAN (yszheda AT gmail.com),
  *        Company:  
  *
  * =====================================================================================
  */
-#include <stdio.h>
-#include <cuda.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <math.h>
 #include "matrix.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include "helper_cuda.h"
 
 const int gf_width = 8;
 const int field_size = 1 << 8;
@@ -682,25 +681,25 @@ void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
          * check whether the leading coefficient of the current row is in the 'index'th column
          *-----------------------------------------------------------------------------*/
         int index = row;
-        cudaMemcpy(currentRow, matrix_dev + row * size, currentRowSize, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(currentRow, matrix_dev + row * size, currentRowSize, cudaMemcpyDeviceToHost));
         pivotIndex = get_pivot_index(currentRow, index, size);
         if (pivotIndex != row)
         {
             dim3 scGrid(1, (int) (ceil((float) size / SINGLE_BLOCK_SIZE)));
-            dim3 scBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
+            dim3 scBlock(1, min(size, SINGLE_BLOCK_SIZE));
             switch_columns<<<scGrid, scBlock>>>(matrix_dev, result_dev, index, pivotIndex, size);
         }
-        cudaDeviceSynchronize();
+        checkCudaErrors(cudaDeviceSynchronize());
 
 #ifdef DEBUG
         uint8_t matrix_host[size * size];
-        cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost));
         printf("Current row: %d\n", row);
         printf("Step: switch columns\n");
         printf("matrix:\n");
         show_square_matrix_debug(matrix_host, size);
         uint8_t result_host[size * size];
-        cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost));
         printf("result:\n");
         show_square_matrix_debug(result_host, size);
 #endif
@@ -709,18 +708,18 @@ void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
         dim3 nprBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
         // Normalize the pivot row
         normalize_pivot_row<<<nprGrid, nprBlock>>>(matrix_dev, result_dev, index, size);
-        //    	// Normalize the pivot column
-        //        normalize_pivot_col<<<nprGrid, linearBlock>>>(matrix_dev, result_dev, index, size);
-        cudaDeviceSynchronize();
+        // // Normalize the pivot column
+        // normalize_pivot_col<<<nprGrid, linearBlock>>>(matrix_dev, result_dev, index, size);
+        checkCudaErrors(cudaDeviceSynchronize());
 
 #ifdef DEBUG
         //uint8_t matrix_host[size * size];
-        cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost));
         printf("Step: normalize pivot row\n");
         printf("matrix:\n");
         show_square_matrix_debug(matrix_host, size);
         //uint8_t result_host[size * size];
-        cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost));
         printf("result:\n");
         show_square_matrix_debug(result_host, size);
 #endif
@@ -728,24 +727,23 @@ void GPU_invert_matrix(uint8_t *matrix_dev, uint8_t *result_dev, int size)
         dim3 ebrGrid(size, (int) (ceil((float) size / SINGLE_BLOCK_SIZE)));
         dim3 ebrBlock(1, min(size, SINGLE_BLOCK_SIZE)); 
         eliminate_by_row<<<ebrGrid, ebrBlock>>>(matrix_dev, result_dev, row, size);
-        cudaDeviceSynchronize();
+        checkCudaErrors(cudaDeviceSynchronize());
 
 #ifdef DEBUG
         //uint8_t matrix_host[size * size];
-        cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(matrix_host, matrix_dev, size * size, cudaMemcpyDeviceToHost));
         printf("Step: eliminate by row\n");
         printf("matrix:\n");
         show_square_matrix_debug(matrix_host, size);
         //uint8_t result_host[size * size];
-        cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost);
+        checkCudaErrors(cudaMemcpy(result_host, result_dev, size * size, cudaMemcpyDeviceToHost));
         printf("result:\n");
         show_square_matrix_debug(result_host, size);
 #endif
     }
-
 }
 
-/* 
+/*
  * ===  FUNCTION  ======================================================================
  *         Name:  gen_encoding_matrix
  *  Description:  generate encoding matrix
@@ -760,7 +758,7 @@ __global__ void gen_encoding_matrix(uint8_t *encodingMatrix, int row, int col)
     encodingMatrix[i * col + j] = gf_pow((j + 1) % field_size, i);
 }
 
-/* 
+/*
  * ===  FUNCTION  ======================================================================
  *         Name:  encode_chunk
  *  Description:  encode the given buffer of data chunks
@@ -778,7 +776,7 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
     int gridDimY = (int)(ceil((float) parityBlockNum / tileWidthRow));
 
     cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
+    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, 0));
     /*
        int tunedSMemSize = 2048;
        int sMemMaxSize = deviceProp.sharedMemPerBlock;
@@ -792,8 +790,8 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
     float stepTime = 0;
     cudaEvent_t stepStart, stepStop;
     // create event
-    cudaEventCreate(&stepStart);
-    cudaEventCreate(&stepStop);
+    checkCudaErrors(cudaEventCreate(&stepStart));
+    checkCudaErrors(cudaEventCreate(&stepStop));
 
     if (chunkSize % sizeof(AlignType) == 0)
     {
@@ -804,11 +802,11 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
         size_t sMemSize = sMemMinSize;
 
         // record event
-        cudaEventRecord(stepStart);
+        checkCudaErrors(cudaEventRecord(stepStart));
         matrix_mul<AlignType><<<grid, block, sMemSize, streamID>>>(parityCoeff, (AlignType *)dataChunk, (AlignType *)codeChunk, parityBlockNum, nativeBlockNum, (chunkSize / sizeof(AlignType)), tileWidthRow, tileWidthCol, tileDepth);
         // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
+        checkCudaErrors(cudaEventRecord(stepStop));
+        checkCudaErrors(cudaEventSynchronize(stepStop));
     }
     else
     {
@@ -819,19 +817,19 @@ __host__ float encode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
         size_t sMemSize = sMemMinSize;
 
         // record event
-        cudaEventRecord(stepStart);
+        checkCudaErrors(cudaEventRecord(stepStart));
         matrix_mul<><<<grid, block, sMemSize, streamID>>>(parityCoeff, dataChunk, codeChunk, parityBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
         // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
+        checkCudaErrors(cudaEventRecord(stepStop));
+        checkCudaErrors(cudaEventSynchronize(stepStop));
     }
 
     // get event elapsed time
-    cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+    checkCudaErrors(cudaEventElapsedTime(&stepTime, stepStart, stepStop));
     return stepTime;
 }
 
-/* 
+/*
  * ===  FUNCTION  ======================================================================
  *         Name:  decode_chunk
  *  Description:  decode the given buffer of code chunks
@@ -853,7 +851,7 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
     int gridDimY = (int) (ceil((float) nativeBlockNum / tileWidthRow));
 
     cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
+    checkCudaErrors(cudaGetDeviceProperties(&deviceProp, 0));
     /*
        int sMemMaxSize = deviceProp.sharedMemPerBlock;
        int tunedSMemSize = 2048;
@@ -867,8 +865,8 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
     float stepTime = 0;
     cudaEvent_t stepStart, stepStop;
     // create event
-    cudaEventCreate(&stepStart);
-    cudaEventCreate(&stepStop);
+    checkCudaErrors(cudaEventCreate(&stepStart));
+    checkCudaErrors(cudaEventCreate(&stepStop));
 
     if (chunkSize % sizeof(AlignType) == 0)
     {
@@ -879,11 +877,11 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
         size_t sMemSize = sMemMinSize;
 
         // record event
-        cudaEventRecord(stepStart);
+        checkCudaErrors(cudaEventRecord(stepStart));
         matrix_mul<AlignType><<<grid, block, sMemSize, streamID>>>(parityCoeff, (AlignType *) codeChunk, (AlignType *) dataChunk, nativeBlockNum, nativeBlockNum, (chunkSize / sizeof(AlignType)), tileWidthRow, tileWidthCol, tileDepth);
         // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
+        checkCudaErrors(cudaEventRecord(stepStop));
+        checkCudaErrors(cudaEventSynchronize(stepStop));
     }
     else
     {
@@ -894,15 +892,15 @@ __host__ float decode_chunk(unsigned char *dataChunk, unsigned char *parityCoeff
         size_t sMemSize = sMemMinSize;
 
         // record event
-        cudaEventRecord(stepStart);
+        checkCudaErrors(cudaEventRecord(stepStart));
         matrix_mul<><<<grid, block, sMemSize, streamID>>>(parityCoeff, codeChunk, dataChunk, nativeBlockNum, nativeBlockNum, chunkSize, tileWidthRow, tileWidthCol, tileDepth);
         // record event and synchronize
-        cudaEventRecord(stepStop);
-        cudaEventSynchronize(stepStop);
+        checkCudaErrors(cudaEventRecord(stepStop));
+        checkCudaErrors(cudaEventSynchronize(stepStop));
     }
 
     // get event elapsed time
-    cudaEventElapsedTime(&stepTime, stepStart, stepStop);
+    checkCudaErrors(cudaEventElapsedTime(&stepTime, stepStart, stepStop));
     return stepTime;
 }
 
