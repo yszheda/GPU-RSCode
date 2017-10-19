@@ -358,30 +358,18 @@ void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize, 
         thread_data[i].chunkSize = deviceChunkSize;
         thread_data[i].gridDimXSize = gridDimXSize;
         thread_data[i].streamNum = streamNum;
-
         int deviceDataSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
         int deviceCodeSize = nativeBlockNum * deviceChunkSize * sizeof(uint8_t);
-        // Pinned Host Memory
-        // checkCudaErrors(cudaMallocHost((void **)&dataBufPerDevice[i], deviceDataSize));
-        // checkCudaErrors(cudaMallocHost((void **)&codeBufPerDevice[i], deviceCodeSize));
-        // Pageable Host Memory
-        dataBufPerDevice[i] = (uint8_t*) malloc(deviceDataSize);
-        codeBufPerDevice[i] = (uint8_t*) malloc(deviceCodeSize);
-
+        checkCudaErrors(cudaMallocHost((void **)&dataBufPerDevice[i], deviceDataSize));
+        checkCudaErrors(cudaMallocHost((void **)&codeBufPerDevice[i], deviceCodeSize));
         for (int j = 0; j < nativeBlockNum; ++j)
         {
             // Pinned Host Memory
-            // checkCudaErrors(cudaMemcpy(codeBufPerDevice[i] + j * deviceChunkSize,
-            //         codeBuf + j * chunkSize + i * minChunkSizePerDevice,
-            //         deviceChunkSize,
-            //         cudaMemcpyHostToHost));
-            // Pageable Host Memory
-            memcpy(codeBufPerDevice[i] + j * deviceChunkSize,
+            checkCudaErrors(cudaMemcpy(codeBufPerDevice[i] + j * deviceChunkSize,
                     codeBuf + j * chunkSize + i * minChunkSizePerDevice,
-                    deviceChunkSize);
+                    deviceChunkSize,
+                    cudaMemcpyHostToHost));
         }
-        checkCudaErrors(cudaHostRegister(dataBufPerDevice[i], deviceDataSize, cudaHostRegisterDefault));
-        checkCudaErrors(cudaHostRegister(codeBufPerDevice[i], deviceCodeSize, cudaHostRegisterDefault));
         thread_data[i].dataBuf = dataBufPerDevice[i];
         thread_data[i].codeBuf = codeBufPerDevice[i];
         thread_data[i].decodingMatrix = decodingMatrix;
@@ -402,26 +390,18 @@ void decode_file(char *inFile, char *confFile, char *outFile, int gridDimXSize, 
             deviceChunkSize = chunkSize - i * minChunkSizePerDevice;
         }
 
-        checkCudaErrors(cudaHostUnregister(dataBufPerDevice[i]));
-        checkCudaErrors(cudaHostUnregister(codeBufPerDevice[i]));
         for (int j = 0; j < nativeBlockNum; ++j)
         {
             // Pinned Host Memory
-            // checkCudaErrors(cudaMemcpy(dataBuf + j * chunkSize + i * minChunkSizePerDevice,
-            //         dataBufPerDevice[i] + j * deviceChunkSize,
-            //         deviceChunkSize,
-            //         cudaMemcpyHostToHost));
-            memcpy(dataBuf + j * chunkSize + i * minChunkSizePerDevice,
+            checkCudaErrors(cudaMemcpy(dataBuf + j * chunkSize + i * minChunkSizePerDevice,
                     dataBufPerDevice[i] + j * deviceChunkSize,
-                    deviceChunkSize);
+                    deviceChunkSize,
+                    cudaMemcpyHostToHost));
         }
 
         // Pinned Host Memory
-        // checkCudaErrors(cudaFreeHost(dataBufPerDevice[i]));
-        // checkCudaErrors(cudaFreeHost(codeBufPerDevice[i]));
-        // Pageable Host Memory
-        free(dataBufPerDevice[i]);
-        free(codeBufPerDevice[i]);
+        checkCudaErrors(cudaFreeHost(dataBufPerDevice[i]));
+        checkCudaErrors(cudaFreeHost(codeBufPerDevice[i]));
     }
 
     pthread_barrier_destroy(&barrier);
